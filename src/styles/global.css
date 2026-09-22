@@ -121,7 +121,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .brand__mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: var(--pink); color: var(--navy); transform: rotate(-3deg); }
 .brand__mark svg { width: 20px; }
 .sidebar nav { display: grid; gap: 6px; }
-.nav-link { display: flex; min-height: 48px; align-items: center; gap: 14px; padding: 0 14px; border-radius: 13px; color: #eef3fa; font-size: 14px; font-weight: 650; transition: color 160ms ease, background-color 160ms ease, transform 160ms ease; }
+.nav-link { display: flex; min-height: 48px; align-items: center; gap: 14px; padding: 0 14px; border-radius: 13px; color: #eef3fa; font-size: 14px; font-weight: 650; transition: transform 160ms ease; }
 .nav-link svg { width: 20px; }
 .nav-link:hover { color: white; background: var(--navy-soft); }
 .nav-link.is-active { color: var(--navy); background: #f8f9fb; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
