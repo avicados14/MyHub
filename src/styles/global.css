@@ -329,7 +329,7 @@ kbd { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; backg
 .week-day > header strong { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; font-size: 12px; font-variant-numeric: tabular-nums; }
 .week-day.is-today > header strong { background: var(--navy); color: white; }
 .week-day__events { display: grid; align-content: start; gap: 8px; padding: 10px 7px; }
-.week-day__empty { padding: 18px 0; color: color-mix(in srgb, var(--ink-soft) 50%, transparent); font-size: 9px; text-align: center; }
+.week-day__empty { padding: 18px 0; color: var(--ink-soft); font-size: 9px; font-weight: 650; text-align: center; }
 .event-block { position: relative; display: grid; width: 100%; min-width: 0; gap: 3px; padding: 10px; overflow: hidden; border: 1px solid transparent; border-radius: 10px; color: var(--ink); text-align: left; }
 button.event-block { min-height: 0; cursor: pointer; font: inherit; }
 .event-block--event { background: var(--mint); }
@@ -345,7 +345,7 @@ button.event-block { min-height: 0; cursor: pointer; font: inherit; }
 .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 .month-day { min-height: 118px; padding: 9px; overflow: hidden; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .month-day > span { display: block; margin-bottom: 7px; font-size: 10px; font-weight: 800; }
-.month-day.is-outside { opacity: .36; }
+.month-day.is-outside { background: var(--surface-soft); color: var(--ink-soft); }
 .month-event { display: block; width: 100%; margin: 3px 0; padding: 4px 5px; overflow: hidden; border: 0; border-radius: 5px; background: var(--mint); color: var(--ink); font-size: 7px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 button.month-event { cursor: pointer; }
 .month-event--study { background: var(--blue-soft); }
@@ -380,7 +380,7 @@ button.month-event { cursor: pointer; }
 .planner-brief p { margin: 0; font-size: 11px; }
 .study-block-list { display: grid; gap: 10px; }
 .study-row { display: grid; grid-template-columns: 170px minmax(0,1fr) auto; align-items: center; gap: 18px; padding: 17px 18px; border-left: 4px solid var(--blue); }
-.study-row.is-complete { opacity: .6; border-left-color: var(--success); }
+.study-row.is-complete { border-left-color: var(--success); background: var(--success-soft); }
 .study-row.is-complete h2 { text-decoration: line-through; }
 .study-row time strong, .study-row time span { display: block; }
 .study-row time strong { margin-bottom: 3px; font-size: 11px; }
