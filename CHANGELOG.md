@@ -6,6 +6,8 @@ All notable changes to MyHub are documented here.
 
 ### Added
 
+Added a complete explicit grocery workflow: compatible mass, volume, and count aggregation; per-item Pantry Check decisions including selected staples; editable shopping-list items; immutable completed-trip history; and a confirmed-purchase pantry handoff with optional per-item quantity and location review.
+
 Added explicit `AppData` schema version 2 with loss-preserving migration from version 1 local state and backups. The durable domain foundation now includes packaged foods, leftovers, nutrition provenance, immutable meal-source snapshots, study avoid-time ranges, meal-planning modes/preferences, editable grocery category/staple models, and multiple calendar feeds.
 
 Added optional encrypted GitHub-backed synchronization for the dedicated private `avicados14/MyHub-Data` repository. IndexedDB remains the immediate offline store. Versioned Web Crypto envelopes use PBKDF2-SHA-256 with 310,000 iterations and AES-256-GCM; tampering and wrong passphrases are rejected. The GitHub Contents client enforces a private repository, conditionally writes with blob SHA values, serializes writes, and surfaces conflicts for explicit resolution.

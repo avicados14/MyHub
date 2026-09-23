@@ -62,9 +62,9 @@ Food-log entries and meal entries store immutable source and nutrition snapshots
 
 ### Pantry and Grocery
 
-Grocery generation traces planned meals to recipe ingredients. Aggregation is conservative: it combines only matching canonical ingredient names with compatible units. The current conversion table combines ounces and pounds. Other mass, volume, count, cooked-versus-dry, and ambiguous cross-family conversions remain separate until the user resolves them.
+Grocery generation traces planned meals to recipe ingredients. Aggregation is conservative: it combines only matching canonical ingredient names with compatible units. The conversion table normalizes supported mass, volume, and count aliases within their respective families; cooked-versus-dry, custom-unit, and ambiguous cross-family quantities remain separate until the user resolves them.
 
-Pantry Check records the user’s decision for every requirement. Generating a list does not silently subtract inventory. A completed trip is copied into an immutable history record. Purchased items enter the pantry only through an explicit post-trip action.
+Pantry Check records the user’s decision for every requirement, including each staple the user explicitly adds. Generating a list does not silently subtract inventory. A completed trip is copied into an immutable history record. Purchased items enter the pantry only through an explicit post-trip action; the default adds checked purchases, while the detailed handoff requires an explicit selection for any unchecked item.
 
 ## Data Model
 

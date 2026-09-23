@@ -10,7 +10,7 @@ The web application is the product-validation phase for a future native SwiftUI 
 
 **Food planning** combines a recipe library, cooking-friendly serving scaling, a weekly meal planner, prepared-versus-consumed servings, leftovers, immutable food-log snapshots, and daily nutrition progress.
 
-**Pantry and groceries** aggregate compatible recipe ingredients, compare those requirements with saved inventory, generate a mobile-friendly shopping list, preserve completed trips as historical snapshots, and optionally add purchases back to the pantry.
+**Pantry and groceries** aggregate compatible recipe ingredients, compare those requirements with saved inventory, require an explicit Pantry Check decision for every requirement and added staple, generate a mobile-friendly editable shopping list, preserve completed trips as historical snapshots, and add only confirmed purchases back to the pantry.
 
 ## Project Status
 
@@ -28,7 +28,7 @@ Working now:
 - Weekly meal planning with prepared, consumed, and leftover balances
 - Daily nutrition snapshots and editable targets
 - Pantry inventory across pantry, refrigerator, and freezer
-- Grocery aggregation, Pantry Check, shopping, completion, pantry handoff, and immutable history
+- Grocery aggregation across compatible mass, volume, and count units; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history
 - Universal search across recipes, homework, and pantry items
 - Empty first run, IndexedDB persistence, versioned migration, JSON export/import, and confirmed clear-all
 - Optional encrypted GitHub Sync to a dedicated private data repository
@@ -111,7 +111,7 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, unit normalization, grocery aggregation, nutrition totals, leftover limits, scheduling conflicts, due-date prioritization, ICS parsing, IndexedDB persistence, and backup validation. Browser tests cover the connected acceptance flows.
+Domain tests cover recipe scaling, fraction formatting, unit normalization, grocery aggregation and pantry decisions, nutrition totals, leftover limits, scheduling conflicts, due-date prioritization, ICS parsing, IndexedDB persistence, and backup validation. Browser tests cover pantry CRUD, the full grocery review/edit/checkout flow, and other connected acceptance workflows at desktop, tablet, and mobile sizes.
 
 ## GitHub Pages Deployment
 

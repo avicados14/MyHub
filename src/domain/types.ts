@@ -4,7 +4,7 @@ export type AssignmentStatus = 'not-started' | 'in-progress' | 'complete'
 export type CalendarKind = 'event' | 'study' | 'meal-prep'
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type StorageLocation = 'Pantry' | 'Refrigerator' | 'Freezer'
-export type GroceryCategory =
+export type BuiltInGroceryCategory =
   | 'Produce'
   | 'Meat & Seafood'
   | 'Dairy'
@@ -14,6 +14,8 @@ export type GroceryCategory =
   | 'Snacks'
   | 'Household'
   | 'Other'
+
+export type GroceryCategory = BuiltInGroceryCategory | (string & {})
 
 export interface EntityBase {
   id: string
@@ -195,6 +197,9 @@ export interface GroceryItem extends EntityBase {
   sourceRecipeIds: string[]
   pantryQuantity: number
   pantryDecision: 'unreviewed' | 'none' | 'saved' | 'enough' | 'custom'
+  pantryCustomQuantity?: number
+  needsReview?: boolean
+  reviewReason?: string
 }
 
 export interface GroceryList extends EntityBase {

@@ -282,9 +282,9 @@ The checklist combines the requested end-to-end web path with the missing regres
 | [ ] | Assert planned/consumed nutrition rule | Product decision is explicit and test proves correct nutrition update and immutable source facts. |
 | [~] | Log food and view nutrition | Saved recipes log snapshots and six totals; custom/packaged/label/leftover inputs and six remaining values are missing. |
 | [ ] | Create/log packaged food | Manual package/nutrition entry, reviewed label/lookup path, UPC/text handling, and immutable package snapshot work. |
-| [x] | Generate grocery list | Planned ingredients scale and aggregate; basic Pantry Check workflow creates a list. |
-| [~] | Complete Pantry Check and edit list | Core decisions/checkoff work; Enter Amount, quantity/custom/delete/note editing, and broader unit equivalence do not. |
-| [ ] | Confirm grocery staples and pantry handoff | Staples are editable and explicitly selected; selected purchased quantities—not all unchecked items—go to pantry. |
+| [x] | Generate grocery list | Planned ingredients scale, aggregate compatible mass, volume, and count units, compare saved pantry quantities, and enter an explicit Pantry Check. |
+| [x] | Complete Pantry Check and edit list | Every generated requirement, including an added staple, requires an explicit pantry decision; saved/custom amounts calculate the purchase quantity; shopping items support checkoff plus add, edit, delete, quantity, category, and note changes. |
+| [x] | Confirm grocery staples and pantry handoff | Enabled staples are explicitly selected and then reviewed; trip completion preserves an immutable snapshot; only checked purchases are added by default, while the detailed handoff supports explicit item, quantity, and storage-location choices. |
 | [x] | Complete trip and inspect history | Confirmed completion snapshots items and history shows date/name/count/status. |
 | [x] | Export/import/clear | Versioned validation/migration and confirmed clear-all exist; browser coverage verifies empty first run and clear-all. |
 | [ ] | Keyboard-test all dialogs | Search and all dialogs trap focus, return it correctly, escape safely, and pass open-state axe checks. |
