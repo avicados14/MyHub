@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './AppShell'
 import { useApp } from './AppContext'
+import { useGitHubSync } from '../sync/GitHubSyncContext'
 
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
 const CalendarPage = lazy(() => import('../features/calendar/CalendarPage'))
@@ -15,12 +16,15 @@ const PrivateAccessPage = lazy(() => import('../features/settings/PrivateAccessP
 
 export default function App() {
   const { ready } = useApp()
+  const { privateAccessReady } = useGitHubSync()
+  const openingPrivateLink = window.location.hash.startsWith('#/access')
+  const applicationReady = ready && (privateAccessReady || openingPrivateLink)
 
   return (
     <AppShell>
-      {!ready ? (
+      {!applicationReady ? (
         <div className="route-loading" role="status">
-          Opening your local hub…
+          {ready ? 'Loading your encrypted MyHub data…' : 'Opening your local hub…'}
         </div>
       ) : (
         <Suspense

@@ -33,6 +33,7 @@ interface PrivateAccessState {
   encryptedData: string
   version: number
   writes: number
+  resolveDelayMs: number
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -96,6 +97,9 @@ const installPrivateAccessMock = async (page: Page, state: PrivateAccessState) =
       return
     }
     if (body.action === 'resolve' && body.id === privateAccessId) {
+      if (state.resolveDelayMs > 0) {
+        await new Promise((resolve) => globalThis.setTimeout(resolve, state.resolveDelayMs))
+      }
       await json(route, {
         encryptedPayload: state.encryptedPayload,
         encryptedData: state.encryptedData,
@@ -183,7 +187,7 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
   page,
 }) => {
   const state = freshRemoteState()
-  const privateAccess = { encryptedPayload: '', encryptedData: '', version: 0, writes: 0 }
+  const privateAccess = { encryptedPayload: '', encryptedData: '', version: 0, writes: 0, resolveDelayMs: 0 }
   await installGitHubMock(page, state)
   await installPrivateAccessMock(page, privateAccess)
   const passphrase = createTestKeyMaterial()
@@ -218,9 +222,14 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
   expect(savedCredential?.tokenEnvelope).toBeTruthy()
   expect(savedCredential?.tokenEnvelope).not.toContain(token)
 
+  privateAccess.resolveDelayMs = 750
   await phonePage.goto('/#/settings')
+  await phonePage.reload()
+  await expect(phonePage.getByText('Loading your encrypted MyHub data…')).toBeVisible()
+  await expect(phonePage.getByLabel('Your name')).toHaveCount(0)
   const phoneName = phonePage.getByLabel('Your name')
   await expect(phoneName).toHaveValue('Crosscut User')
+  privateAccess.resolveDelayMs = 0
   await phoneName.fill('Updated on phone')
   await expect.poll(() => privateAccess.writes, { timeout: 30_000 }).toBe(1)
   await expect.poll(() => privateAccess.version, { timeout: 30_000 }).toBe(2)
