@@ -1,4 +1,4 @@
-import { AlertTriangle, Barcode, CheckCircle2, ImagePlus, ScanText } from 'lucide-react'
+import { AlertTriangle, Barcode, CheckCircle2, ImagePlus, ScanText, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Field, Modal, SegmentedControl, StatusBadge } from '../../components/ui'
 import type { Nutrition, NutritionProvenance, PackagedFood } from '../../domain/types'
@@ -6,7 +6,12 @@ import { makeId } from '../../utilities/date'
 import { formatFileSize, IMAGE_LIMIT_BYTES, readFileAsDataUrl, validateImageFile } from './fileImages'
 import { extractNutritionLabel } from './nutritionLabel'
 import { recognizeImageText } from './ocrService'
-import { lookupOpenFoodFacts } from './openFoodFacts'
+import {
+  lookupOpenFoodFacts,
+  searchOpenFoodFacts,
+  type OpenFoodFactsDraft,
+  type OpenFoodFactsSearchResult,
+} from './openFoodFacts'
 
 interface PackagedFoodEditorProps {
   open: boolean
@@ -15,7 +20,7 @@ interface PackagedFoodEditorProps {
   onSave: (food: PackagedFood) => void
 }
 
-type PackageMode = 'manual' | 'barcode' | 'label'
+type PackageMode = 'manual' | 'search' | 'barcode' | 'label'
 const ZERO_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
 
 const blankFood = (): PackagedFood => {
@@ -46,6 +51,8 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
   const [mode, setMode] = useState<PackageMode>('manual')
   const [draft, setDraft] = useState<PackagedFood>(() => (food ? structuredClone(food) : blankFood()))
   const [barcode, setBarcode] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<OpenFoodFactsSearchResult[]>([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -58,6 +65,8 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
     setMode('manual')
     setDraft(food ? structuredClone(food) : blankFood())
     setBarcode(food?.barcode ?? '')
+    setSearchQuery('')
+    setSearchResults([])
     setBusy(false)
     setMessage('')
     setError('')
@@ -72,29 +81,33 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
   const updateProvenance = (patch: Partial<NutritionProvenance>) =>
     setDraft((current) => ({ ...current, nutritionProvenance: { ...current.nutritionProvenance, ...patch } }))
 
+  const applyImport = (imported: OpenFoodFactsDraft) => {
+    setDraft((current) => ({
+      ...current,
+      source: 'imported',
+      name: imported.name,
+      brand: imported.brand,
+      barcode: imported.barcode,
+      servingSize: { quantity: imported.servingQuantity, unit: imported.servingUnit },
+      nutritionPerServing: imported.nutrition,
+      nutritionProvenance: imported.provenance,
+      image: imported.image ?? current.image,
+      notes: imported.warnings.join(' '),
+      needsReview: true,
+    }))
+    setConfirmed(false)
+    setMessage(
+      `Read-only database import selected. ${imported.warnings.join(' ') || 'Review the package before saving.'}`,
+    )
+  }
+
   const lookUpBarcode = async () => {
     setBusy(true)
     setError('')
     setMessage('Looking up limited product fields from Open Food Facts…')
     try {
       const imported = await lookupOpenFoodFacts(barcode)
-      setDraft((current) => ({
-        ...current,
-        source: 'imported',
-        name: imported.name,
-        brand: imported.brand,
-        barcode: imported.barcode,
-        servingSize: { quantity: imported.servingQuantity, unit: imported.servingUnit },
-        nutritionPerServing: imported.nutrition,
-        nutritionProvenance: imported.provenance,
-        image: imported.image ?? current.image,
-        notes: imported.warnings.join(' '),
-        needsReview: true,
-      }))
-      setConfirmed(false)
-      setMessage(
-        `Read-only database import completed. ${imported.warnings.join(' ') || 'Review the package before saving.'}`,
-      )
+      applyImport(imported)
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -102,6 +115,26 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
           : 'Lookup failed. Enter the package manually or scan its nutrition label.',
       )
       setMode('manual')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const searchProducts = async () => {
+    setBusy(true)
+    setError('')
+    setSearchResults([])
+    setMessage('Searching limited product fields from Open Food Facts…')
+    try {
+      const results = await searchOpenFoodFacts(searchQuery)
+      setSearchResults(results)
+      setMessage(
+        results.length
+          ? `${results.length} possible matches. Results stay in this dialog unless you select, review, and save one.`
+          : 'No matching Open Food Facts products were found. Try another term or enter the package manually.',
+      )
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Search failed. Enter the package manually instead.')
     } finally {
       setBusy(false)
     }
@@ -205,11 +238,65 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
           }}
           options={[
             { value: 'manual', label: 'Manual' },
+            { value: 'search', label: 'Text search' },
             { value: 'barcode', label: 'Barcode' },
             { value: 'label', label: 'Label image' },
           ]}
         />
 
+        {mode === 'search' ? (
+          <section className="import-panel">
+            <span className="import-panel__icon">
+              <Search aria-hidden="true" />
+            </span>
+            <div>
+              <h3>Open Food Facts text search</h3>
+              <p>Search on submit, then select one result to reuse the package review workflow below.</p>
+            </div>
+            <form
+              className="package-search-form"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void searchProducts()
+              }}
+            >
+              <Field label="Product or brand">
+                <input
+                  type="search"
+                  autoComplete="off"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Peanut butter"
+                />
+              </Field>
+              <button className="button button--primary" type="submit" disabled={busy}>
+                {busy ? 'Searching…' : 'Search products'}
+              </button>
+            </form>
+            {searchResults.length ? (
+              <ul className="package-search-results" aria-label="Open Food Facts search results">
+                {searchResults.map((result) => (
+                  <li key={result.resultId}>
+                    <div>
+                      <strong>{result.name}</strong>
+                      <small>
+                        {result.brand || 'Brand not listed'} · {result.servingQuantity} {result.servingUnit} ·{' '}
+                        {Math.round(result.nutrition.calories)} kcal
+                      </small>
+                    </div>
+                    <button className="button button--secondary" type="button" onClick={() => applyImport(result)}>
+                      Review this result
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <p className="source-disclosure">
+              Open Food Facts is a public, volunteer database. Results may be incomplete, incorrect, or missing.
+              Unselected results are not saved or logged by MyHub.
+            </p>
+          </section>
+        ) : null}
         {mode === 'barcode' ? (
           <section className="import-panel">
             <span className="import-panel__icon">
@@ -217,7 +304,7 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
             </span>
             <div>
               <h3>Open Food Facts lookup</h3>
-              <p>Uses the official v2 product endpoint with limited fields. MyHub reads only and never writes back.</p>
+              <p>Uses the current product endpoint with limited fields. MyHub reads only and never writes back.</p>
             </div>
             <Field label="UPC or EAN barcode">
               <input

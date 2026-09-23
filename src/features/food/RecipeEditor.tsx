@@ -3,6 +3,11 @@ import { useEffect, useId, useState } from 'react'
 import { Field, Modal, StatusBadge } from '../../components/ui'
 import { createUnknownNutritionProvenance } from '../../domain/defaults'
 import { splitQuantityAndUnit } from '../../domain/measurements'
+import {
+  defaultIngredientMappings,
+  estimateRecipeNutrition,
+  type IngredientNutritionMapping,
+} from '../../domain/recipeNutrition'
 import type {
   GroceryCategory,
   Nutrition,
@@ -10,6 +15,7 @@ import type {
   Recipe,
   RecipeIngredient,
   RecipeStep,
+  PackagedFood,
 } from '../../domain/types'
 import { makeId } from '../../utilities/date'
 import {
@@ -36,6 +42,7 @@ const EMPTY_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, 
 interface RecipeEditorProps {
   open: boolean
   recipe?: Recipe
+  packagedFoods?: PackagedFood[]
   onClose: () => void
   onSave: (recipe: Recipe) => void
 }
@@ -99,8 +106,11 @@ const ingredientsFromLines = (value: string): RecipeIngredient[] =>
       }
     })
 
-export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEditorProps) {
+export default function RecipeEditor({ open, recipe, packagedFoods = [], onClose, onSave }: RecipeEditorProps) {
   const [draft, setDraft] = useState<Recipe>(() => (recipe ? cloneRecipe(recipe) : blankRecipe()))
+  const [estimationOpen, setEstimationOpen] = useState(false)
+  const [estimationMappings, setEstimationMappings] = useState<IngredientNutritionMapping[]>([])
+  const [estimationConfirmed, setEstimationConfirmed] = useState(false)
   const [imageMessage, setImageMessage] = useState('')
   const [error, setError] = useState('')
   const imageInputId = useId()
@@ -108,6 +118,9 @@ export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEd
   useEffect(() => {
     if (open) {
       setDraft(recipe ? cloneRecipe(recipe) : blankRecipe())
+      setEstimationOpen(false)
+      setEstimationMappings([])
+      setEstimationConfirmed(false)
       setImageMessage('')
       setError('')
     }
@@ -146,6 +159,55 @@ export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEd
     setDraft((current) => ({ ...current, nutritionProvenance: { ...current.nutritionProvenance, ...patch } }))
   }
 
+  const startEstimation = () => {
+    setEstimationMappings(defaultIngredientMappings(draft.ingredients, packagedFoods))
+    setEstimationConfirmed(false)
+    setEstimationOpen(true)
+  }
+
+  const updateEstimationMapping = (ingredientId: string, patch: Partial<IngredientNutritionMapping>) => {
+    setEstimationMappings((current) => {
+      const existing = current.find((mapping) => mapping.ingredientId === ingredientId)
+      if (!existing) {
+        if (!patch.sourceFoodId) return current
+        return [
+          ...current,
+          { ingredientId, sourceFoodId: patch.sourceFoodId, sourceServings: patch.sourceServings ?? 1 },
+        ]
+      }
+      return current.map((mapping) => (mapping.ingredientId === ingredientId ? { ...mapping, ...patch } : mapping))
+    })
+    setEstimationConfirmed(false)
+  }
+
+  const applyEstimation = () => {
+    const estimate = estimateRecipeNutrition(draft, packagedFoods, estimationMappings)
+    if (!estimationConfirmed) {
+      setError('Review the mapped and unresolved ingredients, then confirm the estimate before applying it.')
+      return
+    }
+    const sourceLabel = estimate.sourceLabels.length
+      ? `Ingredient estimate from ${estimate.sourceLabels.join('; ')}`
+      : 'Ingredient estimate (no resolved nutrition sources)'
+    setDraft((current) => ({
+      ...current,
+      nutritionPerServing: estimate.perServing,
+      nutritionProvenance: {
+        kind: 'estimated',
+        capturedAt: new Date().toISOString(),
+        estimated: true,
+        sourceLabel,
+      },
+      needsReview: true,
+      reviewedAt: undefined,
+      reviewNotes: estimate.unresolvedIngredientIds.length
+        ? `${estimate.unresolvedIngredientIds.length} ingredient${estimate.unresolvedIngredientIds.length === 1 ? '' : 's'} unresolved in nutrition estimate.`
+        : 'Ingredient nutrition estimate applied; review and correct values before marking reviewed.',
+    }))
+    setEstimationOpen(false)
+    setError('')
+  }
+
   const uploadImage = async (file: File | undefined) => {
     if (!file) return
     const validation = validateImageFile(file)
@@ -163,6 +225,7 @@ export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEd
   }
 
   const submit = () => {
+    const currentYield = draft.currentYield ?? draft.originalYield
     const ingredients = draft.ingredients
       .filter((ingredient) => ingredient.name.trim())
       .map((ingredient) => ({
@@ -183,13 +246,14 @@ export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEd
       setError('Add at least one method step before saving.')
       return
     }
-    if (draft.originalYield <= 0 || (draft.currentYield ?? 0) <= 0) {
+    if (draft.originalYield <= 0 || currentYield <= 0) {
       setError('Original and current yields must be greater than zero.')
       return
     }
     const timestamp = new Date().toISOString()
     onSave({
       ...draft,
+      currentYield,
       name: draft.name.trim(),
       description: draft.description.trim(),
       notes: draft.notes?.trim(),
@@ -358,7 +422,10 @@ export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEd
                   min="0.25"
                   step="0.25"
                   value={draft.originalYield}
-                  onChange={(event) => setDraft({ ...draft, originalYield: Number(event.target.value) })}
+                  onChange={(event) => {
+                    const originalYield = Number(event.target.value)
+                    setDraft((current) => ({ ...current, originalYield }))
+                  }}
                 />
               </Field>
               <Field label="Current yield">
@@ -367,7 +434,10 @@ export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEd
                   min="0.25"
                   step="0.25"
                   value={draft.currentYield ?? draft.originalYield}
-                  onChange={(event) => setDraft({ ...draft, currentYield: Number(event.target.value) })}
+                  onChange={(event) => {
+                    const currentYield = Number(event.target.value)
+                    setDraft((current) => ({ ...current, currentYield }))
+                  }}
                 />
               </Field>
             </div>
@@ -585,10 +655,109 @@ export default function RecipeEditor({ open, recipe, onClose, onSave }: RecipeEd
               <h3>Nutrition per serving</h3>
               <p>Record the source and flag estimates; zero means unknown, not nutritionally free.</p>
             </div>
-            <StatusBadge tone={draft.nutritionProvenance.estimated ? 'attention' : 'food'}>
-              {draft.nutritionProvenance.estimated ? 'Estimated' : draft.nutritionProvenance.kind}
-            </StatusBadge>
+            <div className="nutrition-heading-actions">
+              <StatusBadge tone={draft.nutritionProvenance.estimated ? 'attention' : 'food'}>
+                {draft.nutritionProvenance.estimated ? 'Estimated' : draft.nutritionProvenance.kind}
+              </StatusBadge>
+              <button className="button button--secondary" type="button" onClick={startEstimation}>
+                Estimate from ingredients
+              </button>
+            </div>
           </div>
+          <p className="source-disclosure">
+            Estimation uses only sources you explicitly map below. MyHub never invents missing values and does not use
+            AI.
+          </p>
+          {estimationOpen ? (
+            <div className="nutrition-estimation" aria-label="Ingredient nutrition estimate review">
+              <div>
+                <h4>Review ingredient mappings</h4>
+                <p>
+                  Choose a saved Open Food Facts or manual package source and state how many source servings this recipe
+                  uses. Unresolved ingredients remain visible and contribute no invented nutrition.
+                </p>
+              </div>
+              <div className="nutrition-estimation__list">
+                {estimateRecipeNutrition(draft, packagedFoods, estimationMappings).ingredients.map((item) => (
+                  <article key={item.ingredient.id} className={item.resolved ? 'is-resolved' : 'is-unresolved'}>
+                    <div>
+                      <strong>{item.ingredient.name || 'Unnamed ingredient'}</strong>
+                      <small>
+                        {item.ingredient.quantity ?? 'Unknown quantity'} {item.ingredient.unit} ·{' '}
+                        {item.resolved ? `${Math.round(item.nutrition.calories)} kcal in recipe` : item.reason}
+                      </small>
+                    </div>
+                    <Field label={`Nutrition source for ${item.ingredient.name || 'ingredient'}`}>
+                      <select
+                        value={item.mapping?.sourceFoodId ?? ''}
+                        onChange={(event) => {
+                          if (!event.target.value) {
+                            setEstimationMappings((current) =>
+                              current.filter((mapping) => mapping.ingredientId !== item.ingredient.id),
+                            )
+                            setEstimationConfirmed(false)
+                            return
+                          }
+                          updateEstimationMapping(item.ingredient.id, { sourceFoodId: event.target.value })
+                        }}
+                      >
+                        <option value="">Unresolved — no source</option>
+                        {packagedFoods.map((food) => (
+                          <option key={food.id} value={food.id}>
+                            {food.name} — {food.nutritionProvenance.sourceLabel || food.nutritionProvenance.kind}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={`Source servings used for ${item.ingredient.name || 'ingredient'}`}>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="any"
+                        disabled={!item.mapping?.sourceFoodId}
+                        value={item.mapping?.sourceServings ?? ''}
+                        onChange={(event) =>
+                          updateEstimationMapping(item.ingredient.id, { sourceServings: Number(event.target.value) })
+                        }
+                      />
+                    </Field>
+                  </article>
+                ))}
+              </div>
+              <div className="nutrition-estimation__summary" aria-live="polite">
+                <strong>
+                  Estimated per serving:{' '}
+                  {Math.round(estimateRecipeNutrition(draft, packagedFoods, estimationMappings).perServing.calories)}{' '}
+                  kcal
+                </strong>
+                <span>
+                  {estimateRecipeNutrition(draft, packagedFoods, estimationMappings).unresolvedIngredientIds.length}{' '}
+                  unresolved · {estimateRecipeNutrition(draft, packagedFoods, estimationMappings).sourceLabels.length}{' '}
+                  source labels
+                </span>
+              </div>
+              <label className="confirmation-check">
+                <input
+                  type="checkbox"
+                  checked={estimationConfirmed}
+                  onChange={(event) => setEstimationConfirmed(event.target.checked)}
+                />
+                <span>
+                  <CheckCircle2 aria-hidden="true" />
+                  <strong>I reviewed these source mappings and serving amounts.</strong>
+                  <small>I understand unresolved ingredients are excluded and the result remains estimated.</small>
+                </span>
+              </label>
+              <div className="modal__actions">
+                <button className="button button--quiet" type="button" onClick={() => setEstimationOpen(false)}>
+                  Cancel estimate
+                </button>
+                <button className="button button--primary" type="button" onClick={applyEstimation}>
+                  Apply reviewed estimate
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="nutrition-editor-grid">
             {(['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium'] as const).map((key) => (
               <Field

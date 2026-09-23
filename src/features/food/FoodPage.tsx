@@ -24,7 +24,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, PageHeader, ProgressBar, SegmentedControl, StatusBadge } from '../../components/ui'
 import { createMealSuggestions, type MealSuggestion } from '../../domain/mealSuggestions'
-import { logMealConsumption, moveOrCopyMeal, syncLeftoverForMeal } from '../../domain/mealWorkflow'
+import { logMealConsumption, moveOrCopyMeal, upsertMealWithLeftover } from '../../domain/mealWorkflow'
 import { sumNutrition } from '../../domain/recipe'
 import type { AppData, FoodLogEntry, MealEntry, MealSlot, PackagedFood, Recipe } from '../../domain/types'
 import { addDays, formatDate, makeId, startOfWeek, toLocalDate } from '../../utilities/date'
@@ -111,12 +111,10 @@ export default function FoodPage() {
   }
 
   const saveMeal = (meal: MealEntry) => {
-    updateData((previous) => {
-      const meals = previous.meals.some((item) => item.id === meal.id)
-        ? previous.meals.map((item) => (item.id === meal.id ? meal : item))
-        : [...previous.meals.filter((item) => !(item.date === meal.date && item.slot === meal.slot)), meal]
-      return syncLeftoverForMeal({ ...previous, meals }, meal, new Date().toISOString())
-    }, `${meal.sourceSnapshot.name} planned. Nutrition will count only when consumed servings are recorded.`)
+    updateData(
+      (previous) => upsertMealWithLeftover(previous, meal, new Date().toISOString()),
+      `${meal.sourceSnapshot.name} planned. Nutrition will count only when consumed servings are recorded.`,
+    )
     setMealOpen(false)
     setEditingMeal(undefined)
   }
@@ -258,6 +256,7 @@ export default function FoodPage() {
       <RecipeEditor
         open={recipeOpen}
         recipe={editingRecipe}
+        packagedFoods={data.packagedFoods}
         onClose={() => {
           setRecipeOpen(false)
           setEditingRecipe(undefined)
@@ -507,7 +506,8 @@ function PlannerView({
   updateData: ReturnType<typeof useApp>['updateData']
 }) {
   const [generation, setGeneration] = useState(0)
-  const [locked, setLocked] = useState<Set<string>>(() => new Set())
+  const [slotGenerations, setSlotGenerations] = useState<Record<string, number>>({})
+  const [lockedSuggestions, setLockedSuggestions] = useState<Map<string, MealSuggestion>>(() => new Map())
   const targets = useMemo(
     () =>
       days.flatMap((day) =>
@@ -515,10 +515,26 @@ function PlannerView({
       ),
     [data.settings.mealPlanning.preferredSlots, days],
   )
-  const suggestions = useMemo(
-    () => createMealSuggestions(data, targets, locked, generation),
-    [data, generation, locked, targets],
-  )
+  const suggestions = useMemo(() => {
+    const generated = createMealSuggestions(
+      data,
+      targets,
+      new Set(),
+      generation,
+      new Map(Object.entries(slotGenerations)),
+    )
+    return generated.map((suggestion) => lockedSuggestions.get(`${suggestion.date}:${suggestion.slot}`) ?? suggestion)
+  }, [data, generation, lockedSuggestions, slotGenerations, targets])
+
+  const changeGeneration = (keys: string[]) => {
+    setSlotGenerations((current) => {
+      const next = { ...current }
+      keys.forEach((key) => {
+        if (!lockedSuggestions.has(key)) next[key] = (next[key] ?? 0) + 1
+      })
+      return next
+    })
+  }
 
   const acceptSuggestion = (suggestion: MealSuggestion) => {
     const timestamp = new Date().toISOString()
@@ -567,10 +583,7 @@ function PlannerView({
     }
     if (meal)
       updateData(
-        (previous) => ({
-          ...previous,
-          meals: [...previous.meals.filter((item) => !(item.date === meal.date && item.slot === meal.slot)), meal],
-        }),
+        (previous) => upsertMealWithLeftover(previous, meal, timestamp),
         `${meal.sourceSnapshot.name} accepted from Smart suggestions.`,
       )
   }
@@ -610,14 +623,14 @@ function PlannerView({
             type="button"
             onClick={() => setGeneration((value) => value + 1)}
           >
-            <RefreshCw aria-hidden="true" /> Regenerate
+            <RefreshCw aria-hidden="true" /> Regenerate week
           </button>
         </div>
         {suggestions.length ? (
           <div className="suggestion-list">
             {suggestions.slice(0, 5).map((suggestion) => {
               const key = `${suggestion.date}:${suggestion.slot}`
-              const isLocked = locked.has(key)
+              const isLocked = lockedSuggestions.has(key)
               return (
                 <article key={suggestion.id}>
                   <div>
@@ -634,10 +647,10 @@ function PlannerView({
                       type="button"
                       aria-label={`${isLocked ? 'Unlock' : 'Lock'} suggestion for ${suggestion.date} ${suggestion.slot}`}
                       onClick={() =>
-                        setLocked((current) => {
-                          const next = new Set(current)
+                        setLockedSuggestions((current) => {
+                          const next = new Map(current)
                           if (next.has(key)) next.delete(key)
-                          else next.add(key)
+                          else next.set(key, suggestion)
                           return next
                         })
                       }
@@ -648,9 +661,23 @@ function PlannerView({
                       className="button button--quiet"
                       type="button"
                       disabled={isLocked}
-                      onClick={() => setGeneration((value) => value + 1)}
+                      onClick={() => changeGeneration([key])}
                     >
-                      Replace
+                      Replace slot
+                    </button>
+                    <button
+                      className="button button--quiet"
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() =>
+                        changeGeneration(
+                          targets
+                            .filter((target) => target.date === suggestion.date)
+                            .map((target) => `${target.date}:${target.slot}`),
+                        )
+                      }
+                    >
+                      Regenerate day
                     </button>
                     <button
                       className="button button--primary"

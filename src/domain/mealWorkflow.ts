@@ -37,6 +37,22 @@ export const syncLeftoverForMeal = (data: AppData, meal: MealEntry, timestamp: s
   return { ...data, leftovers }
 }
 
+export const upsertMealWithLeftover = (data: AppData, meal: MealEntry, timestamp: string): AppData => {
+  const displaced = data.meals.find((item) => item.id !== meal.id && item.date === meal.date && item.slot === meal.slot)
+  const meals = data.meals.some((item) => item.id === meal.id)
+    ? data.meals.map((item) => (item.id === meal.id ? meal : item))
+    : [...data.meals.filter((item) => !(item.date === meal.date && item.slot === meal.slot)), meal]
+  const withoutDisplaced = displaced
+    ? {
+        ...data,
+        meals,
+        leftovers: data.leftovers.filter((leftover) => leftover.sourceMealId !== displaced.id),
+        foodLog: data.foodLog.filter((entry) => entry.sourceSnapshot.sourceId !== `meal:${displaced.id}`),
+      }
+    : { ...data, meals }
+  return syncLeftoverForMeal(withoutDisplaced, meal, timestamp)
+}
+
 export const logMealConsumption = (
   data: AppData,
   mealId: string,

@@ -15,6 +15,7 @@ import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, Field, Modal, StatusBadge } from '../../components/ui'
+import { upsertMealWithLeftover } from '../../domain/mealWorkflow'
 import { convertForSystem } from '../../domain/measurements'
 import { formatQuantity, scaledIngredients } from '../../domain/recipe'
 import type { MealEntry, MealSlot, Recipe } from '../../domain/types'
@@ -58,6 +59,8 @@ export default function RecipePage() {
   const addToPlan = (form: HTMLFormElement) => {
     const values = new FormData(form)
     const timestamp = new Date().toISOString()
+    const plannedServings = Number(values.get('servings'))
+    const preparedServings = Number(values.get('preparedServings'))
     const entry: MealEntry = {
       id: makeId('meal'),
       createdAt: timestamp,
@@ -66,9 +69,9 @@ export default function RecipePage() {
       date: String(values.get('date')),
       slot: String(values.get('slot')) as MealSlot,
       recipeId: recipe.id,
-      servings: Number(values.get('servings')),
-      preparedServings: Number(values.get('preparedServings')),
-      consumedServings: 0,
+      servings: plannedServings,
+      preparedServings,
+      consumedServings: Math.min(plannedServings, preparedServings),
       sourceSnapshot: {
         sourceType: 'recipe',
         sourceId: recipe.id,
@@ -80,11 +83,8 @@ export default function RecipePage() {
       },
     }
     updateData(
-      (previous) => ({
-        ...previous,
-        meals: [...previous.meals.filter((meal) => !(meal.date === entry.date && meal.slot === entry.slot)), entry],
-      }),
-      `${recipe.name} added to your meal plan. Nutrition will count after consumption is recorded.`,
+      (previous) => upsertMealWithLeftover(previous, entry, timestamp),
+      `${recipe.name} added to your meal plan.`,
     )
     setPlanOpen(false)
   }
@@ -297,7 +297,13 @@ export default function RecipePage() {
           </div>
         </form>
       </Modal>
-      <RecipeEditor open={editOpen} recipe={recipe} onClose={() => setEditOpen(false)} onSave={saveRecipe} />
+      <RecipeEditor
+        open={editOpen}
+        recipe={recipe}
+        packagedFoods={data.packagedFoods}
+        onClose={() => setEditOpen(false)}
+        onSave={saveRecipe}
+      />
     </>
   )
 }

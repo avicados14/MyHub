@@ -1,4 +1,68 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+import { createTestFixtureData } from '../src/test/fixtures'
+import type { AppData, PackagedFood } from '../src/domain/types'
+
+const seedAppData = async (page: Page, data: AppData, route: string) => {
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+  await page.evaluate(async (state) => {
+    const request = indexedDB.open('myhub-local', 2)
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onupgradeneeded = () => {
+        const next = request.result
+        if (!next.objectStoreNames.contains('application')) next.createObjectStore('application')
+        if (!next.objectStoreNames.contains('credentials')) next.createObjectStore('credentials')
+      }
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction('application', 'readwrite')
+      transaction.objectStore('application').put(state, 'state')
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+    database.close()
+  }, data)
+  await page.reload()
+  await page.waitForLoadState('networkidle')
+  await page.goto(route)
+  await page.waitForLoadState('networkidle')
+}
+
+const readAppData = async (page: Page): Promise<AppData> =>
+  page.evaluate(async () => {
+    const request = indexedDB.open('myhub-local', 2)
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const state = await new Promise<AppData>((resolve, reject) => {
+      const get = database.transaction('application', 'readonly').objectStore('application').get('state')
+      get.onsuccess = () => resolve(get.result as AppData)
+      get.onerror = () => reject(get.error)
+    })
+    database.close()
+    return state
+  })
+
+const riceSource = (timestamp: string): PackagedFood => ({
+  id: 'package-rice',
+  createdAt: timestamp,
+  updatedAt: timestamp,
+  source: 'imported',
+  name: 'rice',
+  brand: 'Test source',
+  barcode: '12345678',
+  servingSize: { quantity: 1, unit: 'cup' },
+  nutritionPerServing: { calories: 100, protein: 4, carbs: 20, fat: 1, fiber: 2, sodium: 10 },
+  nutritionProvenance: {
+    kind: 'database',
+    capturedAt: timestamp,
+    estimated: true,
+    sourceLabel: 'Open Food Facts (read-only import)',
+  },
+})
 
 test.describe('food v2 workflows', () => {
   test('creates and edits a structured recipe with a visible review workflow', async ({ page }) => {
@@ -66,5 +130,117 @@ test.describe('food v2 workflows', () => {
     await page.getByText('Meal planner', { exact: true }).click()
     await expect(page.getByText('1.5 left')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Leftovers' })).toBeVisible()
+  })
+
+  test('searches Open Food Facts text without live network and reuses explicit package confirmation', async ({
+    page,
+  }) => {
+    await page.route('https://world.openfoodfacts.org/cgi/search.pl?**', async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          products: [
+            {
+              code: '12345678',
+              product_name: 'Crunchy peanut butter',
+              brands: 'Example Foods',
+              serving_size: '32 g',
+              nutriments: {
+                'energy-kcal_serving': 190,
+                proteins_serving: 7,
+                carbohydrates_serving: 8,
+                fat_serving: 16,
+                fiber_serving: 2,
+                sodium_serving: 0.14,
+              },
+            },
+          ],
+        }),
+      })
+    })
+    await page.goto('/#/food?view=packages')
+    await page.getByRole('button', { name: 'Add packaged food' }).first().click()
+    const editor = page.getByRole('dialog', { name: 'Add packaged food' })
+    await editor.getByText('Text search', { exact: true }).click()
+    await expect(editor.getByText(/public, volunteer database/)).toBeVisible()
+    await editor.getByLabel('Product or brand').fill('peanut butter')
+    await editor.getByRole('button', { name: 'Search products' }).click()
+    await expect(editor.getByText('Crunchy peanut butter', { exact: true })).toBeVisible()
+    expect((await readAppData(page)).packagedFoods).toEqual([])
+    await editor.getByRole('button', { name: 'Review this result' }).click()
+    await expect(editor.getByLabel('Product name')).toHaveValue('Crunchy peanut butter')
+    await editor.getByRole('button', { name: 'Save packaged food' }).click()
+    await expect(editor.getByRole('alert')).toContainText('Confirm that you reviewed')
+    await editor.getByText('I compared the imported values with the package label.').click()
+    await editor.getByRole('button', { name: 'Save packaged food' }).click()
+    await expect(page.getByRole('heading', { name: 'Crunchy peanut butter' })).toBeVisible()
+  })
+
+  test('reviews transparent ingredient nutrition estimation, keeps unresolved items, and permits correction', async ({
+    page,
+  }) => {
+    const data = createTestFixtureData(new Date(2026, 8, 22))
+    data.packagedFoods = [riceSource(data.initializedAt)]
+    await seedAppData(page, data, '/#/food/recipes/recipe-burrito')
+    await page.getByRole('button', { name: 'Edit recipe' }).click()
+    const editor = page.getByRole('dialog', { name: 'Edit Chicken Burrito Bowls' })
+    await editor.getByRole('button', { name: 'Estimate from ingredients' }).click()
+    await expect(editor.getByText('3 unresolved · 1 source labels')).toBeVisible()
+    await expect(editor.getByText('Quantity is unresolved.')).toBeVisible()
+    await expect(editor.getByText('Estimated per serving: 50 kcal')).toBeVisible()
+    await editor.getByText('I reviewed these source mappings and serving amounts.').click()
+    await editor.getByRole('button', { name: 'Apply reviewed estimate' }).click()
+    await expect(editor.getByText('Needs review', { exact: true })).toBeVisible()
+    await editor.getByLabel('Calories (kcal)').fill('55')
+    await editor.getByRole('button', { name: 'Mark reviewed' }).click()
+    await editor.getByLabel('Original yield').fill('4')
+    await editor.getByLabel('Current yield').fill('4')
+    await editor.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByText('55 kcal', { exact: true })).toBeVisible()
+    const stored = await readAppData(page)
+    const recipe = stored.recipes.find((item) => item.id === 'recipe-burrito')
+    expect(recipe?.nutritionPerServing.calories).toBe(55)
+    expect(recipe?.nutritionProvenance).toEqual(
+      expect.objectContaining({
+        kind: 'estimated',
+        estimated: true,
+        sourceLabel: expect.stringContaining('Open Food Facts'),
+      }),
+    )
+  })
+
+  test('recipe detail add-to-plan creates prepared-minus-consumed leftovers', async ({ page }) => {
+    const data = createTestFixtureData(new Date(2026, 8, 22))
+    await seedAppData(page, data, '/#/food/recipes/recipe-burrito')
+    await page.getByRole('button', { name: 'Add to meal plan' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add to meal plan' })
+    await dialog.getByLabel('Date').fill('2026-09-30')
+    await dialog.getByLabel('Servings to eat').fill('1.5')
+    await dialog.getByLabel('Prepared servings').fill('4')
+    await dialog.getByRole('button', { name: 'Add to plan' }).click()
+    await expect
+      .poll(async () => {
+        const stored = await readAppData(page)
+        const meal = stored.meals.find((item) => item.date === '2026-09-30' && item.slot === 'dinner')
+        const leftover = stored.leftovers.find((item) => item.sourceMealId === meal?.id)
+        return { consumed: meal?.consumedServings, remaining: leftover?.servingsRemaining }
+      })
+      .toEqual({ consumed: 1.5, remaining: 2.5 })
+  })
+
+  test('regenerates slots, days, and weeks while preserving temporary suggestion locks', async ({ page }) => {
+    const data = createTestFixtureData(new Date(2026, 8, 22))
+    data.meals = []
+    data.foodLog = []
+    await seedAppData(page, data, '/#/food?view=planner')
+    const suggestion = page.locator('.suggestion-list article').first()
+    const initial = await suggestion.locator('strong').innerText()
+    await suggestion.getByRole('button', { name: /Lock suggestion/ }).click()
+    await page.getByRole('button', { name: 'Regenerate week' }).click()
+    await expect(suggestion.locator('strong')).toHaveText(initial)
+    await suggestion.getByRole('button', { name: /Unlock suggestion/ }).click()
+    await suggestion.getByRole('button', { name: 'Replace slot' }).click()
+    await expect(suggestion.locator('strong')).not.toHaveText(initial)
+    await expect(suggestion.getByRole('button', { name: 'Regenerate day' })).toBeVisible()
   })
 })

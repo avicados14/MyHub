@@ -233,6 +233,91 @@
   font-size: 10px;
 }
 
+.package-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.package-search-results,
+.nutrition-estimation__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.package-search-results li,
+.nutrition-estimation__list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.package-search-results strong,
+.package-search-results small,
+.nutrition-estimation__list strong,
+.nutrition-estimation__list small {
+  display: block;
+}
+
+.package-search-results small,
+.nutrition-estimation__list small {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.nutrition-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.nutrition-estimation {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--yellow-strong) 28%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--yellow) 28%, var(--surface));
+}
+
+.nutrition-estimation h4,
+.nutrition-estimation p {
+  margin-bottom: 4px;
+}
+
+.nutrition-estimation__list article {
+  grid-template-columns: minmax(140px, 1fr) minmax(180px, 1fr) minmax(130px, 0.5fr);
+}
+
+.nutrition-estimation__list article.is-unresolved {
+  border-color: color-mix(in srgb, var(--yellow-strong) 38%, var(--line));
+}
+
+.nutrition-estimation__summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.nutrition-estimation__summary strong {
+  color: var(--ink);
+}
+
 .import-fallback {
   display: flex;
   align-items: flex-start;
@@ -769,6 +854,17 @@
   .nutrition-editor-grid,
   .package-grid {
     grid-template-columns: 1fr;
+  }
+
+  .package-search-form,
+  .package-search-results li,
+  .nutrition-estimation__list article {
+    grid-template-columns: 1fr;
+  }
+
+  .nutrition-heading-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .ingredient-editor-row {

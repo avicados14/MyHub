@@ -10,18 +10,25 @@ const OPEN_FOOD_FACTS_FIELDS = [
   'image_front_url',
 ].join(',')
 
+interface OffProduct {
+  code?: string
+  product_name?: string
+  brands?: string
+  serving_size?: string
+  serving_quantity?: number
+  image_front_url?: string
+  nutriments?: Record<string, unknown>
+}
+
 interface OffResponse {
-  status?: number
+  status?: number | string
+  result?: { id?: string }
   status_verbose?: string
-  product?: {
-    code?: string
-    product_name?: string
-    brands?: string
-    serving_size?: string
-    serving_quantity?: number
-    image_front_url?: string
-    nutriments?: Record<string, unknown>
-  }
+  product?: OffProduct
+}
+
+interface OffSearchResponse {
+  products?: OffProduct[]
 }
 
 export interface OpenFoodFactsDraft {
@@ -34,6 +41,10 @@ export interface OpenFoodFactsDraft {
   image?: string
   provenance: NutritionProvenance
   warnings: string[]
+}
+
+export interface OpenFoodFactsSearchResult extends OpenFoodFactsDraft {
+  resultId: string
 }
 
 const numeric = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null)
@@ -50,16 +61,7 @@ const parseServing = (label: string | undefined, quantity: number | undefined): 
   return { quantity: quantity && quantity > 0 ? quantity : 100, unit: 'g' }
 }
 
-export const lookupOpenFoodFacts = async (barcode: string, signal?: AbortSignal): Promise<OpenFoodFactsDraft> => {
-  const normalized = barcode.replace(/\D/g, '')
-  if (normalized.length < 8 || normalized.length > 14) throw new Error('Enter an 8–14 digit UPC or EAN barcode.')
-  const endpoint = `https://world.openfoodfacts.org/api/v2/product/${normalized}.json?fields=${encodeURIComponent(OPEN_FOOD_FACTS_FIELDS)}`
-  const response = await fetch(endpoint, { signal, headers: { Accept: 'application/json' } })
-  if (!response.ok) throw new Error(`Open Food Facts returned ${response.status}. Enter the product manually instead.`)
-  const body = (await response.json()) as OffResponse
-  if (body.status !== 1 || !body.product)
-    throw new Error('No Open Food Facts product was found. Enter the label manually instead.')
-  const product = body.product
+const draftFromProduct = (product: OffProduct, fallbackBarcode: string): OpenFoodFactsDraft => {
   const values = product.nutriments ?? {}
   const serving = parseServing(product.serving_size, product.serving_quantity)
   const usedServingValues = Object.keys(values).some((key) => key.endsWith('_serving'))
@@ -83,10 +85,11 @@ export const lookupOpenFoodFacts = async (barcode: string, signal?: AbortSignal)
   }
   if (Object.values(nutrition).every((value) => value === 0))
     warnings.push('Nutrition values are missing. Check the package label before saving.')
+  const barcode = product.code ?? fallbackBarcode
   return {
     name: product.product_name?.trim() || 'Unnamed packaged food',
     brand: product.brands?.trim() || '',
-    barcode: product.code ?? normalized,
+    barcode,
     servingQuantity: serving.quantity,
     servingUnit: serving.unit,
     nutrition,
@@ -96,9 +99,77 @@ export const lookupOpenFoodFacts = async (barcode: string, signal?: AbortSignal)
       capturedAt: new Date().toISOString(),
       estimated: true,
       sourceLabel: 'Open Food Facts (read-only import)',
-      sourceUrl: `https://world.openfoodfacts.org/product/${normalized}`,
+      sourceUrl: `https://world.openfoodfacts.org/product/${barcode}`,
     },
     warnings,
+  }
+}
+
+const requestHeaders = {
+  Accept: 'application/json',
+  'X-User-Agent': 'MyHub/0.1 (https://github.com/avicados14/MyHub)',
+}
+
+const networkError = (action: string, cause: unknown): Error => {
+  if (cause instanceof DOMException && cause.name === 'AbortError') return cause
+  return new Error(
+    `${action} could not reach Open Food Facts. Your browser, network, or the public service may be blocking the request; enter the package manually instead.`,
+  )
+}
+
+export const lookupOpenFoodFacts = async (barcode: string, signal?: AbortSignal): Promise<OpenFoodFactsDraft> => {
+  const normalized = barcode.replace(/\D/g, '')
+  if (normalized.length < 8 || normalized.length > 14) throw new Error('Enter an 8–14 digit UPC or EAN barcode.')
+  const endpoint = `https://world.openfoodfacts.org/api/v3.6/product/${normalized}.json?fields=${encodeURIComponent(OPEN_FOOD_FACTS_FIELDS)}`
+  try {
+    const response = await fetch(endpoint, { signal, headers: requestHeaders })
+    if (!response.ok)
+      throw new Error(`Open Food Facts returned ${response.status}. Enter the product manually instead.`)
+    const body = (await response.json()) as OffResponse
+    if ((body.status !== 'success' && body.status !== 1) || !body.product)
+      throw new Error('No Open Food Facts product was found. Enter the label manually instead.')
+    return draftFromProduct(body.product, normalized)
+  } catch (cause) {
+    if (cause instanceof Error && /Open Food Facts returned|No Open Food Facts product/.test(cause.message)) throw cause
+    throw networkError('Barcode lookup', cause)
+  }
+}
+
+export const searchOpenFoodFacts = async (
+  query: string,
+  signal?: AbortSignal,
+): Promise<OpenFoodFactsSearchResult[]> => {
+  const normalized = query.trim().replaceAll(/\s+/g, ' ')
+  if (normalized.length < 2) throw new Error('Enter at least two characters to search.')
+  const parameters = new URLSearchParams({
+    search_terms: normalized,
+    search_simple: '1',
+    action: 'process',
+    json: '1',
+    page: '1',
+    page_size: '8',
+    fields: OPEN_FOOD_FACTS_FIELDS,
+  })
+  try {
+    // This is Open Food Facts' documented full-text endpoint. Search runs only on submit,
+    // never on each keystroke, to respect the public search rate limit.
+    const response = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${parameters}`, {
+      signal,
+      headers: requestHeaders,
+    })
+    if (!response.ok)
+      throw new Error(`Open Food Facts search returned ${response.status}. Try again or enter it manually.`)
+    const body = (await response.json()) as OffSearchResponse
+    return (body.products ?? [])
+      .filter((product) => Boolean(product.code && product.product_name))
+      .slice(0, 8)
+      .map((product) => {
+        const draft = draftFromProduct(product, product.code ?? '')
+        return { ...draft, resultId: `${draft.barcode}:${draft.name}` }
+      })
+  } catch (cause) {
+    if (cause instanceof Error && /Open Food Facts search returned/.test(cause.message)) throw cause
+    throw networkError('Text search', cause)
   }
 }
 
