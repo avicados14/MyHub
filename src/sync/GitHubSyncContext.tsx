@@ -386,7 +386,8 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
           dataRef.current = remoteData
           replaceData(remoteData, 'Supabase loaded the current encrypted MyHub data.')
           await persistCredential(next)
-          await performSync()
+          setStatus('current')
+          void withSerializedOperation(() => performSync())
         } finally {
           setPrivateAccessReady(true)
         }

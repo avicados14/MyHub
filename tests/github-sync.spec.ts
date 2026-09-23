@@ -23,6 +23,8 @@ interface RemoteState {
   content: string | null
   sha: string | null
   repositoryPrivate: boolean
+  blockContentReads: boolean
+  pendingContentReads: Array<() => void>
   writes: Array<Record<string, unknown>>
   deletes: Array<Record<string, unknown>>
   repositoryChecks: number
@@ -55,6 +57,9 @@ const installGitHubMock = async (page: Page, state: RemoteState) => {
       return
     }
     if (request.method() === 'GET') {
+      if (state.blockContentReads) {
+        await new Promise<void>((resolve) => state.pendingContentReads.push(resolve))
+      }
       if (!state.content || !state.sha) {
         await json(route, { message: 'Not Found' }, 404)
         return
@@ -139,6 +144,8 @@ const freshRemoteState = (): RemoteState => ({
   content: null,
   sha: null,
   repositoryPrivate: true,
+  blockContentReads: false,
+  pendingContentReads: [],
   writes: [],
   deletes: [],
   repositoryChecks: 0,
@@ -210,11 +217,15 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
   const phonePage = await phone.newPage()
   await installGitHubMock(phonePage, state)
   await installPrivateAccessMock(phonePage, privateAccess)
+  state.blockContentReads = true
   await phonePage.goto(accessLink)
 
   await expect(
     phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
   ).toBeVisible()
+  await expect.poll(() => state.pendingContentReads.length).toBe(1)
+  state.blockContentReads = false
+  for (const release of state.pendingContentReads.splice(0)) release()
   await expect.poll(() => phonePage.url()).not.toContain('id=')
   await expect.poll(() => phonePage.url()).not.toContain('key=')
   expect(state.writes).toHaveLength(1)
