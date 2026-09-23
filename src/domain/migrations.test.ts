@@ -8,7 +8,16 @@ const base = {
   updatedAt: '2025-01-02T00:00:00.000Z',
   source: 'manual',
 }
-const nutrition = { calories: 400, protein: 20, carbs: 50, fat: 10, fiber: 8, sodium: 500 }
+const nutrition = {
+  calories: 400,
+  protein: 20,
+  carbs: 50,
+  fat: 10,
+  sugar: 12,
+  saturatedFat: 3,
+  fiber: 8,
+  sodium: 500,
+}
 
 const v1Data = {
   schemaVersion: 1,

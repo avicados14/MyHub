@@ -83,6 +83,8 @@ export interface Nutrition {
   protein: number
   carbs: number
   fat: number
+  sugar?: number
+  saturatedFat?: number
   fiber: number
   sodium: number
 }
@@ -226,6 +228,9 @@ export interface GroceryList extends EntityBase {
   name: string
   items: GroceryItem[]
   status: 'draft' | 'shopping' | 'completed'
+  sourceStartDate?: string
+  sourceEndDate?: string
+  sourceMealIds?: string[]
   completedAt?: string
 }
 
@@ -233,6 +238,9 @@ export interface GroceryHistoryEntry extends EntityBase {
   name: string
   completedAt: string
   items: GroceryItem[]
+  sourceStartDate?: string
+  sourceEndDate?: string
+  sourceMealIds?: string[]
 }
 
 export interface AvoidTimeRange {
@@ -260,6 +268,7 @@ export interface MealPlanningPreferences {
   preferredSlots: MealSlot[]
   targetPrepServings: number
   favorAvailablePantry: boolean
+  lateDayNutritionBias?: boolean
 }
 
 export interface GroceryCategorySetting {

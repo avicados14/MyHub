@@ -12,6 +12,35 @@ describe('smart meal suggestions', () => {
     expect(createMealSuggestions(data, targets)).toEqual(createMealSuggestions(data, targets))
   })
 
+  it('falls back to review-marked recipes when the whole imported cookbook needs review', () => {
+    const data = createTestFixtureData(new Date(2026, 8, 22))
+    data.meals = []
+    data.recipes = data.recipes.map((recipe) => ({ ...recipe, needsReview: true }))
+
+    const suggestion = createMealSuggestions(data, [{ date: '2026-09-28', slot: 'dinner' }])[0]
+
+    expect(suggestion).toBeDefined()
+    expect(suggestion?.reasons).toContain('Recipe details are marked for review')
+  })
+
+  it('moves most target calories and protein to dinner and snack when late-day timing is enabled', () => {
+    const data = createTestFixtureData(new Date(2026, 8, 22))
+    data.meals = []
+    data.foodLog = []
+    data.settings.mealPlanning.favorAvailablePantry = false
+    data.settings.mealPlanning.lateDayNutritionBias = true
+    const light = { ...structuredClone(data.recipes[0]!), id: 'recipe-light', category: 'Any' }
+    light.nutritionPerServing = { ...light.nutritionPerServing, calories: 150, protein: 9 }
+    const substantial = { ...structuredClone(data.recipes[1]!), id: 'recipe-substantial', category: 'Any' }
+    substantial.nutritionPerServing = { ...substantial.nutritionPerServing, calories: 900, protein: 55 }
+    data.recipes = [light, substantial]
+
+    expect(createMealSuggestions(data, [{ date: '2026-09-28', slot: 'breakfast' }])[0]?.sourceId).toBe('recipe-light')
+    expect(createMealSuggestions(data, [{ date: '2026-09-28', slot: 'dinner' }])[0]?.sourceId).toBe(
+      'recipe-substantial',
+    )
+  })
+
   it('prefers available leftovers in favor-leftovers mode', () => {
     const data = createTestFixtureData(new Date(2026, 8, 22))
     data.settings.mealPlanning.mode = 'favor-leftovers'

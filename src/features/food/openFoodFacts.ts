@@ -77,6 +77,8 @@ const draftFromProduct = (product: OffProduct, fallbackBarcode: string): OpenFoo
     protein: nutriment(values, 'proteins', servingGrams) ?? 0,
     carbs: nutriment(values, 'carbohydrates', servingGrams) ?? 0,
     fat: nutriment(values, 'fat', servingGrams) ?? 0,
+    sugar: nutriment(values, 'sugars', servingGrams) ?? 0,
+    saturatedFat: nutriment(values, 'saturated-fat', servingGrams) ?? 0,
     fiber: nutriment(values, 'fiber', servingGrams) ?? 0,
     sodium: (() => {
       const sodium = nutriment(values, 'sodium', servingGrams)

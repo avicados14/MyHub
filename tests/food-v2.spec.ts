@@ -174,6 +174,18 @@ test.describe('food v2 workflows', () => {
     await editor.getByText('I compared the imported values with the package label.').click()
     await editor.getByRole('button', { name: 'Save packaged food' }).click()
     await expect(page.getByRole('heading', { name: 'Crunchy peanut butter' })).toBeVisible()
+
+    await page.getByText('Nutrition', { exact: true }).click()
+    await page.getByRole('button', { name: 'Log food' }).click()
+    const logEditor = page.getByRole('dialog', { name: 'Log food' })
+    await logEditor.getByText('Barcode/Search', { exact: true }).click()
+    await logEditor.getByLabel('Barcode or food name').fill('peanut butter')
+    await logEditor.getByRole('button', { name: 'Search Open Food Facts' }).click()
+    await logEditor.getByRole('button', { name: /Crunchy peanut butter/ }).click()
+    await expect(logEditor.getByLabel('Food name', { exact: true })).toHaveValue('Crunchy peanut butter')
+    await logEditor.getByText('I reviewed the values.').click()
+    await logEditor.getByRole('button', { name: 'Log consumed food', exact: true }).click()
+    await expect.poll(async () => (await readAppData(page)).foodLog.at(-1)?.name).toBe('Crunchy peanut butter')
   })
 
   test('reviews transparent ingredient nutrition estimation, keeps unresolved items, and permits correction', async ({
@@ -209,13 +221,13 @@ test.describe('food v2 workflows', () => {
     )
   })
 
-  test('recipe detail add-to-plan creates prepared-minus-consumed leftovers', async ({ page }) => {
+  test('recipe planning preserves all prepared servings until consumption is recorded', async ({ page }) => {
     const data = createTestFixtureData(new Date(2026, 8, 22))
     await seedAppData(page, data, '/#/food/recipes/recipe-burrito')
     await page.getByRole('button', { name: 'Add to meal plan' }).click()
     const dialog = page.getByRole('dialog', { name: 'Add to meal plan' })
     await dialog.getByLabel('Date').fill('2026-09-30')
-    await dialog.getByLabel('Servings to eat').fill('1.5')
+    await dialog.getByLabel('Planned servings').fill('1.5')
     await dialog.getByLabel('Prepared servings').fill('4')
     await dialog.getByRole('button', { name: 'Add to plan' }).click()
     await expect
@@ -225,15 +237,17 @@ test.describe('food v2 workflows', () => {
         const leftover = stored.leftovers.find((item) => item.sourceMealId === meal?.id)
         return { consumed: meal?.consumedServings, remaining: leftover?.servingsRemaining }
       })
-      .toEqual({ consumed: 1.5, remaining: 2.5 })
+      .toEqual({ consumed: 0, remaining: 4 })
   })
 
   test('regenerates slots, days, and weeks while preserving temporary suggestion locks', async ({ page }) => {
     const data = createTestFixtureData(new Date(2026, 8, 22))
     data.meals = []
     data.foodLog = []
+    data.recipes = data.recipes.map((recipe) => ({ ...recipe, needsReview: true }))
     await seedAppData(page, data, '/#/food?view=planner')
     const suggestion = page.locator('.suggestion-list article').first()
+    await expect(suggestion.getByText('Recipe details are marked for review')).toBeVisible()
     const initial = await suggestion.locator('strong').innerText()
     await suggestion.getByRole('button', { name: /Lock suggestion/ }).click()
     await page.getByRole('button', { name: 'Regenerate week' }).click()

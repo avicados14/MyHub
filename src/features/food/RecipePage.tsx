@@ -17,6 +17,7 @@ import { useApp } from '../../app/AppContext'
 import { Card, Field, Modal, StatusBadge } from '../../components/ui'
 import { upsertMealWithLeftover } from '../../domain/mealWorkflow'
 import { convertForSystem } from '../../domain/measurements'
+import { NUTRITION_FIELDS } from '../../domain/nutrition'
 import { formatQuantity, scaledIngredients } from '../../domain/recipe'
 import type { MealEntry, MealSlot, Recipe } from '../../domain/types'
 import { makeId, toLocalDate } from '../../utilities/date'
@@ -71,7 +72,7 @@ export default function RecipePage() {
       recipeId: recipe.id,
       servings: plannedServings,
       preparedServings,
-      consumedServings: Math.min(plannedServings, preparedServings),
+      consumedServings: 0,
       sourceSnapshot: {
         sourceType: 'recipe',
         sourceId: recipe.id,
@@ -245,11 +246,11 @@ export default function RecipePage() {
           </StatusBadge>
         </div>
         <dl>
-          {Object.entries(recipe.nutritionPerServing).map(([key, value]) => (
+          {NUTRITION_FIELDS.map(({ key, label, unit }) => (
             <div key={key}>
-              <dt>{key}</dt>
+              <dt>{label}</dt>
               <dd>
-                {value} {key === 'calories' ? 'kcal' : key === 'sodium' ? 'mg' : 'g'}
+                {recipe.nutritionPerServing[key] ?? 0} {unit}
               </dd>
             </div>
           ))}
@@ -280,7 +281,7 @@ export default function RecipePage() {
             </select>
           </Field>
           <div className="form-grid__split">
-            <Field label="Servings to eat">
+            <Field label="Planned servings">
               <input name="servings" type="number" min="0.25" step="0.25" defaultValue={servings} required />
             </Field>
             <Field label="Prepared servings">

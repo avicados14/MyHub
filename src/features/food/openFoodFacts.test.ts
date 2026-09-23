@@ -13,6 +13,8 @@ const product = (code = '12345678', name = 'Test Bar') => ({
     proteins_serving: 6,
     carbohydrates_serving: 20,
     fat_serving: 8,
+    sugars_serving: 9,
+    'saturated-fat_serving': 2.5,
     fiber_serving: 3,
     sodium_serving: 0.2,
   },
@@ -27,7 +29,16 @@ describe('Open Food Facts lookup', () => {
     )
     const draft = await lookupOpenFoodFacts('12345678')
     expect(fetchMock.mock.calls[0]?.[0]).toContain('/api/v3.6/product/12345678.json?fields=')
-    expect(draft.nutrition).toEqual({ calories: 180, protein: 6, carbs: 20, fat: 8, fiber: 3, sodium: 200 })
+    expect(draft.nutrition).toEqual({
+      calories: 180,
+      protein: 6,
+      carbs: 20,
+      fat: 8,
+      sugar: 9,
+      saturatedFat: 2.5,
+      fiber: 3,
+      sodium: 200,
+    })
     expect(draft.provenance).toEqual(expect.objectContaining({ kind: 'database', estimated: true }))
   })
 

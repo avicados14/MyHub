@@ -180,6 +180,9 @@ const addReview = (item: Omit<GroceryItem, 'id' | 'createdAt' | 'updatedAt' | 's
   item.reviewReason = item.reviewReason ? `${item.reviewReason} ${reason}` : reason
 }
 
+export const groceryMealsForWindow = (meals: MealEntry[], startDate: string, endDate: string): MealEntry[] =>
+  meals.filter((meal) => meal.date >= startDate && meal.date <= endDate)
+
 export const aggregateGroceryItems = (
   meals: MealEntry[],
   recipes: Recipe[],
@@ -194,12 +197,25 @@ export const aggregateGroceryItems = (
     if (!meal.recipeId) continue
     const recipe = recipeMap.get(meal.recipeId)
     if (!recipe || !Number.isFinite(recipe.originalYield) || recipe.originalYield <= 0) continue
-    const factor = meal.servings / recipe.originalYield
+    const groceryServings = Math.max(meal.servings, meal.preparedServings)
+    if (!Number.isFinite(groceryServings) || groceryServings <= 0) continue
     for (const ingredient of recipe.ingredients) {
-      if (ingredient.quantity === null || !Number.isFinite(ingredient.quantity) || ingredient.quantity < 0) continue
+      const override = ingredient.scaledOverride
+      const sourceQuantity = override ? override.quantity : ingredient.quantity
+      const sourceUnit = override ? override.unit : ingredient.unit
+      const sourceYield = override ? override.yield : recipe.originalYield
+      if (
+        sourceQuantity === null ||
+        !Number.isFinite(sourceQuantity) ||
+        sourceQuantity < 0 ||
+        !Number.isFinite(sourceYield) ||
+        sourceYield <= 0
+      )
+        continue
+      const factor = groceryServings / sourceYield
       const canonicalName = canonicalizeIngredientName(ingredient.canonicalName || ingredient.name)
       if (!canonicalName) continue
-      const value = toCanonicalQuantity(ingredient.quantity * factor, ingredient.unit)
+      const value = toCanonicalQuantity(sourceQuantity * factor, sourceUnit)
       const unitKey = value.family === 'other' ? normalizedUnitKey(value.unit) : value.family
       const key = `${canonicalName}|${unitKey}`
       const existing = totals.get(key)
@@ -309,6 +325,9 @@ export const copyHistoryEntryToList = (entry: GroceryHistoryEntry, now = new Dat
   source: 'manual',
   name: `${entry.name} copy`,
   status: 'shopping',
+  sourceStartDate: entry.sourceStartDate,
+  sourceEndDate: entry.sourceEndDate,
+  sourceMealIds: entry.sourceMealIds ? [...entry.sourceMealIds] : undefined,
   items: entry.items.map((item) => ({
     ...structuredClone(item),
     id: makeId('grocery'),

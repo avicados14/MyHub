@@ -253,9 +253,20 @@ test('clear all data requires confirmation and restores an empty install', async
   await expect(page.getByRole('heading', { name: 'Homework is clear' })).toBeVisible()
 })
 
+test('settings section links are shareable and stay on the settings route', async ({ page }) => {
+  await page.goto('/#/settings')
+  const githubLink = page.getByRole('link', { name: 'GitHub Sync' })
+  await expect(githubLink).toHaveAttribute('href', /#\/settings\?section=github-sync$/)
+  await githubLink.click()
+  await expect(page).toHaveURL(/#\/settings\?section=github-sync$/)
+  await expect(page.getByRole('heading', { name: 'GitHub Sync' })).toBeInViewport()
+})
+
 test('settings controls are labeled and persist configuration changes', async ({ page }) => {
   await page.goto('/#/settings')
   await page.getByLabel('Appearance').selectOption('dark')
+  await page.getByLabel('Sugar limit').fill('61')
+  await page.getByLabel('Saturated fat limit').fill('26')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
 
   await page.getByRole('button', { name: 'Add time range' }).click()
@@ -275,6 +286,8 @@ test('settings controls are labeled and persist configuration changes', async ({
   await waitForStoredStaple(page, 'Tahini', false)
   await page.reload()
   await expect(page.getByLabel('Appearance')).toHaveValue('dark')
+  await expect(page.getByLabel('Sugar limit')).toHaveValue('61')
+  await expect(page.getByLabel('Saturated fat limit')).toHaveValue('26')
   await expect(page.getByLabel('Label')).toHaveValue('Lab')
   await expect(page.getByLabel('Starts')).toHaveValue('14:00')
   await expect(page.getByLabel('Enable Tahini')).not.toBeChecked()
@@ -334,7 +347,7 @@ test('connected empty-to-history journey persists across reload', async ({ page 
   await page.getByRole('button', { name: 'Add to meal plan' }).click()
   const planDialog = page.getByRole('dialog', { name: 'Add to meal plan' })
   await planDialog.getByRole('combobox', { name: 'Meal', exact: true }).selectOption('dinner')
-  await planDialog.getByRole('spinbutton', { name: 'Servings to eat', exact: true }).fill('2')
+  await planDialog.getByRole('spinbutton', { name: 'Planned servings', exact: true }).fill('2')
   await planDialog.getByRole('spinbutton', { name: 'Prepared servings', exact: true }).fill('5')
   await planDialog.getByRole('button', { name: 'Add to plan' }).click()
 

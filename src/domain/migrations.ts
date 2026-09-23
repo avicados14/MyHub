@@ -1,4 +1,5 @@
 import { createDefaultGroceryCategories, createEmptyData, createUnknownNutritionProvenance } from './defaults'
+import { createZeroNutrition } from './nutrition'
 import type {
   AppData,
   CalendarFeed,
@@ -13,7 +14,7 @@ import type {
 
 export const CURRENT_SCHEMA_VERSION = 2 as const
 
-const ZERO_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
+const ZERO_NUTRITION: Nutrition = createZeroNutrition()
 
 type UnknownRecord = Record<string, unknown>
 
@@ -122,6 +123,8 @@ const asNutrition = (value: unknown): Nutrition => {
     protein: isNumber(value.protein) ? value.protein : 0,
     carbs: isNumber(value.carbs) ? value.carbs : 0,
     fat: isNumber(value.fat) ? value.fat : 0,
+    sugar: isNumber(value.sugar) ? value.sugar : 0,
+    saturatedFat: isNumber(value.saturatedFat) ? value.saturatedFat : 0,
     fiber: isNumber(value.fiber) ? value.fiber : 0,
     sodium: isNumber(value.sodium) ? value.sodium : 0,
   }

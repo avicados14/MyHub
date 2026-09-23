@@ -64,11 +64,11 @@ The base recipe is never repeatedly multiplied, which avoids accumulated roundin
 
 Recipes have structured metadata, source/provenance, notes, review state, a persistent current yield, and per-ingredient overrides that apply at an explicit yield. The measurement catalog normalizes compatible US/metric volume, mass, count, and temperature units; display conversion occurs at the recipe detail edge and never mutates source quantities.
 
-Food-log entries and meal entries store immutable source and nutrition snapshots. Later recipe or packaged-food edits therefore do not rewrite historical nutrition or planned-meal facts. Prepared and consumed servings remain separate; consumed-meal log snapshots update daily nutrition, planned meals do not, and remaining servings cannot become negative. Remaining prepared recipe servings create/update reusable leftover records. Packaged-food records can be entered manually or seeded from a reviewed read-only lookup/label draft.
+Food-log entries and meal entries store immutable source and nutrition snapshots. Later recipe or packaged-food edits therefore do not rewrite historical nutrition or planned-meal facts. Planned, prepared, and consumed servings remain separate. Adding a recipe to the plan initializes consumption at zero; only an explicit consumed-serving edit updates daily nutrition. Remaining servings cannot become negative, and remaining prepared recipe servings create or update reusable leftover records. Packaged-food records can be entered manually or seeded from a reviewed read-only lookup or label draft.
 
 ### Pantry and Grocery
 
-Grocery generation traces planned meals to recipe ingredients. Aggregation is conservative: it combines only matching canonical ingredient names with compatible units. The conversion table normalizes supported mass, volume, and count aliases within their respective families; cooked-versus-dry, custom-unit, and ambiguous cross-family quantities remain separate until the user resolves them.
+Grocery generation first selects persisted meals in the remaining Sunday-to-Saturday planner week. Historical and later-week meals are excluded. Recipe requirements use the greater of planned and prepared servings, then apply the same explicit yield-specific ingredient override shown on the recipe page. Each active list and completed history record persists its start date, end date, and source meal IDs. Aggregation remains conservative: it combines only matching canonical ingredient names with compatible units. The conversion table normalizes supported mass, volume, and count aliases within their respective families; cooked-versus-dry, custom-unit, and ambiguous cross-family quantities remain separate until the user resolves them.
 
 Pantry Check records the user’s decision for every requirement, including each staple the user explicitly adds. Generating a list does not silently subtract inventory. A completed trip is copied into an immutable history record. Purchased items enter the pantry only through an explicit post-trip action; the default adds checked purchases, while the detailed handoff requires an explicit selection for any unchecked item.
 
@@ -78,12 +78,12 @@ All persistent records use stable string identifiers, ISO timestamps, and explic
 
 The main aggregate is `AppData`:
 
-| Area        | Records                                                                                                                           |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| School      | Calendar events, multiple calendar feeds, homework assignments, subtasks, study settings, avoid-time ranges                       |
-| Food        | Recipes, packaged foods, ingredients, steps, immutable meal-source snapshots, leftovers, food-log snapshots, nutrition provenance |
-| Inventory   | Pantry items, active grocery list, immutable grocery history                                                                      |
-| Preferences | Appearance, measurement system, nutrition targets, meal-planning mode/preferences, grocery categories/staples                     |
+| Area        | Records                                                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| School      | Calendar events, multiple calendar feeds, homework assignments, subtasks, study settings, avoid-time ranges                                   |
+| Food        | Recipes, packaged foods, ingredients, steps, immutable meal-source snapshots, leftovers, food-log snapshots, eight-field nutrition provenance |
+| Inventory   | Pantry items, active grocery list, immutable grocery history                                                                                  |
+| Preferences | Appearance, measurement system, nutrition targets, meal-planning mode/preferences, grocery categories/staples                                 |
 
 `AppData.schemaVersion` is currently `2`. `migrateAppData` explicitly transforms schema version 1 state and backup data into version 2, adding durable defaults and immutable snapshots without removing legacy records. Unknown future schema versions are rejected. The backup envelope adds its own `formatVersion`, application version, and export timestamp.
 
@@ -116,9 +116,11 @@ GitHub Pages cannot hold secrets or provide a private proxy. External features t
 
 Canvas supports a direct best-effort ICS URL request and a reliable local `.ics` file import. The multi-file Calendar importer is the preferred reviewed path for Canvas, Google Calendar, and standard ICS exports; feed URLs, private exports, and user calendar content are never bundled as fixtures.
 
-Recipe URL extraction requests only public Schema.org Recipe JSON-LD directly from the browser and exposes a pasted-content fallback when CORS or network access fails. Image and local video-frame OCR use a lazily loaded browser worker, then pass text to the deterministic parser; imported recipes remain **Needs Review** until a user confirms them. Social intake accepts user-supplied captions, screenshots, or local video frames and does not scrape or bypass platform restrictions.
+Recipe URL extraction requests only public Schema.org Recipe JSON-LD directly from the browser and exposes a pasted-content fallback when CORS or network access fails. Schema.org sugar and saturated-fat values are retained with the other six nutrients. Image and local video-frame OCR use a lazily loaded browser worker, then pass text to the deterministic parser; imported recipes remain **Needs Review** until a user confirms them. If every saved recipe is review-marked, deterministic meal suggestions use those records with an explicit warning rather than making the planner unusable. The personalized late-day preference assigns 13% of target calories/protein to breakfast and lunch and 87% to dinner and snack when scoring suggestions. Social intake accepts user-supplied captions, screenshots, or local video frames and does not scrape or bypass platform restrictions.
 
-The read-only Open Food Facts adapter requests a limited v2 product field set from the browser. Its records are marked estimated and require confirmation before use. Nutrition-label OCR likewise runs locally, warns on missing fields, and requires review. All of these adapters have manual entry paths and mocked/parser unit tests, so the automated suite does not depend on live remote data.
+Nutrition carries calories, protein, carbohydrates, fat, sugar, saturated fat, fiber, and sodium through package/database import, label OCR, recipe estimates, meal-source snapshots, food logs, settings, and progress views. Historical records without sugar or saturated fat safely contribute zero rather than inventing values.
+
+The read-only Open Food Facts adapter requests a limited product field set from the browser. Packaged-food authoring and food logging both support submit-triggered text search as well as UPC/EAN lookup. Search results are marked estimated and require confirmation before use. Nutrition-label OCR likewise runs locally, warns on missing fields, and requires review. All of these adapters have manual entry paths and mocked/parser tests, so the automated suite does not depend on live remote data.
 
 ## Historical Snapshots
 
@@ -130,7 +132,7 @@ Vitest validates pure domain functions and IndexedDB behavior. The suite covers 
 
 Playwright runs critical workflows in Chromium at desktop, tablet, and mobile sizes with semantic role and label locators. Focused suites cover structured recipe review/editing, planned-versus-consumed nutrition, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, reviewed multi-file ICS imports, keyboard-operable study resizing, populated dashboard ordering, universal-search navigation, and backup recovery. Provider-level GitHub Sync tests intercept every GitHub API request and use synthetic encrypted snapshots; they verify private-repository enforcement, connect/unlock, push, pull/reload, pause/resume, both deterministic conflict choices, unlink, and remote deletion without live credentials. The request assertions confirm that committed payloads do not expose recipe names or profile plaintext.
 
-The Playwright launcher selects an available loopback port for local runs so concurrent worktrees do not collide. CI uses deterministic port `4287`. The workflow invokes the unfiltered `npm run test:e2e` command, which executes all 3 viewport projects before deployment. The final integrated branch passed 84 Vitest tests in 18 files and 117 Playwright tests. A separate 42-action exploratory run exercised every primary route and found no console errors, page exceptions, failed HTTP responses, or page-level overflow. A real Chromium session also connected to the private repository, decrypted 27 recipes and 2 calendar feeds, imported 3,365 events, and verified encrypted write-back.
+The Playwright launcher selects an available loopback port for local runs so concurrent worktrees do not collide. CI uses deterministic port `4287`. The workflow invokes the unfiltered `npm run test:e2e` command, which executes all 3 viewport projects before deployment. The final integrated branch passed 90 Vitest tests in 18 files and 123 Playwright tests. A separate 42-action exploratory run exercised every primary route and found no console errors, page exceptions, failed HTTP responses, or page-level overflow. A real Chromium session also connected to the private repository, decrypted 27 recipes and 2 calendar feeds, imported 3,365 events, and verified encrypted write-back.
 
 ## Future Backend
 

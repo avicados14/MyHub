@@ -21,10 +21,19 @@ describe('recipe calculations', () => {
   it('sums nutrition snapshots and never returns negative leftovers', () => {
     expect(
       sumNutrition([
-        { calories: 100, protein: 10, carbs: 8, fat: 2, fiber: 1, sodium: 50 },
-        { calories: 250, protein: 20, carbs: 30, fat: 8, fiber: 4, sodium: 250 },
+        { calories: 100, protein: 10, carbs: 8, fat: 2, sugar: 3, saturatedFat: 1, fiber: 1, sodium: 50 },
+        { calories: 250, protein: 20, carbs: 30, fat: 8, sugar: 7, saturatedFat: 2, fiber: 4, sodium: 250 },
       ]),
-    ).toEqual({ calories: 350, protein: 30, carbs: 38, fat: 10, fiber: 5, sodium: 300 })
+    ).toEqual({
+      calories: 350,
+      protein: 30,
+      carbs: 38,
+      fat: 10,
+      sugar: 10,
+      saturatedFat: 3,
+      fiber: 5,
+      sodium: 300,
+    })
     expect(remainingPreparedServings({ preparedServings: 2, consumedServings: 3 })).toBe(0)
   })
 })

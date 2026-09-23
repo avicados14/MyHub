@@ -2,13 +2,19 @@ import { AlertTriangle, Barcode, Plus, ScanText } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Field, Modal, SegmentedControl, StatusBadge } from '../../components/ui'
 import { createUnknownNutritionProvenance } from '../../domain/defaults'
+import { createZeroNutrition, NUTRITION_FIELDS } from '../../domain/nutrition'
 import { multiplyNutrition } from '../../domain/recipe'
 import type { AppData, FoodLogEntry, Nutrition, NutritionProvenance } from '../../domain/types'
 import { makeId, toLocalDate } from '../../utilities/date'
 import { validateImageFile } from './fileImages'
 import { extractNutritionLabel } from './nutritionLabel'
 import { recognizeImageText } from './ocrService'
-import { lookupOpenFoodFacts } from './openFoodFacts'
+import {
+  lookupOpenFoodFacts,
+  searchOpenFoodFacts,
+  type OpenFoodFactsDraft,
+  type OpenFoodFactsSearchResult,
+} from './openFoodFacts'
 
 interface FoodLogEditorProps {
   open: boolean
@@ -19,7 +25,7 @@ interface FoodLogEditorProps {
 }
 
 type LogSource = 'recipe' | 'packaged' | 'barcode' | 'label' | 'custom' | 'leftover'
-const ZERO_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
+const ZERO_NUTRITION: Nutrition = createZeroNutrition()
 
 export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePackage }: FoodLogEditorProps) {
   const [source, setSource] = useState<LogSource>('recipe')
@@ -27,6 +33,7 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
   const [query, setQuery] = useState('')
   const [name, setName] = useState('')
   const [barcode, setBarcode] = useState('')
+  const [searchResults, setSearchResults] = useState<OpenFoodFactsSearchResult[]>([])
   const [nutrition, setNutrition] = useState<Nutrition>({ ...ZERO_NUTRITION })
   const [provenance, setProvenance] = useState<NutritionProvenance>(() => createUnknownNutritionProvenance())
   const [date, setDate] = useState(toLocalDate(new Date()))
@@ -58,6 +65,7 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
     setQuery('')
     setName('')
     setBarcode('')
+    setSearchResults([])
     setNutrition({ ...ZERO_NUTRITION })
     setProvenance(createUnknownNutritionProvenance())
     setDate(toLocalDate(new Date()))
@@ -71,6 +79,7 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
     setSource(value)
     setError('')
     setConfirmed(value !== 'barcode' && value !== 'label')
+    setSearchResults([])
     setSourceId(
       value === 'recipe'
         ? (data.recipes[0]?.id ?? '')
@@ -82,15 +91,26 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
     )
   }
 
+  const applyLookupResult = (result: OpenFoodFactsDraft) => {
+    setName(result.name)
+    setNutrition(result.nutrition)
+    setProvenance(result.provenance)
+    setConfirmed(false)
+    setSearchResults([])
+  }
+
   const lookup = async () => {
     setBusy(true)
     setError('')
     try {
-      const result = await lookupOpenFoodFacts(barcode)
-      setName(result.name)
-      setNutrition(result.nutrition)
-      setProvenance(result.provenance)
-      setConfirmed(false)
+      const normalizedBarcode = barcode.replace(/\D/g, '')
+      if (/^[\d\s-]+$/.test(barcode.trim()) && normalizedBarcode.length >= 8 && normalizedBarcode.length <= 14) {
+        applyLookupResult(await lookupOpenFoodFacts(normalizedBarcode))
+      } else {
+        const results = await searchOpenFoodFacts(barcode)
+        setSearchResults(results)
+        if (!results.length) setError('No matching foods were found. Try another name or enter the nutrition manually.')
+      }
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -303,13 +323,34 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
         ) : null}
         {source === 'barcode' ? (
           <section className="log-source-panel">
-            <Field label="UPC or EAN">
-              <input inputMode="numeric" value={barcode} onChange={(event) => setBarcode(event.target.value)} />
+            <Field label="Barcode or food name">
+              <input
+                type="search"
+                name="foodLookup"
+                autoComplete="off"
+                spellCheck={false}
+                value={barcode}
+                onChange={(event) => {
+                  setBarcode(event.target.value)
+                  setSearchResults([])
+                }}
+                placeholder="UPC, EAN, product, or brand…"
+              />
             </Field>
             <button className="button button--secondary" type="button" disabled={busy} onClick={() => void lookup()}>
-              <Barcode aria-hidden="true" /> {busy ? 'Looking up…' : 'Search Open Food Facts'}
+              <Barcode aria-hidden="true" /> {busy ? 'Searching…' : 'Search Open Food Facts'}
             </button>
-            <p>Read-only lookup. Failure falls back to the editable fields below.</p>
+            <p>Search by barcode or text. Results are read-only imports until you review the editable fields below.</p>
+            {searchResults.length ? (
+              <div className="food-log-search-results" aria-label="Open Food Facts results">
+                {searchResults.map((result) => (
+                  <button type="button" key={result.resultId} onClick={() => applyLookupResult(result)}>
+                    <strong>{result.name}</strong>
+                    <span>{result.brand || result.barcode}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </section>
         ) : null}
         {source === 'label' ? (
@@ -348,13 +389,13 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
               <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Food or meal name" />
             </Field>
             <div className="nutrition-editor-grid">
-              {(['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium'] as const).map((key) => (
-                <Field key={key} label={`${key[0]?.toUpperCase()}${key.slice(1)} per serving`}>
+              {NUTRITION_FIELDS.map(({ key, label }) => (
+                <Field key={key} label={`${label} per serving`}>
                   <input
                     type="number"
                     min="0"
                     step="any"
-                    value={nutrition[key]}
+                    value={nutrition[key] ?? 0}
                     onChange={(event) => setNutrition({ ...nutrition, [key]: Number(event.target.value) })}
                   />
                 </Field>

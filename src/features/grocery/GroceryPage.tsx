@@ -22,6 +22,7 @@ import {
   copyHistoryEntryToList,
   defaultPantryLocation,
   groceryItemFromStaple,
+  groceryMealsForWindow,
   groceryUnitFamily,
   isValidGroceryQuantity,
   purchaseQuantity,
@@ -36,7 +37,7 @@ import type {
   StorageLocation,
 } from '../../domain/types'
 import { formatQuantity } from '../../domain/recipe'
-import { makeId } from '../../utilities/date'
+import { addDays, formatDate, makeId, startOfWeek, toLocalDate } from '../../utilities/date'
 import '../../styles/grocery-v2.css'
 
 const FALLBACK_CATEGORIES: GroceryCategory[] = [
@@ -74,8 +75,11 @@ export default function GroceryPage() {
 
   const generate = () => {
     const timestamp = new Date().toISOString()
+    const today = toLocalDate(new Date())
+    const weekEnd = toLocalDate(addDays(startOfWeek(new Date()), 6))
+    const scopedMeals = groceryMealsForWindow(data.meals, today, weekEnd)
     const items = aggregateGroceryItems(
-      data.meals,
+      scopedMeals,
       data.recipes,
       data.pantry,
       timestamp,
@@ -90,11 +94,14 @@ export default function GroceryPage() {
           updatedAt: timestamp,
           source: 'generated',
           name: 'Weekly groceries',
+          sourceStartDate: today,
+          sourceEndDate: weekEnd,
+          sourceMealIds: scopedMeals.map((meal) => meal.id),
           items,
           status: 'draft',
         },
       }),
-      `Generated ${items.length} grocery requirements. Review pantry amounts and staple suggestions before shopping.`,
+      `Generated ${items.length} grocery requirements for ${formatDate(today)} through ${formatDate(weekEnd)}. Review pantry amounts and staple suggestions before shopping.`,
     )
   }
 
@@ -246,6 +253,9 @@ export default function GroceryPage() {
       name: list.name,
       completedAt: timestamp,
       items: structuredClone(list.items),
+      sourceStartDate: list.sourceStartDate,
+      sourceEndDate: list.sourceEndDate,
+      sourceMealIds: list.sourceMealIds ? [...list.sourceMealIds] : undefined,
     }
     updateData(
       (previous) => ({
@@ -720,6 +730,11 @@ function ShoppingView({
             <p>
               {checked} of {total} items checked
             </p>
+            {list.sourceStartDate && list.sourceEndDate ? (
+              <small>
+                Planned meals from {formatDate(list.sourceStartDate)} through {formatDate(list.sourceEndDate)}
+              </small>
+            ) : null}
           </div>
           <div className="shopping-toolbar">
             <button className="button button--secondary" type="button" onClick={() => setEditing('new')}>

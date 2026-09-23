@@ -5,6 +5,8 @@ export const DEFAULT_NUTRITION_TARGETS: Nutrition = {
   protein: 100,
   carbs: 250,
   fat: 70,
+  sugar: 50,
+  saturatedFat: 20,
   fiber: 28,
   sodium: 2300,
 }
@@ -70,6 +72,7 @@ export const createEmptyData = (now = new Date()): AppData => ({
       preferredSlots: ['breakfast', 'lunch', 'dinner'],
       targetPrepServings: 4,
       favorAvailablePantry: true,
+      lateDayNutritionBias: false,
     },
     groceryCategories: createDefaultGroceryCategories(),
     groceryStaples: [],

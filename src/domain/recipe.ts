@@ -1,4 +1,5 @@
 import type { MealEntry, Nutrition, Recipe, RecipeIngredient } from './types'
+import { createZeroNutrition, nutritionValue } from './nutrition'
 
 const FRACTIONS: Array<[number, string]> = [
   [0.125, '⅛'],
@@ -44,6 +45,8 @@ export const multiplyNutrition = (nutrition: Nutrition, servings: number): Nutri
   protein: nutrition.protein * servings,
   carbs: nutrition.carbs * servings,
   fat: nutrition.fat * servings,
+  sugar: nutritionValue(nutrition, 'sugar') * servings,
+  saturatedFat: nutritionValue(nutrition, 'saturatedFat') * servings,
   fiber: nutrition.fiber * servings,
   sodium: nutrition.sodium * servings,
 })
@@ -55,10 +58,12 @@ export const sumNutrition = (values: Nutrition[]): Nutrition =>
       protein: total.protein + value.protein,
       carbs: total.carbs + value.carbs,
       fat: total.fat + value.fat,
+      sugar: nutritionValue(total, 'sugar') + nutritionValue(value, 'sugar'),
+      saturatedFat: nutritionValue(total, 'saturatedFat') + nutritionValue(value, 'saturatedFat'),
       fiber: total.fiber + value.fiber,
       sodium: total.sodium + value.sodium,
     }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 },
+    createZeroNutrition(),
   )
 
 export const remainingPreparedServings = (meal: Pick<MealEntry, 'preparedServings' | 'consumedServings'>): number =>

@@ -130,6 +130,7 @@ test('pantry supports validated full-field CRUD and safe quantity controls', asy
 
 test('pantry check requires decisions, confirms staples, and supports full shopping-list editing', async ({ page }) => {
   const data = createTestFixtureData()
+  data.meals.push({ ...structuredClone(data.meals[0]!), id: 'meal-historic', date: '2020-01-01' })
   data.settings.groceryCategories.push({ id: 'category-bulk', name: 'Bulk', sortOrder: 2.5, enabled: true })
   data.settings.groceryStaples = [
     {
@@ -153,6 +154,12 @@ test('pantry check requires decisions, confirms staples, and supports full shopp
   ]
   await seedAppData(page, data, '/#/grocery')
   await page.getByRole('button', { name: 'Generate from meal plan' }).click()
+  await waitForStored(
+    page,
+    (stored) =>
+      stored.activeGroceryList?.sourceMealIds?.includes('meal-historic') === false &&
+      Boolean(stored.activeGroceryList?.sourceStartDate && stored.activeGroceryList.sourceEndDate),
+  )
 
   await expect(page.getByRole('heading', { name: 'Suggested staples' })).toBeVisible()
   await expect(page.getByText('Hidden staple')).toHaveCount(0)
@@ -166,7 +173,7 @@ test('pantry check requires decisions, confirms staples, and supports full shopp
 
   const chicken = page.getByRole('heading', { name: 'chicken breast', exact: true }).locator('..').locator('..')
   await chicken.getByText('Enter amount', { exact: true }).click()
-  await chicken.getByLabel('Amount on hand for chicken breast').fill('1')
+  await chicken.getByLabel('Amount on hand for chicken breast').fill('0')
   const rice = page.getByRole('heading', { name: 'rice', exact: true }).locator('..').locator('..')
   await rice.getByText('Use saved amount', { exact: true }).click()
   const beans = page.getByRole('heading', { name: 'black beans', exact: true }).locator('..').locator('..')
@@ -178,7 +185,7 @@ test('pantry check requires decisions, confirms staples, and supports full shopp
   await expect(page.getByRole('button', { name: /Build shopping list/ })).toBeEnabled()
   await page.getByRole('button', { name: /Build shopping list/ }).click()
 
-  await expect(page.getByText('3 oz', { exact: true })).toBeVisible()
+  await expect(page.getByRole('article').filter({ hasText: 'rice' })).toContainText('2 cup')
   await expect(page.getByText('black beans', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Edit rice' }).click()
   const editDialog = page.getByRole('dialog', { name: 'Edit rice' })

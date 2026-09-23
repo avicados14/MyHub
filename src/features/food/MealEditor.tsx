@@ -2,6 +2,7 @@ import { AlertTriangle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Field, Modal, SegmentedControl } from '../../components/ui'
 import { createUnknownNutritionProvenance } from '../../domain/defaults'
+import { createZeroNutrition, NUTRITION_FIELDS } from '../../domain/nutrition'
 import type { AppData, MealEntry, MealSlot, Nutrition } from '../../domain/types'
 import { formatDate, makeId } from '../../utilities/date'
 
@@ -16,7 +17,7 @@ interface MealEditorProps {
 }
 
 type MealSourceType = 'recipe' | 'packaged' | 'custom' | 'leftover'
-const ZERO_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
+const ZERO_NUTRITION: Nutrition = createZeroNutrition()
 
 export default function MealEditor({ open, data, target, meal, initialSource, onClose, onSave }: MealEditorProps) {
   const [sourceType, setSourceType] = useState<MealSourceType>('recipe')
@@ -226,13 +227,13 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
               />
             </Field>
             <div className="nutrition-editor-grid">
-              {(['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium'] as const).map((key) => (
-                <Field key={key} label={`${key[0]?.toUpperCase()}${key.slice(1)} per serving`}>
+              {NUTRITION_FIELDS.map(({ key, label }) => (
+                <Field key={key} label={`${label} per serving`}>
                   <input
                     type="number"
                     min="0"
                     step="any"
-                    value={nutrition[key]}
+                    value={nutrition[key] ?? 0}
                     onChange={(event) => setNutrition({ ...nutrition, [key]: Number(event.target.value) })}
                   />
                 </Field>

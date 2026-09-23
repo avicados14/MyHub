@@ -24,6 +24,7 @@ interface SuggestionContext {
 }
 
 const SLOT_CALORIE_SHARE: Record<MealSlot, number> = { breakfast: 0.22, lunch: 0.3, dinner: 0.38, snack: 0.1 }
+const LATE_DAY_SLOT_SHARE: Record<MealSlot, number> = { breakfast: 0.06, lunch: 0.07, dinner: 0.6, snack: 0.27 }
 const SLOT_CATEGORY: Record<MealSlot, string[]> = {
   breakfast: ['breakfast'],
   lunch: ['lunch'],
@@ -59,16 +60,18 @@ const nutritionFit = (
   targets: Nutrition,
   consumed: Nutrition,
   slot: MealSlot,
+  lateDayNutritionBias: boolean,
 ): { score: number; reason: string } => {
+  const slotShare = lateDayNutritionBias ? LATE_DAY_SLOT_SHARE[slot] : SLOT_CALORIE_SHARE[slot]
   const remainingCalories = Math.max(0, targets.calories - consumed.calories)
-  const intendedCalories = Math.min(remainingCalories || targets.calories, targets.calories * SLOT_CALORIE_SHARE[slot])
+  const intendedCalories = Math.min(remainingCalories || targets.calories, targets.calories * slotShare)
   if (intendedCalories <= 0) return { score: 0, reason: 'Nutrition target already met' }
   const calorieFit = Math.max(
     0,
     1 - Math.abs(recipe.nutritionPerServing.calories - intendedCalories) / intendedCalories,
   )
   const proteinRemaining = Math.max(0, targets.protein - consumed.protein)
-  const intendedProtein = Math.max(1, proteinRemaining * SLOT_CALORIE_SHARE[slot])
+  const intendedProtein = Math.max(1, proteinRemaining * slotShare)
   const proteinFit = Math.max(0, 1 - Math.abs(recipe.nutritionPerServing.protein - intendedProtein) / intendedProtein)
   const score = calorieFit * 18 + proteinFit * 8
   return {
@@ -86,9 +89,20 @@ const scoreRecipe = (recipe: Recipe, context: SuggestionContext): { score: numbe
   const coverage = pantryCoverage(recipe, context.available)
   const load = scheduleLoad(context.data, context.date)
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes
-  const nutrition = nutritionFit(recipe, context.data.settings.nutritionTargets, context.consumed, context.slot)
+  const nutrition = nutritionFit(
+    recipe,
+    context.data.settings.nutritionTargets,
+    context.consumed,
+    context.slot,
+    context.data.settings.mealPlanning.lateDayNutritionBias === true,
+  )
   score += nutrition.score
   reasons.push(nutrition.reason)
+
+  if (recipe.needsReview) {
+    score -= 4
+    reasons.push('Recipe details are marked for review')
+  }
 
   if (slotFit(recipe, context.slot)) {
     score += 16
@@ -178,7 +192,8 @@ export const createMealSuggestions = (
       return recipe?.ingredients.map((ingredient) => ingredient.canonicalName) ?? []
     }),
   )
-  const recipes = data.recipes.filter((recipe) => !recipe.needsReview)
+  const reviewedRecipes = data.recipes.filter((recipe) => !recipe.needsReview)
+  const recipes = reviewedRecipes.length ? reviewedRecipes : data.recipes
   const consumed = sumNutrition(
     data.foodLog.filter((entry) => entry.date === targets[0]?.date).map((entry) => entry.nutritionSnapshot),
   )

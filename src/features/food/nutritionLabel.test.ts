@@ -2,13 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { extractNutritionLabel } from './nutritionLabel'
 
 describe('nutrition label extraction', () => {
-  it('extracts the requested serving and six nutrition metrics', () => {
+  it('extracts the requested serving and eight nutrition metrics', () => {
     const draft = extractNutritionLabel(
-      `Nutrition Facts\nServing size 28 g\nCalories 140\nTotal Fat 7 g\nTotal Carbohydrate 18 g\nDietary Fiber 3 g\nProtein 4 g\nSodium 210 mg`,
+      `Nutrition Facts\nServing size 28 g\nCalories 140\nTotal Fat 7 g\nSaturated Fat 2 g\nTotal Carbohydrate 18 g\nDietary Fiber 3 g\nTotal Sugars 6 g\nProtein 4 g\nSodium 210 mg`,
     )
     expect(draft.servingQuantity).toBe(28)
     expect(draft.servingUnit).toBe('g')
-    expect(draft.nutrition).toEqual({ calories: 140, protein: 4, carbs: 18, fat: 7, fiber: 3, sodium: 210 })
+    expect(draft.nutrition).toEqual({
+      calories: 140,
+      protein: 4,
+      carbs: 18,
+      fat: 7,
+      sugar: 6,
+      saturatedFat: 2,
+      fiber: 3,
+      sodium: 210,
+    })
     expect(draft.warnings[0]).toMatch(/estimates/)
   })
 
