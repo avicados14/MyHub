@@ -48,7 +48,7 @@ test('user adds homework and generates study sessions', async ({ page }) => {
 
 test('user creates a recipe from an empty library', async ({ page }) => {
   await page.goto('/#/food')
-  await expect(page.getByRole('heading', { name: 'No matching recipes' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your recipe shelf is ready' })).toBeVisible()
   await page.getByRole('button', { name: 'Add recipe' }).click()
   await page.getByLabel('Recipe name').fill('Lemon chickpea bowls')
   await page.getByLabel('Description').fill('A quick weeknight bowl.')

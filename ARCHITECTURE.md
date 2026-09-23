@@ -62,7 +62,9 @@ scale factor = requested servings / original yield
 
 The base recipe is never repeatedly multiplied, which avoids accumulated rounding drift. Unquantified ingredients such as “salt to taste” stay unquantified. Common cooking fractions are formatted at the display edge.
 
-Food-log entries and meal entries store immutable source and nutrition snapshots. Later recipe or packaged-food edits therefore do not rewrite historical nutrition or planned-meal facts. Prepared and consumed servings remain separate, and remaining servings cannot become negative. Durable `PackagedFood`, `Leftover`, and nutrition-provenance contracts are present even where their full workflows remain future feature work.
+Recipes have structured metadata, source/provenance, notes, review state, a persistent current yield, and per-ingredient overrides that apply at an explicit yield. The measurement catalog normalizes compatible US/metric volume, mass, count, and temperature units; display conversion occurs at the recipe detail edge and never mutates source quantities.
+
+Food-log entries and meal entries store immutable source and nutrition snapshots. Later recipe or packaged-food edits therefore do not rewrite historical nutrition or planned-meal facts. Prepared and consumed servings remain separate; consumed-meal log snapshots update daily nutrition, planned meals do not, and remaining servings cannot become negative. Remaining prepared recipe servings create/update reusable leftover records. Packaged-food records can be entered manually or seeded from a reviewed read-only lookup/label draft.
 
 ### Pantry and Grocery
 
@@ -112,7 +114,11 @@ GitHub Pages cannot hold secrets or provide a private proxy. External features t
 3. Failure must be explicit and actionable.
 4. Missing values must never be fabricated.
 
-Canvas supports a direct best-effort ICS URL request and a reliable local `.ics` file import. The multi-file Calendar importer is the preferred reviewed path for Canvas, Google Calendar, and standard ICS exports; feed URLs, private exports, and user calendar content are never bundled as fixtures. Recipe URL extraction, nutrition lookup, barcode lookup, OCR, image interpretation, and social-media intake remain future adapters rather than hard-coded dependencies.
+Canvas supports a direct best-effort ICS URL request and a reliable local `.ics` file import. The multi-file Calendar importer is the preferred reviewed path for Canvas, Google Calendar, and standard ICS exports; feed URLs, private exports, and user calendar content are never bundled as fixtures.
+
+Recipe URL extraction requests only public Schema.org Recipe JSON-LD directly from the browser and exposes a pasted-content fallback when CORS or network access fails. Image and local video-frame OCR use a lazily loaded browser worker, then pass text to the deterministic parser; imported recipes remain **Needs Review** until a user confirms them. Social intake accepts user-supplied captions, screenshots, or local video frames and does not scrape or bypass platform restrictions.
+
+The read-only Open Food Facts adapter requests a limited v2 product field set from the browser. Its records are marked estimated and require confirmation before use. Nutrition-label OCR likewise runs locally, warns on missing fields, and requires review. All of these adapters have manual entry paths and mocked/parser unit tests, so the automated suite does not depend on live remote data.
 
 ## Historical Snapshots
 
@@ -120,9 +126,9 @@ Meal entries, food logs, and grocery history store copies of the relevant facts 
 
 ## Testing Strategy
 
-Vitest validates pure domain functions and IndexedDB behavior. The suite currently covers recipe scaling, fraction formatting, nutrition sums, leftover limits, unit normalization, grocery aggregation, pantry subtraction, due ordering, long-horizon conflict-aware study planning with avoid-time ranges, ICS parsing/classification/provenance/deduplication, encrypted calendar snapshot parsing, persistence, and backup validation.
+Vitest validates pure domain functions and IndexedDB behavior. The suite covers recipe scaling, fraction formatting, nutrition sums, prepared/consumed meal and leftover updates, unit normalization/conversion, deterministic recipe and label parsing, mocked Open Food Facts lookup/failure handling, grocery aggregation and pantry decisions, due ordering, long-horizon conflict-aware study planning with avoid-time ranges, ICS parsing/classification/provenance/deduplication, encrypted calendar snapshots, persistence, and backup validation.
 
-Playwright runs critical workflows in Chromium at desktop, tablet, and mobile sizes. Tests use semantic role and label locators. A focused school/calendar flow verifies homework editing and subtasks, safe provenance links, event CRUD, explicit preview/confirmation of a multi-file in-memory ICS upload, and keyboard-operable study resizing. CI runs linting, strict type checking, unit tests, browser tests, and the production build before deployment; a full responsive release matrix remains a separate release-evidence concern.
+Playwright runs critical workflows in Chromium at desktop, tablet, and mobile sizes with semantic role and label locators. Focused suites cover structured recipe review/editing, planned-versus-consumed nutrition, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, reviewed multi-file ICS imports, and keyboard-operable study resizing. The complete integrated matrix is rerun before release rather than inferred from isolated feature branches.
 
 ## Future Backend
 

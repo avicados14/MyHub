@@ -8,7 +8,7 @@ The web application is the product-validation phase for a future native SwiftUI 
 
 **School planning** combines editable calendar events, multiple local iCalendar (`.ics`) sources, homework with subtasks and provenance, estimated work, preferred study hours, and configured avoid-time ranges. The deterministic planner works through each deadline and preserves blocks that the user locks, completes, moves, or resizes.
 
-**Food planning** combines a recipe library, cooking-friendly serving scaling, a weekly meal planner, prepared-versus-consumed servings, leftovers, immutable food-log snapshots, and daily nutrition progress.
+**Food planning** combines structured recipes and reviewable imports, cooking-friendly serving scaling and conversions, a weekly meal planner, prepared-versus-consumed servings, reusable leftovers, packaged foods, immutable food-log snapshots, and daily nutrition progress.
 
 **Pantry and groceries** aggregate compatible recipe ingredients, compare those requirements with saved inventory, require an explicit Pantry Check decision for every requirement and added staple, generate a mobile-friendly editable shopping list, preserve completed trips as historical snapshots, and add only confirmed purchases back to the pantry.
 
@@ -26,9 +26,11 @@ Working now:
 - Full homework editing, progress/status, subtasks, source links, and imported provenance
 - Deterministic conflict-aware study scheduling through deadlines, including configured avoid-time ranges
 - Study-block locking, completion, removal, accessible form editing, direct week-column drag, and 15-minute resize buttons
-- Recipe library, details, favorites, creation, and yield scaling
-- Weekly meal planning with prepared, consumed, and leftover balances
-- Daily nutrition snapshots and editable targets
+- Structured recipe creation/editing, source metadata, notes, ingredient overrides, persistent current yield, and US/metric display conversion
+- Reviewable recipe drafts from permitted URL JSON-LD, pasted content, local image OCR, or user-supplied social caption/screenshot/video frame
+- Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with prepared, consumed, and leftover balances
+- Packaged-food entry, read-only Open Food Facts lookup, local Nutrition Facts OCR with confirmation, and immutable six-metric nutrition snapshots
+- Daily nutrition snapshots, editable targets, and totals that exclude planned meals until consumption is recorded
 - Pantry inventory across pantry, refrigerator, and freezer
 - Grocery aggregation across compatible mass, volume, and count units; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history
 - Universal search across recipes, homework, and pantry items
@@ -40,7 +42,8 @@ Working now:
 In development or intentionally limited:
 
 - Local `.ics` file import is the reliable browser path. Encrypted private-repository calendar snapshots can be checked after GitHub Sync is unlocked; no private feed URL or calendar file is bundled with MyHub.
-- Recipe URL, social-media, image, video, OCR, barcode, and public nutrition database adapters are not connected to a server in this static prototype. Manual entry remains functional.
+- Recipe URL and Open Food Facts requests are direct browser requests and can fail because of CORS, network access, or incomplete public records. The interface preserves provenance, requires review for imported/OCR values, and offers pasted/manual entry fallbacks; CI uses mocked lookup/parser tests and does not require remote data.
+- Image/video OCR runs locally in the browser after the user selects a file. Social intake accepts only user-supplied captions, screenshots, or local video frames; MyHub does not log in, scrape, or bypass platform restrictions.
 - Study blocks can be dragged between week columns, but drag-and-drop is never required: the edit form and labeled keyboard-operable resize buttons remain available.
 - GitHub Sync is snapshot-based rather than a transactional database; simultaneous edits require an explicit choice of copy.
 
@@ -113,11 +116,11 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, safe unit normalization, grocery aggregation and pantry decisions, nutrition totals, leftover limits, long-horizon and avoid-time scheduling, ICS parsing/classification/deduplication, encrypted calendar snapshots, IndexedDB persistence, and backup validation. Focused browser tests cover pantry CRUD, grocery review/edit/checkout/history, homework editing/subtasks/provenance, calendar event CRUD, confirmed multi-file imports, study-block resizing, and connected workflows at desktop and mobile sizes.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS parsing/classification/deduplication, encrypted calendar snapshots, IndexedDB persistence, and backup validation. Focused browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block resizing, and responsive acceptance workflows.
 
 ## GitHub Pages Deployment
 
-The workflow at `.github/workflows/pages.yml` runs on pushes to `main` and can also be started manually. It installs dependencies, runs linting, strict type checking, unit tests, Chromium browser tests, and a production build. It then uses the current GitHub Pages artifact workflow with least-privilege `pages: write` and `id-token: write` permissions.[2]
+The workflow at `.github/workflows/pages.yml` runs on pushes to `main` and can also be started manually. It installs dependencies, runs linting, strict type checking, unit tests, the desktop Chromium browser project, and a production build. The locally validated Food V2 suite also covers tablet and mobile; extending that full matrix to CI remains a release-practice task. The workflow then uses the current GitHub Pages artifact workflow with least-privilege `pages: write` and `id-token: write` permissions.[2]
 
 In the repository, choose **Settings → Pages → Build and deployment → GitHub Actions** if it is not already selected.
 

@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { cloneElement, isValidElement, useEffect, useId, useRef, type ReactElement, type ReactNode } from 'react'
 
 export function PageHeader({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
   return (
@@ -79,12 +79,21 @@ export function Modal({ open, title, description, onClose, children }: { open: b
 }
 
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+  const inputId = useId()
+  const hintId = useId()
+  const control = isValidElement<{ id?: string; 'aria-describedby'?: string }>(children)
+    ? cloneElement(children as ReactElement<{ id?: string; 'aria-describedby'?: string }>, {
+      id: children.props.id ?? inputId,
+      ...(hint ? { 'aria-describedby': [children.props['aria-describedby'], hintId].filter(Boolean).join(' ') } : {}),
+    })
+    : children
+  const controlId = isValidElement<{ id?: string }>(children) ? children.props.id ?? inputId : inputId
   return (
-    <label className="field">
-      <span className="field__label">{label}</span>
-      {children}
-      {hint ? <span className="field__hint">{hint}</span> : null}
-    </label>
+    <div className="field">
+      <label className="field__label" htmlFor={controlId}>{label}</label>
+      {control}
+      {hint ? <span className="field__hint" id={hintId}>{hint}</span> : null}
+    </div>
   )
 }
 

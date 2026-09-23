@@ -109,6 +109,11 @@ export interface RecipeIngredient {
   unit: string
   category: GroceryCategory
   note?: string
+  scaledOverride?: {
+    yield: number
+    quantity: number | null
+    unit: string
+  }
 }
 
 export interface RecipeStep {
@@ -119,11 +124,13 @@ export interface RecipeStep {
 export interface Recipe extends EntityBase {
   name: string
   description: string
+  notes?: string
   image: string
   category: string
   tags: string[]
   favorite: boolean
   originalYield: number
+  currentYield?: number
   prepMinutes: number
   cookMinutes: number
   ingredients: RecipeIngredient[]
@@ -133,6 +140,8 @@ export interface Recipe extends EntityBase {
   sourceLabel: string
   sourceUrl?: string
   needsReview?: boolean
+  reviewedAt?: string
+  reviewNotes?: string
 }
 
 export interface PackagedFood extends EntityBase {
@@ -145,6 +154,8 @@ export interface PackagedFood extends EntityBase {
   nutritionProvenance: NutritionProvenance
   image?: string
   notes?: string
+  needsReview?: boolean
+  reviewedAt?: string
 }
 
 export interface MealSourceSnapshot {

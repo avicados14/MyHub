@@ -10,6 +10,14 @@ Added a complete explicit grocery workflow: compatible mass, volume, and count a
 
 Added explicit `AppData` schema version 2 with loss-preserving migration from version 1 local state and backups. The durable domain foundation now includes packaged foods, leftovers, nutrition provenance, immutable meal-source snapshots, study avoid-time ranges, meal-planning modes/preferences, editable grocery category/staple models, and multiple calendar feeds.
 
+Completed the food-planning workflow with structured recipe creation and editing, source metadata, notes, image input, tags, current yield, per-ingredient overrides, measurement-system conversion, nutrition provenance, and a visible **Needs Review** state. Recipe imports accept public Recipe JSON-LD, pasted JSON-LD/HTML/text, local image OCR, and user-supplied social captions, screenshots, or video frames; imports retain provenance, require review, and expose manual fallbacks when browser access or OCR fails.
+
+Added packaged-food entry and editing with UPC/EAN fields, serving details, images, notes, six nutrition metrics, read-only Open Food Facts lookup, and browser-local Nutrition Facts OCR. Imported or OCR values remain estimated and cannot be saved until the user confirms review. Packaged foods can be planned or logged through immutable source and nutrition snapshots.
+
+Completed meal and nutrition lifecycle controls: recipe, packaged, custom, and leftover meal sources; prepared versus consumed serving entry; non-negative reusable leftovers; accessible move/copy controls; multi-source food logging; and six-metric daily totals, targets, and remaining values. Planned meals stay out of daily nutrition until consumption is recorded. Deterministic local Smart suggestions can be accepted, replaced, or locked and use saved recipes, pantry coverage, leftovers, favorites, yields, and the persisted planning mode without claiming generative AI.
+
+Added unit and browser coverage for recipe imports, label parsing, Open Food Facts fallback, measurement conversion, meal consumption/leftovers, and deterministic suggestions. Added the focused cross-viewport `tests/food-v2.spec.ts` workflow, which validates recipe authoring/review/import and the planned-versus-consumed nutrition rule.
+
 Added optional encrypted GitHub-backed synchronization for the dedicated private `avicados14/MyHub-Data` repository. IndexedDB remains the immediate offline store. Versioned Web Crypto envelopes use PBKDF2-SHA-256 with 310,000 iterations and AES-256-GCM; tampering and wrong passphrases are rejected. The GitHub Contents client enforces a private repository, conditionally writes with blob SHA values, serializes writes, and surfaces conflicts for explicit resolution.
 
 Added a GitHub Sync provider and accessible Settings controls for connect/unlock, manual sync, status, pause/resume, unlink, conflict choice, and latest-snapshot deletion. The fine-grained token is encrypted in a separate IndexedDB credential record, is excluded from AppData and backups, and requires only repository-scoped Contents read/write access.
@@ -23,6 +31,8 @@ Added a narrow read-only encrypted private-calendar snapshot adapter at `myhub-d
 ### Changed
 
 Fresh installations and **Clear all data** now produce empty personal collections rather than demo records. Sample records are isolated to test fixtures. Data/privacy copy now distinguishes local IndexedDB, optional encrypted sync, and plaintext JSON exports.
+
+The food documentation and requirements audit now describe the completed web workflow and its explicit boundaries: all imports require review, external requests are direct browser requests with manual fallbacks, OCR stays in the browser for user-selected files, and the focused food acceptance suite passed on fresh desktop, tablet, and mobile execution. The broader all-domain responsive CI matrix remains a separate release-practice gap.
 
 ### Security
 
