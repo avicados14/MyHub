@@ -147,7 +147,10 @@ export const convertGroceryQuantity = (quantity: number, fromUnit: string, toUni
   return roundQuantity(source.quantity / targetDefinition.baseFactor)
 }
 
-const displayQuantity = (canonical: CanonicalQuantity, measurementSystem: MeasurementSystem): { quantity: number; unit: string } => {
+const displayQuantity = (
+  canonical: CanonicalQuantity,
+  measurementSystem: MeasurementSystem,
+): { quantity: number; unit: string } => {
   if (canonical.family === 'mass') {
     if (measurementSystem === 'metric') {
       return canonical.quantity >= 1000
@@ -204,7 +207,10 @@ export const aggregateGroceryItems = (
         existing.quantity += value.quantity
         if (!existing.sourceRecipeIds.includes(recipe.id)) existing.sourceRecipeIds.push(recipe.id)
         if (canonicalizeIngredientName(existing.name) !== canonicalizeIngredientName(ingredient.name)) {
-          addReview(existing, `“${existing.name}” and “${ingredient.name}” share a saved name; confirm they are equivalent.`)
+          addReview(
+            existing,
+            `“${existing.name}” and “${ingredient.name}” share a saved name; confirm they are equivalent.`,
+          )
         }
       } else {
         let saved = 0
@@ -252,7 +258,10 @@ export const aggregateGroceryItems = (
   }
 
   return pending.map((item) => {
-    const display = displayQuantity({ quantity: item.quantity, unit: item.unit, family: groceryUnitFamily(item.unit) }, measurementSystem)
+    const display = displayQuantity(
+      { quantity: item.quantity, unit: item.unit, family: groceryUnitFamily(item.unit) },
+      measurementSystem,
+    )
     const pantryDisplay = convertGroceryQuantity(item.pantryQuantity, item.unit, display.unit) ?? item.pantryQuantity
     return {
       ...item,

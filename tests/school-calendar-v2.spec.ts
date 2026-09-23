@@ -16,9 +16,14 @@ test('homework supports complete editing, subtasks, and safe source provenance',
   await page.getByLabel('Progress percent').fill('35')
   await page.getByLabel('Source label').fill('Course portal')
   await page.getByLabel('Source URL').fill('https://example.edu/assignment/7')
-  await page.getByRole('dialog', { name: 'Add homework' }).getByRole('button', { name: 'Add homework', exact: true }).click()
+  await page
+    .getByRole('dialog', { name: 'Add homework' })
+    .getByRole('button', { name: 'Add homework', exact: true })
+    .click()
 
-  const card = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'Structural analysis draft' }) })
+  const card = page
+    .getByRole('article')
+    .filter({ has: page.getByRole('heading', { name: 'Structural analysis draft' }) })
   await expect(card.getByText('In progress')).toBeVisible()
   await expect(card.getByRole('link', { name: 'Open source' })).toHaveAttribute('target', '_blank')
   await card.getByLabel('New subtask for Structural analysis draft').fill('Check load cases')
@@ -58,8 +63,20 @@ test('multiple local ICS files require preview and explicit confirmation', async
   await page.getByLabel('Source name').fill('Canvas exports')
   await page.getByLabel('Date window').selectOption('year')
   await page.locator('input[name="files"]').setInputFiles([
-    { name: 'canvas.ics', mimeType: 'text/calendar', buffer: Buffer.from(`BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:canvas-assignment\nDTSTART:${year}1015T235900\nSUMMARY:Case study [BUS 201]\nURL:https://example.edu/courses/1/assignments/4\nEND:VEVENT\nEND:VCALENDAR`) },
-    { name: 'canvas-classes.ics', mimeType: 'text/calendar', buffer: Buffer.from(`BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:canvas-class\nDTSTART:${year}1016T090000\nDTEND:${year}1016T100000\nSUMMARY:BUS 201 class\nLOCATION:Room 8\nEND:VEVENT\nEND:VCALENDAR`) },
+    {
+      name: 'canvas.ics',
+      mimeType: 'text/calendar',
+      buffer: Buffer.from(
+        `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:canvas-assignment\nDTSTART:${year}1015T235900\nSUMMARY:Case study [BUS 201]\nURL:https://example.edu/courses/1/assignments/4\nEND:VEVENT\nEND:VCALENDAR`,
+      ),
+    },
+    {
+      name: 'canvas-classes.ics',
+      mimeType: 'text/calendar',
+      buffer: Buffer.from(
+        `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:canvas-class\nDTSTART:${year}1016T090000\nDTEND:${year}1016T100000\nSUMMARY:BUS 201 class\nLOCATION:Room 8\nEND:VEVENT\nEND:VCALENDAR`,
+      ),
+    },
   ])
   await page.getByRole('button', { name: 'Preview files' }).click()
   await expect(page.getByRole('heading', { name: 'Ready to import' })).toBeVisible()
@@ -79,7 +96,10 @@ test('generated study blocks expose keyboard-operable fifteen-minute resizing', 
   due.setDate(due.getDate() + 2)
   await page.getByLabel('Due date').fill(localDate(due))
   await page.getByLabel('Estimated minutes').fill('45')
-  await page.getByRole('dialog', { name: 'Add homework' }).getByRole('button', { name: 'Add homework', exact: true }).click()
+  await page
+    .getByRole('dialog', { name: 'Add homework' })
+    .getByRole('button', { name: 'Add homework', exact: true })
+    .click()
   await page.getByRole('button', { name: 'Build my study plan' }).click()
   await page.goto('/#/calendar?view=week')
   await expect(page.getByRole('button', { name: 'Extend Resize practice by 15 minutes' })).toBeVisible()
@@ -89,5 +109,7 @@ test('generated study blocks expose keyboard-operable fifteen-minute resizing', 
   const dialog = page.getByRole('dialog', { name: 'Edit study block' })
   const start = await dialog.getByLabel('Starts').inputValue()
   const end = await dialog.getByLabel('Ends').inputValue()
-  expect(Number(end.slice(0, 2)) * 60 + Number(end.slice(3)) - (Number(start.slice(0, 2)) * 60 + Number(start.slice(3)))).toBe(60)
+  expect(
+    Number(end.slice(0, 2)) * 60 + Number(end.slice(3)) - (Number(start.slice(0, 2)) * 60 + Number(start.slice(3))),
+  ).toBe(60)
 })

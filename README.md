@@ -183,5 +183,5 @@ GitHub Pages is static hosting. MyHub therefore uses a user-supplied, repository
 
 ## References
 
-[1]: https://vite.dev/guide/static-deploy.html "Vite — Deploying a Static Site"
-[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages "GitHub Docs — Using Custom Workflows with GitHub Pages"
+[1]: https://vite.dev/guide/static-deploy.html 'Vite — Deploying a Static Site'
+[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs — Using Custom Workflows with GitHub Pages'

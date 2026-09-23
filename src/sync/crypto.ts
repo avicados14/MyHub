@@ -64,16 +64,16 @@ const parseEnvelope = (serialized: string): EncryptedEnvelope => {
   if (typeof value !== 'object' || value === null) throw new Error('The encrypted snapshot is invalid.')
   const envelope = value as Partial<EncryptedEnvelope>
   if (
-    envelope.format !== ENVELOPE_FORMAT
-    || envelope.version !== ENVELOPE_VERSION
-    || envelope.kdf?.name !== 'PBKDF2'
-    || envelope.kdf.hash !== 'SHA-256'
-    || envelope.kdf.iterations < PBKDF2_ITERATIONS
-    || envelope.cipher?.name !== 'AES-GCM'
-    || envelope.cipher.keyLength !== 256
-    || typeof envelope.kdf.salt !== 'string'
-    || typeof envelope.cipher.iv !== 'string'
-    || typeof envelope.ciphertext !== 'string'
+    envelope.format !== ENVELOPE_FORMAT ||
+    envelope.version !== ENVELOPE_VERSION ||
+    envelope.kdf?.name !== 'PBKDF2' ||
+    envelope.kdf.hash !== 'SHA-256' ||
+    envelope.kdf.iterations < PBKDF2_ITERATIONS ||
+    envelope.cipher?.name !== 'AES-GCM' ||
+    envelope.cipher.keyLength !== 256 ||
+    typeof envelope.kdf.salt !== 'string' ||
+    typeof envelope.cipher.iv !== 'string' ||
+    typeof envelope.ciphertext !== 'string'
   ) {
     throw new Error('This encrypted snapshot version or algorithm is not supported.')
   }
@@ -96,7 +96,10 @@ export const encryptText = async (plaintext: string, passphrase: string): Promis
     key,
     encoder.encode(plaintext),
   )
-  return JSON.stringify({ ...metadata, ciphertext: bytesToBase64(new Uint8Array(ciphertext)) } satisfies EncryptedEnvelope)
+  return JSON.stringify({
+    ...metadata,
+    ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
+  } satisfies EncryptedEnvelope)
 }
 
 export const decryptText = async (serialized: string, passphrase: string): Promise<string> => {
@@ -120,10 +123,10 @@ export const decryptText = async (serialized: string, passphrase: string): Promi
   }
 }
 
-export const encryptJson = async <T,>(value: T, passphrase: string): Promise<string> =>
+export const encryptJson = async <T>(value: T, passphrase: string): Promise<string> =>
   encryptText(JSON.stringify(value), passphrase)
 
-export const decryptJson = async <T,>(serialized: string, passphrase: string): Promise<T> =>
+export const decryptJson = async <T>(serialized: string, passphrase: string): Promise<T> =>
   JSON.parse(await decryptText(serialized, passphrase)) as T
 
 export const sha256Digest = async (value: string): Promise<string> => {

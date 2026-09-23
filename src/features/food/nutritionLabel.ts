@@ -22,7 +22,10 @@ export const extractNutritionLabel = (rawText: string): NutritionLabelDraft => {
   const serving = text.match(/serving\s+size[^\d]*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)/i)
   const calories = valueFor(text, [/calories?[^\d]*(\d+(?:\.\d+)?)/i])
   const protein = valueFor(text, [/protein[^\d]*(\d+(?:\.\d+)?)\s*g/i])
-  const carbs = valueFor(text, [/(?:total\s+)?carbohydrate[^\d]*(\d+(?:\.\d+)?)\s*g/i, /carbs?[^\d]*(\d+(?:\.\d+)?)\s*g/i])
+  const carbs = valueFor(text, [
+    /(?:total\s+)?carbohydrate[^\d]*(\d+(?:\.\d+)?)\s*g/i,
+    /carbs?[^\d]*(\d+(?:\.\d+)?)\s*g/i,
+  ])
   const fat = valueFor(text, [/(?:total\s+)?fat[^\d]*(\d+(?:\.\d+)?)\s*g/i])
   const fiber = valueFor(text, [/(?:dietary\s+)?fiber[^\d]*(\d+(?:\.\d+)?)\s*g/i])
   const sodium = valueFor(text, [/sodium[^\d]*(\d+(?:\.\d+)?)\s*mg/i])

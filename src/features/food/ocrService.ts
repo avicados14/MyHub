@@ -67,7 +67,11 @@ export const extractVideoFrame = async (file: File, requestedTime = 0): Promise<
     if (!context || !canvas.width || !canvas.height) throw new Error('The selected video frame is empty.')
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('The selected video frame could not be created.')), 'image/jpeg', 0.9)
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('The selected video frame could not be created.'))),
+        'image/jpeg',
+        0.9,
+      )
     })
   } finally {
     video.removeAttribute('src')

@@ -106,7 +106,7 @@
 
 .editor-image-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(190px, .8fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(190px, 0.8fr);
   gap: 14px;
   align-items: end;
 }
@@ -131,7 +131,9 @@
 
 .ingredient-editor-row {
   display: grid;
-  grid-template-columns: 26px minmax(130px, 1.4fr) minmax(75px, .55fr) minmax(70px, .5fr) minmax(120px, .85fr) minmax(110px, 1fr) minmax(180px, 1fr) 44px;
+  grid-template-columns:
+    26px minmax(130px, 1.4fr) minmax(75px, 0.55fr) minmax(70px, 0.5fr) minmax(120px, 0.85fr)
+    minmax(110px, 1fr) minmax(180px, 1fr) 44px;
   align-items: end;
   gap: 8px;
   padding: 12px;
@@ -149,7 +151,7 @@
 
 .override-fields {
   display: grid;
-  grid-template-columns: 1fr .65fr;
+  grid-template-columns: 1fr 0.65fr;
   gap: 7px;
   padding: 8px;
   border-radius: 10px;
@@ -671,8 +673,8 @@
 }
 
 .recipe-hero__actions .recipe-source-link {
-  border: 1px solid rgba(255,255,255,.2);
-  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
   color: white;
 }
 

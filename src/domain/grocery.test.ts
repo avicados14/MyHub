@@ -119,7 +119,7 @@ describe('grocery canonical names', () => {
   it('normalizes whitespace, punctuation, case, and a conservative singular allow-list', () => {
     expect(canonicalizeIngredientName('  Tomatoes (fresh) ')).toBe('tomatoes fresh')
     expect(canonicalizeIngredientName('APPLES')).toBe('apple')
-    expect(canonicalizeIngredientName("Baker’s yeast")).toBe('bakers yeast')
+    expect(canonicalizeIngredientName('Baker’s yeast')).toBe('bakers yeast')
   })
 
   it('does not apply unsafe generic stemming', () => {
@@ -163,7 +163,13 @@ describe('grocery aggregation', () => {
       recipe('r6', [ingredient('i6', 'stock', 1, 'L')]),
       recipe('r7', [ingredient('i7', 'stock', 100, 'g')]),
     ]
-    const items = aggregateGroceryItems(recipes.map((entry, index) => meal(`m${index}`, entry.id)), recipes, [], NOW, 'metric')
+    const items = aggregateGroceryItems(
+      recipes.map((entry, index) => meal(`m${index}`, entry.id)),
+      recipes,
+      [],
+      NOW,
+      'metric',
+    )
     const volume = items.find((item) => groceryUnitFamily(item.unit) === 'volume')
     const mass = items.find((item) => groceryUnitFamily(item.unit) === 'mass')
     expect(items).toHaveLength(2)
@@ -180,7 +186,12 @@ describe('grocery aggregation', () => {
       recipe('r2', [ingredient('i2', 'apples', 3, 'pieces')]),
       recipe('r3', [ingredient('i3', 'apple', 1, 'bag')]),
     ]
-    const items = aggregateGroceryItems(recipes.map((entry, index) => meal(`m${index}`, entry.id)), recipes, [], NOW)
+    const items = aggregateGroceryItems(
+      recipes.map((entry, index) => meal(`m${index}`, entry.id)),
+      recipes,
+      [],
+      NOW,
+    )
     expect(items).toHaveLength(2)
     expect(items.find((item) => item.unit === 'each')?.quantity).toBe(5)
     expect(items.find((item) => item.unit === 'bag')?.quantity).toBe(1)
@@ -213,7 +224,10 @@ describe('grocery aggregation', () => {
   it('surfaces possible prepared-name equivalence without silently combining', () => {
     const items = aggregateGroceryItems(
       [meal('m1', 'r1'), meal('m2', 'r2')],
-      [recipe('r1', [ingredient('i1', 'onion', 1, 'each')]), recipe('r2', [ingredient('i2', 'diced onions', 2, 'each')])],
+      [
+        recipe('r1', [ingredient('i1', 'onion', 1, 'each')]),
+        recipe('r2', [ingredient('i2', 'diced onions', 2, 'each')]),
+      ],
       [],
       NOW,
     )
@@ -241,12 +255,35 @@ describe('pantry decisions', () => {
 
 describe('staples and history', () => {
   it('creates a grocery item only when the caller explicitly chooses a staple', () => {
-    const item = groceryItemFromStaple({ id: 'staple-1', name: 'Dish soap', canonicalName: 'dish soap', quantity: 1, unit: 'item', category: 'Cleaning', enabled: true }, NOW)
-    expect(item).toMatchObject({ name: 'Dish soap', unit: 'each', category: 'Cleaning', pantryDecision: 'unreviewed', checked: false })
+    const item = groceryItemFromStaple(
+      {
+        id: 'staple-1',
+        name: 'Dish soap',
+        canonicalName: 'dish soap',
+        quantity: 1,
+        unit: 'item',
+        category: 'Cleaning',
+        enabled: true,
+      },
+      NOW,
+    )
+    expect(item).toMatchObject({
+      name: 'Dish soap',
+      unit: 'each',
+      category: 'Cleaning',
+      pantryDecision: 'unreviewed',
+      checked: false,
+    })
   })
 
   it('copies history into new editable entities without mutating the immutable snapshot', () => {
-    const entry: GroceryHistoryEntry = { ...base, id: 'history-1', name: 'Campus market', completedAt: NOW, items: [groceryItem({ checked: true, note: 'Original note' })] }
+    const entry: GroceryHistoryEntry = {
+      ...base,
+      id: 'history-1',
+      name: 'Campus market',
+      completedAt: NOW,
+      items: [groceryItem({ checked: true, note: 'Original note' })],
+    }
     const original = structuredClone(entry)
     const copy = copyHistoryEntryToList(entry, '2026-09-23T00:00:00.000Z')
     copy.items[0]!.note = 'Changed in new list'

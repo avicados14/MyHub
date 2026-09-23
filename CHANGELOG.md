@@ -56,4 +56,4 @@ The data layer introduces versioned IndexedDB persistence, removable demo data, 
 
 ## References
 
-[1]: https://keepachangelog.com/en/1.1.0/ "Keep a Changelog"
+[1]: https://keepachangelog.com/en/1.1.0/ 'Keep a Changelog'

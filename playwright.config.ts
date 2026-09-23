@@ -1,21 +1,20 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const port = process.env.PLAYWRIGHT_PORT ?? '4173'
-
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: `http://127.0.0.1:${port}`,
+    baseURL: 'http://127.0.0.1:4287',
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `npm run dev -- --host 127.0.0.1 --port ${port}`,
-    url: `http://127.0.0.1:${port}`,
-    reuseExistingServer: !process.env.CI,
+    command: 'npm run dev -- --host 127.0.0.1 --port 4287 --strictPort',
+    url: 'http://127.0.0.1:4287',
+    reuseExistingServer: false,
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } } },

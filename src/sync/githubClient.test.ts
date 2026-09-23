@@ -3,11 +3,16 @@ import { GitHubContentsClient } from './githubClient'
 
 const target = { owner: 'avicados14', repo: 'MyHub-Data', path: 'myhub-data/v1/snapshot.enc' }
 
-const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 describe('GitHub Contents client', () => {
   it('rejects a public repository', async () => {
-    const request = vi.fn().mockResolvedValue(jsonResponse({ private: false, full_name: 'avicados14/MyHub-Data', permissions: { push: true } }))
+    const request = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ private: false, full_name: 'avicados14/MyHub-Data', permissions: { push: true } }),
+      )
     const client = new GitHubContentsClient('token', request)
     await expect(client.requirePrivateRepository(target)).rejects.toThrow(/private repository/)
   })

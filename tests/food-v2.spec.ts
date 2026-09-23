@@ -27,7 +27,9 @@ test.describe('food v2 workflows', () => {
     await page.goto('/#/food')
     await page.getByRole('button', { name: 'Import recipe' }).click()
     await page.getByText('Paste', { exact: true }).click()
-    await page.getByLabel('JSON-LD, HTML, text, or caption').fill('Toast and eggs\nIngredients\n2 each eggs\nsalt to taste\nInstructions\nToast bread.\nCook eggs.')
+    await page
+      .getByLabel('JSON-LD, HTML, text, or caption')
+      .fill('Toast and eggs\nIngredients\n2 each eggs\nsalt to taste\nInstructions\nToast bread.\nCook eggs.')
     await page.getByRole('button', { name: 'Parse pasted content' }).click()
     await expect(page.getByText('Needs Review', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Open review draft' }).click()

@@ -16,9 +16,18 @@ describe('meal lifecycle', () => {
   it('moves or copies meals without mutating source snapshots', () => {
     const data = createTestFixtureData(new Date(2026, 8, 22))
     const meal = data.meals[0]!
-    const copied = moveOrCopyMeal(data, meal.id, { date: '2026-09-24', slot: 'lunch' }, 'copy', '2026-09-22T12:00:00.000Z', 'meal-copy')
+    const copied = moveOrCopyMeal(
+      data,
+      meal.id,
+      { date: '2026-09-24', slot: 'lunch' },
+      'copy',
+      '2026-09-22T12:00:00.000Z',
+      'meal-copy',
+    )
     expect(copied.meals).toHaveLength(data.meals.length + 1)
-    expect(copied.meals.find((item) => item.id === 'meal-copy')).toEqual(expect.objectContaining({ date: '2026-09-24', slot: 'lunch', consumedServings: 0 }))
+    expect(copied.meals.find((item) => item.id === 'meal-copy')).toEqual(
+      expect.objectContaining({ date: '2026-09-24', slot: 'lunch', consumedServings: 0 }),
+    )
     expect(meal.date).not.toBe('2026-09-24')
   })
 })

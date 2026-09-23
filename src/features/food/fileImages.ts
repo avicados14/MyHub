@@ -19,12 +19,13 @@ export const validateVideoFile = (file: File): string | null => {
   return null
 }
 
-export const readFileAsDataUrl = (file: Blob): Promise<string> => new Promise((resolve, reject) => {
-  const reader = new FileReader()
-  reader.onerror = () => reject(reader.error ?? new Error('The file could not be read.'))
-  reader.onload = () => resolve(String(reader.result))
-  reader.readAsDataURL(file)
-})
+export const readFileAsDataUrl = (file: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error ?? new Error('The file could not be read.'))
+    reader.onload = () => resolve(String(reader.result))
+    reader.readAsDataURL(file)
+  })
 
 export const resolveFoodImage = (path: string | undefined): string | undefined => {
   if (!path) return undefined

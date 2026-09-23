@@ -30,15 +30,15 @@ Swift should use `UUID`, `Decimal`, explicit local dates, and versioned `Codable
 
 ## Native Adapters
 
-| Capability | Native direction |
-|---|---|
-| Calendars | EventKit or Apple’s current recommended calendar framework |
-| Local persistence | SwiftData or another native persistence layer after schema review |
-| Camera and labels | AVFoundation, Vision, and VisionKit |
-| Photo intake | PhotosPicker |
-| Sharing into MyHub | Share Extension with an App Group handoff queue |
-| Private sync | Evaluate CloudKit against a private shared backend |
-| Credentials | Keychain where secrets are genuinely required |
+| Capability         | Native direction                                                  |
+| ------------------ | ----------------------------------------------------------------- |
+| Calendars          | EventKit or Apple’s current recommended calendar framework        |
+| Local persistence  | SwiftData or another native persistence layer after schema review |
+| Camera and labels  | AVFoundation, Vision, and VisionKit                               |
+| Photo intake       | PhotosPicker                                                      |
+| Sharing into MyHub | Share Extension with an App Group handoff queue                   |
+| Private sync       | Evaluate CloudKit against a private shared backend                |
+| Credentials        | Keychain where secrets are genuinely required                     |
 
 The Share Extension should capture only data legitimately supplied by the source application. It should create a reviewable draft rather than fabricate missing recipe fields.
 
@@ -67,6 +67,6 @@ Native work should begin only after the user approves:
 
 ## References
 
-[1]: https://developer.apple.com/documentation/swiftui "Apple Developer Documentation — SwiftUI"
-[2]: https://developer.apple.com/documentation/eventkit "Apple Developer Documentation — EventKit"
-[3]: https://developer.apple.com/documentation/swiftdata "Apple Developer Documentation — SwiftData"
+[1]: https://developer.apple.com/documentation/swiftui 'Apple Developer Documentation — SwiftUI'
+[2]: https://developer.apple.com/documentation/eventkit 'Apple Developer Documentation — EventKit'
+[3]: https://developer.apple.com/documentation/swiftdata 'Apple Developer Documentation — SwiftData'

@@ -13,18 +13,49 @@ export function PageHeader({ title, description, action }: { title: string; desc
   )
 }
 
-export function Card({ children, className = '', as: Tag = 'section' }: { children: ReactNode; className?: string; as?: 'section' | 'article' | 'div' }) {
+export function Card({
+  children,
+  className = '',
+  as: Tag = 'section',
+}: {
+  children: ReactNode
+  className?: string
+  as?: 'section' | 'article' | 'div'
+}) {
   return <Tag className={`card ${className}`}>{children}</Tag>
 }
 
-export function StatusBadge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'danger' | 'attention' | 'success' | 'study' | 'food' | 'lilac' }) {
+export function StatusBadge({
+  children,
+  tone = 'neutral',
+}: {
+  children: ReactNode
+  tone?: 'neutral' | 'danger' | 'attention' | 'success' | 'study' | 'food' | 'lilac'
+}) {
   return <span className={`badge badge--${tone}`}>{children}</span>
 }
 
-export function ProgressBar({ value, max, label, tone = 'blue' }: { value: number; max: number; label: string; tone?: 'blue' | 'mint' | 'yellow' | 'pink' }) {
+export function ProgressBar({
+  value,
+  max,
+  label,
+  tone = 'blue',
+}: {
+  value: number
+  max: number
+  label: string
+  tone?: 'blue' | 'mint' | 'yellow' | 'pink'
+}) {
   const percentage = max <= 0 ? 0 : Math.min(100, Math.max(0, (value / max) * 100))
   return (
-    <div className="progress" aria-label={label} role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(value)}>
+    <div
+      className="progress"
+      aria-label={label}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-valuenow={Math.round(value)}
+    >
       <span className={`progress__bar progress__bar--${tone}`} style={{ width: `${percentage}%` }} />
     </div>
   )
@@ -40,7 +71,19 @@ export function EmptyState({ title, detail, action }: { title: string; detail: s
   )
 }
 
-export function Modal({ open, title, description, onClose, children }: { open: boolean; title: string; description?: string; onClose: () => void; children: ReactNode }) {
+export function Modal({
+  open,
+  title,
+  description,
+  onClose,
+  children,
+}: {
+  open: boolean
+  title: string
+  description?: string
+  onClose: () => void
+  children: ReactNode
+}) {
   const titleId = useId()
   const descriptionId = useId()
   const dialog = useRef<HTMLDialogElement>(null)
@@ -83,27 +126,49 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   const hintId = useId()
   const control = isValidElement<{ id?: string; 'aria-describedby'?: string }>(children)
     ? cloneElement(children as ReactElement<{ id?: string; 'aria-describedby'?: string }>, {
-      id: children.props.id ?? inputId,
-      ...(hint ? { 'aria-describedby': [children.props['aria-describedby'], hintId].filter(Boolean).join(' ') } : {}),
-    })
+        id: children.props.id ?? inputId,
+        ...(hint ? { 'aria-describedby': [children.props['aria-describedby'], hintId].filter(Boolean).join(' ') } : {}),
+      })
     : children
-  const controlId = isValidElement<{ id?: string }>(children) ? children.props.id ?? inputId : inputId
+  const controlId = isValidElement<{ id?: string }>(children) ? (children.props.id ?? inputId) : inputId
   return (
     <div className="field">
-      <label className="field__label" htmlFor={controlId}>{label}</label>
+      <label className="field__label" htmlFor={controlId}>
+        {label}
+      </label>
       {control}
-      {hint ? <span className="field__hint" id={hintId}>{hint}</span> : null}
+      {hint ? (
+        <span className="field__hint" id={hintId}>
+          {hint}
+        </span>
+      ) : null}
     </div>
   )
 }
 
-export function SegmentedControl({ label, options, value, onChange }: { label: string; options: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void }) {
+export function SegmentedControl({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: Array<{ value: string; label: string }>
+  value: string
+  onChange: (value: string) => void
+}) {
   return (
     <fieldset className="segmented-control">
       <legend className="sr-only">{label}</legend>
       {options.map((option) => (
         <label key={option.value} className={value === option.value ? 'is-selected' : ''}>
-          <input type="radio" name={label} value={option.value} checked={value === option.value} onChange={() => onChange(option.value)} />
+          <input
+            type="radio"
+            name={label}
+            value={option.value}
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+          />
           <span>{option.label}</span>
         </label>
       ))}

@@ -53,7 +53,14 @@ Vite Preview is only for testing the production build locally; it is not a produ
 
 ## 6. Run Tests
 
-Run linting, strict TypeScript, unit tests, and a production build:
+Format the maintained source, documentation, configuration, and browser-test files before validating the repository:
+
+```bash
+npm run format
+npm run format:check
+```
+
+Run formatting verification, linting, strict TypeScript, unit tests, and a production build:
 
 ```bash
 npm run check
@@ -70,6 +77,8 @@ Then run the browser acceptance tests:
 ```bash
 npm run test:e2e
 ```
+
+Playwright starts an isolated Vite server at `127.0.0.1:4287` with `--strictPort`, does not reuse an existing server, and runs the same serial desktop, tablet, and mobile Chromium matrix used by CI. The suite resets MyHub’s application and credential IndexedDB stores before each stateful scenario. It includes route-level axe checks, dark-mode axe checks, the native search dialog’s keyboard focus trap and return-focus behavior, and the connected empty-to-history persistence journey. Use `npx playwright test --project=desktop tests/accessibility.spec.ts` when you need to rerun the desktop accessibility/search regression alone.
 
 ## 7. Deploy with GitHub Pages
 
@@ -150,7 +159,7 @@ Many Canvas ICS servers block browser-origin requests. Download the `.ics` file 
 
 ### Data disappeared
 
-Confirm you are using the same browser profile and the same address. Browser storage can be cleared by the user, private-browsing rules, or device storage management. Restore the latest JSON export and make regular backups.
+Confirm you are using the same browser profile and the same address. Browser storage can be cleared by the user, private-browsing rules, or device storage management. Restore the latest JSON export and make regular backups. Feed URLs are stored only in that browser’s local MyHub data; do not paste a private feed URL into source, test fixtures, screenshots, issue reports, or a repository.
 
 ### GitHub Sync is locked
 
@@ -171,5 +180,5 @@ npm run test:e2e
 
 ## References
 
-[1]: https://vite.dev/guide/static-deploy.html "Vite — Deploying a Static Site"
-[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages "GitHub Docs — Using Custom Workflows with GitHub Pages"
+[1]: https://vite.dev/guide/static-deploy.html 'Vite — Deploying a Static Site'
+[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs — Using Custom Workflows with GitHub Pages'

@@ -78,13 +78,13 @@ export const createEmptyData = (now = new Date()): AppData => ({
 })
 
 export const isAppDataEmpty = (data: AppData): boolean =>
-  data.events.length === 0
-  && data.assignments.length === 0
-  && data.recipes.length === 0
-  && data.packagedFoods.length === 0
-  && data.meals.length === 0
-  && data.leftovers.length === 0
-  && data.foodLog.length === 0
-  && data.pantry.length === 0
-  && data.activeGroceryList === null
-  && data.groceryHistory.length === 0
+  data.events.length === 0 &&
+  data.assignments.length === 0 &&
+  data.recipes.length === 0 &&
+  data.packagedFoods.length === 0 &&
+  data.meals.length === 0 &&
+  data.leftovers.length === 0 &&
+  data.foodLog.length === 0 &&
+  data.pantry.length === 0 &&
+  data.activeGroceryList === null &&
+  data.groceryHistory.length === 0

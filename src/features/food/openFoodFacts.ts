@@ -36,12 +36,12 @@ export interface OpenFoodFactsDraft {
   warnings: string[]
 }
 
-const numeric = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null
+const numeric = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null)
 const nutriment = (values: Record<string, unknown>, key: string, servingGrams: number | null): number | null => {
   const perServing = numeric(values[`${key}_serving`])
   if (perServing !== null) return perServing
   const per100g = numeric(values[`${key}_100g`])
-  return per100g !== null && servingGrams !== null ? per100g * servingGrams / 100 : null
+  return per100g !== null && servingGrams !== null ? (per100g * servingGrams) / 100 : null
 }
 
 const parseServing = (label: string | undefined, quantity: number | undefined): { quantity: number; unit: string } => {
@@ -56,8 +56,9 @@ export const lookupOpenFoodFacts = async (barcode: string, signal?: AbortSignal)
   const endpoint = `https://world.openfoodfacts.org/api/v2/product/${normalized}.json?fields=${encodeURIComponent(OPEN_FOOD_FACTS_FIELDS)}`
   const response = await fetch(endpoint, { signal, headers: { Accept: 'application/json' } })
   if (!response.ok) throw new Error(`Open Food Facts returned ${response.status}. Enter the product manually instead.`)
-  const body = await response.json() as OffResponse
-  if (body.status !== 1 || !body.product) throw new Error('No Open Food Facts product was found. Enter the label manually instead.')
+  const body = (await response.json()) as OffResponse
+  if (body.status !== 1 || !body.product)
+    throw new Error('No Open Food Facts product was found. Enter the label manually instead.')
   const product = body.product
   const values = product.nutriments ?? {}
   const serving = parseServing(product.serving_size, product.serving_quantity)
@@ -65,7 +66,10 @@ export const lookupOpenFoodFacts = async (barcode: string, signal?: AbortSignal)
   const servingGrams = serving.unit.toLowerCase() === 'g' ? serving.quantity : null
   const warnings: string[] = []
   if (!product.product_name) warnings.push('Product name is missing.')
-  if (!usedServingValues) warnings.push('Per-serving values were unavailable; displayed values use the database per-100 g fields and need confirmation.')
+  if (!usedServingValues)
+    warnings.push(
+      'Per-serving values were unavailable; displayed values use the database per-100 g fields and need confirmation.',
+    )
   const nutrition: Nutrition = {
     calories: nutriment(values, 'energy-kcal', servingGrams) ?? 0,
     protein: nutriment(values, 'proteins', servingGrams) ?? 0,
@@ -77,7 +81,8 @@ export const lookupOpenFoodFacts = async (barcode: string, signal?: AbortSignal)
       return sodium === null ? 0 : sodium * 1000
     })(),
   }
-  if (Object.values(nutrition).every((value) => value === 0)) warnings.push('Nutrition values are missing. Check the package label before saving.')
+  if (Object.values(nutrition).every((value) => value === 0))
+    warnings.push('Nutrition values are missing. Check the package label before saving.')
   return {
     name: product.product_name?.trim() || 'Unnamed packaged food',
     brand: product.brands?.trim() || '',

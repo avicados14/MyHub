@@ -5,15 +5,7 @@ export type CalendarKind = 'event' | 'study' | 'meal-prep'
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type StorageLocation = 'Pantry' | 'Refrigerator' | 'Freezer'
 export type BuiltInGroceryCategory =
-  | 'Produce'
-  | 'Meat & Seafood'
-  | 'Dairy'
-  | 'Bakery'
-  | 'Frozen'
-  | 'Pantry'
-  | 'Snacks'
-  | 'Household'
-  | 'Other'
+  'Produce' | 'Meat & Seafood' | 'Dairy' | 'Bakery' | 'Frozen' | 'Pantry' | 'Snacks' | 'Household' | 'Other'
 
 export type GroceryCategory = BuiltInGroceryCategory | (string & {})
 
@@ -259,12 +251,7 @@ export interface StudySettings {
 }
 
 export type MealPlanningMode =
-  | 'balanced'
-  | 'variety'
-  | 'meal-prep'
-  | 'favor-leftovers'
-  | 'minimize-waste'
-  | 'minimize-unique-ingredients'
+  'balanced' | 'variety' | 'meal-prep' | 'favor-leftovers' | 'minimize-waste' | 'minimize-unique-ingredients'
 
 export interface MealPlanningPreferences {
   mode: MealPlanningMode

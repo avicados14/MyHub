@@ -5,7 +5,9 @@ import type { AppData, GroceryItem } from '../src/domain/types'
 const seedAppData = async (page: Page, data: AppData, route: string) => {
   await page.goto(route)
   await page.waitForLoadState('networkidle')
-  await expect(page.getByRole('heading', { name: route.includes('pantry') ? 'Pantry' : 'Grocery', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: route.includes('pantry') ? 'Pantry' : 'Grocery', exact: true }),
+  ).toBeVisible()
   await page.evaluate(async (state) => {
     const request = indexedDB.open('myhub-local', 2)
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -29,20 +31,21 @@ const seedAppData = async (page: Page, data: AppData, route: string) => {
   await page.waitForLoadState('networkidle')
 }
 
-const readAppData = async (page: Page): Promise<AppData> => page.evaluate(async () => {
-  const request = indexedDB.open('myhub-local', 2)
-  const database = await new Promise<IDBDatabase>((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
+const readAppData = async (page: Page): Promise<AppData> =>
+  page.evaluate(async () => {
+    const request = indexedDB.open('myhub-local', 2)
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const state = await new Promise<AppData>((resolve, reject) => {
+      const get = database.transaction('application', 'readonly').objectStore('application').get('state')
+      get.onsuccess = () => resolve(get.result as AppData)
+      get.onerror = () => reject(get.error)
+    })
+    database.close()
+    return state
   })
-  const state = await new Promise<AppData>((resolve, reject) => {
-    const get = database.transaction('application', 'readonly').objectStore('application').get('state')
-    get.onsuccess = () => resolve(get.result as AppData)
-    get.onerror = () => reject(get.error)
-  })
-  database.close()
-  return state
-})
 
 const waitForStored = async (page: Page, predicate: (data: AppData) => boolean) => {
   await expect.poll(async () => predicate(await readAppData(page))).toBe(true)
@@ -87,12 +90,19 @@ test('pantry supports validated full-field CRUD and safe quantity controls', asy
   await editDialog.getByLabel('Quantity').fill('2')
   await editDialog.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByText('Brown rice', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Decrease Brown rice' }).locator('xpath=ancestor::article')).toContainText('Freezer')
+  await expect(
+    page.getByRole('button', { name: 'Decrease Brown rice' }).locator('xpath=ancestor::article'),
+  ).toContainText('Freezer')
   await expect(page.getByText(/Sealed container/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Decrease Brown rice' }).click()
   await page.getByRole('button', { name: 'Decrease Brown rice' }).click()
-  await expect(page.getByRole('article').filter({ has: page.getByText('Brown rice', { exact: true }) }).locator('.quantity-adjuster > span')).toHaveText('0 kg')
+  await expect(
+    page
+      .getByRole('article')
+      .filter({ has: page.getByText('Brown rice', { exact: true }) })
+      .locator('.quantity-adjuster > span'),
+  ).toHaveText('0 kg')
   await expect(page.getByRole('button', { name: 'Decrease Brown rice' })).toBeDisabled()
   await page.getByRole('button', { name: 'Increase Brown rice' }).click()
   await waitForStored(page, (data) => data.pantry[0]?.quantity === 1 && data.pantry[0]?.notes === 'Sealed container')
@@ -111,7 +121,9 @@ test('pantry supports validated full-field CRUD and safe quantity controls', asy
   await addDialog.getByLabel('Category').selectOption('Produce')
   await addDialog.getByRole('button', { name: 'Add item' }).click()
   await expect(page.getByText('Apples', { exact: true })).toBeVisible()
-  await waitForStored(page, (data) => data.pantry.some((item) => item.name === 'Apples' && item.quantity === 4 && item.location === 'Refrigerator'))
+  await waitForStored(page, (data) =>
+    data.pantry.some((item) => item.name === 'Apples' && item.quantity === 4 && item.location === 'Refrigerator'),
+  )
   await page.reload()
   await expect(page.getByText('Apples', { exact: true })).toBeVisible()
 })
@@ -120,8 +132,24 @@ test('pantry check requires decisions, confirms staples, and supports full shopp
   const data = createTestFixtureData()
   data.settings.groceryCategories.push({ id: 'category-bulk', name: 'Bulk', sortOrder: 2.5, enabled: true })
   data.settings.groceryStaples = [
-    { id: 'staple-soap', name: 'Dish soap', canonicalName: 'dish soap', quantity: 1, unit: 'each', category: 'Household', enabled: true },
-    { id: 'staple-hidden', name: 'Hidden staple', canonicalName: 'hidden staple', quantity: 1, unit: 'each', category: 'Other', enabled: false },
+    {
+      id: 'staple-soap',
+      name: 'Dish soap',
+      canonicalName: 'dish soap',
+      quantity: 1,
+      unit: 'each',
+      category: 'Household',
+      enabled: true,
+    },
+    {
+      id: 'staple-hidden',
+      name: 'Hidden staple',
+      canonicalName: 'hidden staple',
+      quantity: 1,
+      unit: 'each',
+      category: 'Other',
+      enabled: false,
+    },
   ]
   await seedAppData(page, data, '/#/grocery')
   await page.getByRole('button', { name: 'Generate from meal plan' }).click()
@@ -186,7 +214,10 @@ test('pantry check requires decisions, confirms staples, and supports full shopp
   page.once('dialog', (dialog) => dialog.dismiss())
   await page.getByRole('button', { name: 'Clear completed' }).click()
   await expect(page.getByText('chicken breast', { exact: true })).toBeVisible()
-  await waitForStored(page, (stored) => stored.activeGroceryList?.items.some((item) => item.note === 'Brown rice if available') === true)
+  await waitForStored(
+    page,
+    (stored) => stored.activeGroceryList?.items.some((item) => item.note === 'Brown rice if available') === true,
+  )
 })
 
 test('completion adds only explicit selections, preserves history, and repeats into a new list', async ({ page }) => {
@@ -201,7 +232,12 @@ test('completion adds only explicit selections, preserves history, and repeats i
     items: [
       groceryItem('grocery-apples', 'Apples', { quantity: 4, category: 'Produce', checked: true }),
       groceryItem('grocery-milk', 'Milk', { quantity: 1, unit: 'L', category: 'Dairy', checked: false }),
-      groceryItem('grocery-towels', 'Paper towels', { quantity: 2, category: 'Household', checked: false, note: 'Recycled' }),
+      groceryItem('grocery-towels', 'Paper towels', {
+        quantity: 2,
+        category: 'Household',
+        checked: false,
+        note: 'Recycled',
+      }),
     ],
   }
   await seedAppData(page, data, '/#/grocery')
@@ -220,11 +256,13 @@ test('completion adds only explicit selections, preserves history, and repeats i
   await expect(page.getByRole('heading', { name: 'No active grocery list' })).toBeVisible()
   await waitForStored(page, (stored) => {
     const milk = stored.pantry.find((item) => item.name === 'Milk')
-    return milk?.quantity === 2
-      && milk.location === 'Freezer'
-      && !stored.pantry.some((item) => item.name === 'Apples')
-      && !stored.pantry.some((item) => item.name === 'Paper towels')
-      && stored.groceryHistory[0]?.items.length === 3
+    return (
+      milk?.quantity === 2 &&
+      milk.location === 'Freezer' &&
+      !stored.pantry.some((item) => item.name === 'Apples') &&
+      !stored.pantry.some((item) => item.name === 'Paper towels') &&
+      stored.groceryHistory[0]?.items.length === 3
+    )
   })
 
   await page.getByRole('button', { name: /View Campus market completed/ }).click()
@@ -237,5 +275,8 @@ test('completion adds only explicit selections, preserves history, and repeats i
   const editDialog = page.getByRole('dialog', { name: 'Edit Paper towels' })
   await editDialog.getByLabel('Note').fill('Changed only in repeat')
   await editDialog.getByRole('button', { name: 'Save changes' }).click()
-  await waitForStored(page, (stored) => stored.groceryHistory[0]?.items.find((item) => item.name === 'Paper towels')?.note === 'Recycled')
+  await waitForStored(
+    page,
+    (stored) => stored.groceryHistory[0]?.items.find((item) => item.name === 'Paper towels')?.note === 'Recycled',
+  )
 })

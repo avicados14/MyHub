@@ -78,12 +78,12 @@ All persistent records use stable string identifiers, ISO timestamps, and explic
 
 The main aggregate is `AppData`:
 
-| Area | Records |
-|---|---|
-| School | Calendar events, multiple calendar feeds, homework assignments, subtasks, study settings, avoid-time ranges |
-| Food | Recipes, packaged foods, ingredients, steps, immutable meal-source snapshots, leftovers, food-log snapshots, nutrition provenance |
-| Inventory | Pantry items, active grocery list, immutable grocery history |
-| Preferences | Appearance, measurement system, nutrition targets, meal-planning mode/preferences, grocery categories/staples |
+| Area        | Records                                                                                                                           |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| School      | Calendar events, multiple calendar feeds, homework assignments, subtasks, study settings, avoid-time ranges                       |
+| Food        | Recipes, packaged foods, ingredients, steps, immutable meal-source snapshots, leftovers, food-log snapshots, nutrition provenance |
+| Inventory   | Pantry items, active grocery list, immutable grocery history                                                                      |
+| Preferences | Appearance, measurement system, nutrition targets, meal-planning mode/preferences, grocery categories/staples                     |
 
 `AppData.schemaVersion` is currently `2`. `migrateAppData` explicitly transforms schema version 1 state and backup data into version 2, adding durable defaults and immutable snapshots without removing legacy records. Unknown future schema versions are rejected. The backup envelope adds its own `formatVersion`, application version, and export timestamp.
 
@@ -142,5 +142,5 @@ EventKit, SwiftData, Vision, PhotosPicker, AVFoundation, Share Extensions, App G
 
 ## References
 
-[1]: https://vite.dev/guide/static-deploy.html "Vite — Deploying a Static Site"
-[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages "GitHub Docs — Using Custom Workflows with GitHub Pages"
+[1]: https://vite.dev/guide/static-deploy.html 'Vite — Deploying a Static Site'
+[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs — Using Custom Workflows with GitHub Pages'

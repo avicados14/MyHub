@@ -27,14 +27,20 @@ const ZERO_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, f
 const JSON_LD_PATTERN = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
 const HEADING_PATTERN = /^(ingredients?|instructions?|directions?|method|steps?)\s*:?$/i
 
-const asString = (value: unknown): string => typeof value === 'string' ? value.trim() : ''
+const asString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
 const asStringArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value.flatMap((item) => typeof item === 'string' ? [item.trim()] : []).filter(Boolean)
-  if (typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean)
+  if (Array.isArray(value))
+    return value.flatMap((item) => (typeof item === 'string' ? [item.trim()] : [])).filter(Boolean)
+  if (typeof value === 'string')
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
   return []
 }
 
-const record = (value: unknown): Record<string, unknown> | null => typeof value === 'object' && value !== null ? value as Record<string, unknown> : null
+const record = (value: unknown): Record<string, unknown> | null =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null
 
 const recipeNode = (value: unknown): Record<string, unknown> | null => {
   if (Array.isArray(value)) {
@@ -83,16 +89,22 @@ export const parseIngredientLine = (line: string, index: number): RecipeIngredie
 }
 
 const parseInstructions = (value: unknown): string[] => {
-  if (typeof value === 'string') return value.split(/\n+/).map((item) => item.trim()).filter(Boolean)
+  if (typeof value === 'string')
+    return value
+      .split(/\n+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
   if (!Array.isArray(value)) return []
-  return value.flatMap((item) => {
-    if (typeof item === 'string') return [item.trim()]
-    const object = record(item)
-    if (!object) return []
-    if (Array.isArray(object.itemListElement)) return parseInstructions(object.itemListElement)
-    const text = asString(object.text) || asString(object.name)
-    return text ? [text] : []
-  }).filter(Boolean)
+  return value
+    .flatMap((item) => {
+      if (typeof item === 'string') return [item.trim()]
+      const object = record(item)
+      if (!object) return []
+      if (Array.isArray(object.itemListElement)) return parseInstructions(object.itemListElement)
+      const text = asString(object.text) || asString(object.name)
+      return text ? [text] : []
+    })
+    .filter(Boolean)
 }
 
 const nutritionFromNode = (value: unknown): Nutrition => {
@@ -118,14 +130,20 @@ export const parseRecipeJsonLd = (value: unknown, sourceUrl?: string): RecipeDra
   const node = recipeNode(value)
   if (!node) return null
   const ingredients = asStringArray(node.recipeIngredient).map(parseIngredientLine)
-  const steps = parseInstructions(node.recipeInstructions).map((text, index): RecipeStep => ({ id: `import-step-${index}`, text }))
-  const tags = [...asStringArray(node.keywords), ...asStringArray(node.recipeCuisine)].filter((tag, index, all) => all.indexOf(tag) === index)
+  const steps = parseInstructions(node.recipeInstructions).map((text, index): RecipeStep => ({
+    id: `import-step-${index}`,
+    text,
+  }))
+  const tags = [...asStringArray(node.keywords), ...asStringArray(node.recipeCuisine)].filter(
+    (tag, index, all) => all.indexOf(tag) === index,
+  )
   const category = asString(node.recipeCategory) || 'Uncategorized'
   const author = typeof node.author === 'string' ? node.author : asString(record(node.author)?.name)
   const warnings = []
   if (!ingredients.length) warnings.push('No ingredients were found. Add them before marking the draft reviewed.')
   if (!steps.length) warnings.push('No method steps were found. Add them before marking the draft reviewed.')
-  if (ingredients.some((item) => item.quantity === null)) warnings.push('One or more ingredient quantities were not present in the source.')
+  if (ingredients.some((item) => item.quantity === null))
+    warnings.push('One or more ingredient quantities were not present in the source.')
   return {
     name: asString(node.name) || 'Imported recipe draft',
     description: asString(node.description),
@@ -154,18 +172,27 @@ export const extractRecipeJsonLd = (htmlOrJson: string): unknown[] => {
   const trimmed = htmlOrJson.trim()
   const values: unknown[] = []
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    try { values.push(JSON.parse(trimmed)) } catch { /* fall through to text parsing */ }
+    try {
+      values.push(JSON.parse(trimmed))
+    } catch {
+      /* fall through to text parsing */
+    }
   }
   for (const match of htmlOrJson.matchAll(JSON_LD_PATTERN)) {
-    try { values.push(JSON.parse(match[1] ?? '')) } catch { /* malformed blocks remain reviewable as text */ }
+    try {
+      values.push(JSON.parse(match[1] ?? ''))
+    } catch {
+      /* malformed blocks remain reviewable as text */
+    }
   }
   return values
 }
 
-const meaningfulLines = (text: string): string[] => decodeHtml(text)
-  .split(/\r?\n/)
-  .map((line) => line.replace(/^[#>]+\s*/, '').trim())
-  .filter(Boolean)
+const meaningfulLines = (text: string): string[] =>
+  decodeHtml(text)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[#>]+\s*/, '').trim())
+    .filter(Boolean)
 
 export const parseRecipeText = (text: string, kind: RecipeImportKind = 'text', sourceUrl?: string): RecipeDraft => {
   const lines = meaningfulLines(text)
@@ -174,8 +201,14 @@ export const parseRecipeText = (text: string, kind: RecipeImportKind = 'text', s
   const ingredientLines: string[] = []
   const stepLines: string[] = []
   for (const line of lines) {
-    if (/^ingredients?\s*:?$/i.test(line)) { section = 'ingredients'; continue }
-    if (/^(instructions?|directions?|method|steps?)\s*:?$/i.test(line)) { section = 'steps'; continue }
+    if (/^ingredients?\s*:?$/i.test(line)) {
+      section = 'ingredients'
+      continue
+    }
+    if (/^(instructions?|directions?|method|steps?)\s*:?$/i.test(line)) {
+      section = 'steps'
+      continue
+    }
     if (HEADING_PATTERN.test(line)) continue
     if (section === 'ingredients') ingredientLines.push(line)
     else if (section === 'steps') stepLines.push(line.replace(/^\d+[.)]\s*/, ''))
@@ -188,7 +221,8 @@ export const parseRecipeText = (text: string, kind: RecipeImportKind = 'text', s
   }
   const ingredients = ingredientLines.map(parseIngredientLine)
   const warnings = ['Pasted or recognized text needs review because layout and sections may be ambiguous.']
-  if (ingredients.some((item) => item.quantity === null)) warnings.push('Missing quantities were left blank; none were invented.')
+  if (ingredients.some((item) => item.quantity === null))
+    warnings.push('Missing quantities were left blank; none were invented.')
   return {
     name: overview[0]?.slice(0, 120) || 'Imported recipe draft',
     description: overview.slice(1, 3).join(' '),
@@ -201,7 +235,12 @@ export const parseRecipeText = (text: string, kind: RecipeImportKind = 'text', s
     ingredients,
     steps: stepLines.map((line, index) => ({ id: `import-step-${index}`, text: line })),
     nutritionPerServing: { ...ZERO_NUTRITION },
-    sourceLabel: kind === 'caption' || kind === 'social' ? 'Pasted social caption' : kind.includes('ocr') ? 'Browser OCR import' : 'Pasted recipe text',
+    sourceLabel:
+      kind === 'caption' || kind === 'social'
+        ? 'Pasted social caption'
+        : kind.includes('ocr')
+          ? 'Browser OCR import'
+          : 'Pasted recipe text',
     ...(sourceUrl ? { sourceUrl } : {}),
     importKind: kind,
     warnings,
@@ -219,28 +258,36 @@ export const parseRecipeInput = (input: string, kind: RecipeImportKind = 'text',
 
 export const fetchRecipeDraft = async (url: string, signal?: AbortSignal): Promise<RecipeDraft> => {
   let parsed: URL
-  try { parsed = new URL(url) } catch { throw new Error('Enter a complete recipe URL beginning with http:// or https://.') }
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new Error('Enter a complete recipe URL beginning with http:// or https://.')
+  }
   if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only http and https recipe URLs can be fetched.')
   let response: Response
   try {
-    response = await fetch(parsed.toString(), { signal, headers: { Accept: 'text/html,application/ld+json,application/json' } })
+    response = await fetch(parsed.toString(), {
+      signal,
+      headers: { Accept: 'text/html,application/ld+json,application/json' },
+    })
   } catch {
-    throw new Error('This site could not be fetched in the browser, usually because it blocks cross-origin requests. Paste its JSON-LD, page text, caption, or an image instead.')
+    throw new Error(
+      'This site could not be fetched in the browser, usually because it blocks cross-origin requests. Paste its JSON-LD, page text, caption, or an image instead.',
+    )
   }
-  if (!response.ok) throw new Error(`The site returned ${response.status}. Paste its JSON-LD, page text, caption, or an image instead.`)
+  if (!response.ok)
+    throw new Error(`The site returned ${response.status}. Paste its JSON-LD, page text, caption, or an image instead.`)
   const text = await response.text()
   const draft = parseRecipeInput(text, 'url', parsed.toString())
   if (draft.importKind !== 'url' || draft.sourceLabel === 'Pasted recipe text') {
-    throw new Error('No Schema.org Recipe JSON-LD was found. Paste the recipe text or JSON-LD so it can be reviewed locally.')
+    throw new Error(
+      'No Schema.org Recipe JSON-LD was found. Paste the recipe text or JSON-LD so it can be reviewed locally.',
+    )
   }
   return draft
 }
 
-export const recipeFromDraft = (
-  draft: RecipeDraft,
-  timestamp: string,
-  id: string,
-): Recipe => ({
+export const recipeFromDraft = (draft: RecipeDraft, timestamp: string, id: string): Recipe => ({
   id,
   createdAt: timestamp,
   updatedAt: timestamp,

@@ -10,7 +10,10 @@ const jsonLd = {
   prepTime: 'PT10M',
   cookTime: 'PT20M',
   recipeIngredient: ['8 oz spaghetti', 'salt to taste'],
-  recipeInstructions: [{ '@type': 'HowToStep', text: 'Boil the pasta.' }, { '@type': 'HowToStep', text: 'Toss with lemon.' }],
+  recipeInstructions: [
+    { '@type': 'HowToStep', text: 'Boil the pasta.' },
+    { '@type': 'HowToStep', text: 'Toss with lemon.' },
+  ],
   nutrition: { calories: '410 calories', proteinContent: '14 g', sodiumContent: '600 mg' },
 }
 
@@ -28,7 +31,10 @@ describe('recipe imports', () => {
   })
 
   it('keeps unknown quantities blank when parsing pasted text', () => {
-    const draft = parseRecipeInput('Toast and eggs\nIngredients\n2 each eggs\nsalt to taste\nInstructions\nToast bread.\nCook eggs.', 'caption')
+    const draft = parseRecipeInput(
+      'Toast and eggs\nIngredients\n2 each eggs\nsalt to taste\nInstructions\nToast bread.\nCook eggs.',
+      'caption',
+    )
     expect(draft.ingredients.map((item) => item.quantity)).toEqual([2, null])
     expect(draft.steps).toHaveLength(2)
     expect(draft.sourceLabel).toBe('Pasted social caption')
@@ -36,11 +42,17 @@ describe('recipe imports', () => {
 
   it('shows an explicit manual fallback for CORS-style URL failures', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
-    await expect(fetchRecipeDraft('https://recipes.example/test')).rejects.toThrow(/Paste its JSON-LD, page text, caption, or an image/)
+    await expect(fetchRecipeDraft('https://recipes.example/test')).rejects.toThrow(
+      /Paste its JSON-LD, page text, caption, or an image/,
+    )
   })
 
   it('extracts Recipe JSON-LD from fetched HTML', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(`<html><script type="application/ld+json">${JSON.stringify(jsonLd)}</script></html>`, { status: 200 }))
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(`<html><script type="application/ld+json">${JSON.stringify(jsonLd)}</script></html>`, {
+        status: 200,
+      }),
+    )
     const draft = await fetchRecipeDraft('https://recipes.example/lemon')
     expect(draft.name).toBe('Lemon Pasta')
     expect(draft.importKind).toBe('url')

@@ -23,7 +23,10 @@ export class GitHubConflictError extends Error {
 }
 
 export class GitHubApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
     super(message)
     this.name = 'GitHubApiError'
   }
@@ -51,7 +54,8 @@ const encodeBase64Utf8 = (value: string): string => {
 const apiMessage = async (response: Response): Promise<string> => {
   try {
     const body: unknown = await response.json()
-    if (typeof body === 'object' && body !== null && 'message' in body && typeof body.message === 'string') return body.message
+    if (typeof body === 'object' && body !== null && 'message' in body && typeof body.message === 'string')
+      return body.message
   } catch {
     // GitHub sometimes returns an empty body; the status still identifies the failure.
   }
@@ -79,20 +83,30 @@ export class GitHubContentsClient {
   }
 
   async requirePrivateRepository(target: GitHubRepositoryTarget): Promise<GitHubRepositoryInfo> {
-    const response = await this.request(`https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}`)
+    const response = await this.request(
+      `https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}`,
+    )
     if (!response.ok) throw new GitHubApiError(await apiMessage(response), response.status)
-    const repository = await response.json() as GitHubRepositoryInfo
+    const repository = (await response.json()) as GitHubRepositoryInfo
     if (!repository.private) throw new Error('GitHub Sync requires a private repository. This repository is public.')
-    if (repository.permissions?.push === false) throw new Error('The token does not have Contents read/write access to this repository.')
+    if (repository.permissions?.push === false)
+      throw new Error('The token does not have Contents read/write access to this repository.')
     return repository
   }
 
   async getFile(target: GitHubRepositoryTarget): Promise<GitHubRemoteFile | null> {
-    const response = await this.request(`https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`)
+    const response = await this.request(
+      `https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`,
+    )
     if (response.status === 404) return null
     if (!response.ok) throw new GitHubApiError(await apiMessage(response), response.status)
-    const body = await response.json() as { type?: string; sha?: string; content?: string; encoding?: string }
-    if (body.type !== 'file' || typeof body.sha !== 'string' || typeof body.content !== 'string' || body.encoding !== 'base64') {
+    const body = (await response.json()) as { type?: string; sha?: string; content?: string; encoding?: string }
+    if (
+      body.type !== 'file' ||
+      typeof body.sha !== 'string' ||
+      typeof body.content !== 'string' ||
+      body.encoding !== 'base64'
+    ) {
       throw new Error('The configured GitHub path is not a readable file.')
     }
     return { sha: body.sha, content: decodeBase64Utf8(body.content) }
@@ -105,14 +119,17 @@ export class GitHubContentsClient {
         content: encodeBase64Utf8(content),
         ...(sha ? { sha } : {}),
       }
-      const response = await this.request(`https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
+      const response = await this.request(
+        `https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      )
       if (response.status === 409 || response.status === 422) throw new GitHubConflictError()
       if (!response.ok) throw new GitHubApiError(await apiMessage(response), response.status)
-      const result = await response.json() as { content?: { sha?: string } }
+      const result = (await response.json()) as { content?: { sha?: string } }
       const nextSha = result.content?.sha
       if (!nextSha) throw new Error('GitHub did not return the updated file SHA.')
       return nextSha
@@ -121,11 +138,14 @@ export class GitHubContentsClient {
 
   deleteFile(target: GitHubRepositoryTarget, sha: string): Promise<void> {
     return this.serializeWrite(async () => {
-      const response = await this.request(`https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'Delete encrypted MyHub snapshot', sha }),
-      })
+      const response = await this.request(
+        `https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'Delete encrypted MyHub snapshot', sha }),
+        },
+      )
       if (response.status === 409 || response.status === 422) throw new GitHubConflictError()
       if (!response.ok) throw new GitHubApiError(await apiMessage(response), response.status)
     })
@@ -133,7 +153,10 @@ export class GitHubContentsClient {
 
   private serializeWrite<T>(operation: () => Promise<T>): Promise<T> {
     const pending = this.writeQueue.then(operation, operation)
-    this.writeQueue = pending.then(() => undefined, () => undefined)
+    this.writeQueue = pending.then(
+      () => undefined,
+      () => undefined,
+    )
     return pending
   }
 }

@@ -31,21 +31,38 @@ export interface CalendarSnapshotPayload {
 export interface ParsedCalendarSnapshot {
   events: CalendarEvent[]
   assignments: HomeworkAssignment[]
-  feeds: Array<{ id: string; name: string; type: 'canvas' | 'google' | 'ics'; eventCount: number; assignmentCount: number }>
+  feeds: Array<{
+    id: string
+    name: string
+    type: 'canvas' | 'google' | 'ics'
+    eventCount: number
+    assignmentCount: number
+  }>
 }
 
 const isSnapshotPayload = (value: unknown): value is CalendarSnapshotPayload => {
   if (typeof value !== 'object' || value === null) return false
   const payload = value as Partial<CalendarSnapshotPayload>
-  return payload.format === 'myhub-calendar-snapshot'
-    && payload.version === 1
-    && Array.isArray(payload.calendars)
-    && payload.calendars.every((calendar) => typeof calendar === 'object' && calendar !== null
-      && typeof calendar.id === 'string' && typeof calendar.name === 'string' && typeof calendar.ics === 'string'
-      && (calendar.type === 'canvas' || calendar.type === 'google' || calendar.type === 'ics'))
+  return (
+    payload.format === 'myhub-calendar-snapshot' &&
+    payload.version === 1 &&
+    Array.isArray(payload.calendars) &&
+    payload.calendars.every(
+      (calendar) =>
+        typeof calendar === 'object' &&
+        calendar !== null &&
+        typeof calendar.id === 'string' &&
+        typeof calendar.name === 'string' &&
+        typeof calendar.ics === 'string' &&
+        (calendar.type === 'canvas' || calendar.type === 'google' || calendar.type === 'ics'),
+    )
+  )
 }
 
-export const parsePrivateCalendarSnapshot = (plaintext: string, importedAt = new Date().toISOString()): ParsedCalendarSnapshot => {
+export const parsePrivateCalendarSnapshot = (
+  plaintext: string,
+  importedAt = new Date().toISOString(),
+): ParsedCalendarSnapshot => {
   let value: unknown
   try {
     value = JSON.parse(plaintext)
@@ -66,13 +83,22 @@ export const parsePrivateCalendarSnapshot = (plaintext: string, importedAt = new
     const parsed = parseIcsResult(calendar.ics, options)
     events.push(...parsed.events)
     assignments.push(...parsed.assignments)
-    feeds.push({ id: calendar.id, name: calendar.name, type: calendar.type, eventCount: parsed.events.length, assignmentCount: parsed.assignments.length })
+    feeds.push({
+      id: calendar.id,
+      name: calendar.name,
+      type: calendar.type,
+      eventCount: parsed.events.length,
+      assignmentCount: parsed.assignments.length,
+    })
   }
   return { events, assignments, feeds }
 }
 
-export const consumePrivateCalendarSnapshot = async (provider: PrivateCalendarAccessProvider): Promise<ParsedCalendarSnapshot | null> => {
-  if (!provider.available) throw new Error(provider.reason ?? 'Unlock GitHub Sync to import the private calendar snapshot.')
+export const consumePrivateCalendarSnapshot = async (
+  provider: PrivateCalendarAccessProvider,
+): Promise<ParsedCalendarSnapshot | null> => {
+  if (!provider.available)
+    throw new Error(provider.reason ?? 'Unlock GitHub Sync to import the private calendar snapshot.')
   const remote = await provider.fetchEncryptedCalendarSnapshot()
   if (!remote) return null
   const plaintext = await provider.decryptCalendarSnapshot(remote.content)

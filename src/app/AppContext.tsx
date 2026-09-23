@@ -42,13 +42,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return
-    void saveAppData(data).catch(() => setAnnouncement('Changes could not be saved. Export your data before closing this tab.'))
+    void saveAppData(data).catch(() =>
+      setAnnouncement('Changes could not be saved. Export your data before closing this tab.'),
+    )
   }, [data, ready])
 
   useEffect(() => {
-    const mode = data.settings.appearance === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      : data.settings.appearance
+    const mode =
+      data.settings.appearance === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : data.settings.appearance
     document.documentElement.dataset.theme = mode
     document.documentElement.style.colorScheme = mode
   }, [data.settings.appearance])

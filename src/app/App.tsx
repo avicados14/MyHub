@@ -18,9 +18,17 @@ export default function App() {
   return (
     <AppShell>
       {!ready ? (
-        <div className="route-loading" role="status">Opening your local hub…</div>
+        <div className="route-loading" role="status">
+          Opening your local hub…
+        </div>
       ) : (
-        <Suspense fallback={<div className="route-loading" role="status">Loading view…</div>}>
+        <Suspense
+          fallback={
+            <div className="route-loading" role="status">
+              Loading view…
+            </div>
+          }
+        >
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/calendar" element={<CalendarPage />} />

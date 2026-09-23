@@ -43,29 +43,45 @@ const parseContentLine = (line: string): ContentLine | null => {
   return { name: rawName.toUpperCase(), params, value: line.slice(separator + 1) }
 }
 
-const unescapeText = (value: string): string => value
-  .replace(/\\[nN]/g, '\n')
-  .replace(/\\,/g, ',')
-  .replace(/\\;/g, ';')
-  .replace(/\\\\/g, '\\')
+const unescapeText = (value: string): string =>
+  value
+    .replace(/\\[nN]/g, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\')
 
-const firstProperty = (lines: ContentLine[], name: string): ContentLine | undefined => lines.find((line) => line.name === name)
+const firstProperty = (lines: ContentLine[], name: string): ContentLine | undefined =>
+  lines.find((line) => line.name === name)
 
-const compactParts = (value: string): { year: number; month: number; day: number; hour: number; minute: number; second: number } | null => {
+const compactParts = (
+  value: string,
+): { year: number; month: number; day: number; hour: number; minute: number; second: number } | null => {
   const match = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?Z?$/.exec(value)
   if (!match) return null
   return {
-    year: Number(match[1]), month: Number(match[2]), day: Number(match[3]),
-    hour: Number(match[4] ?? 0), minute: Number(match[5] ?? 0), second: Number(match[6] ?? 0),
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+    hour: Number(match[4] ?? 0),
+    minute: Number(match[5] ?? 0),
+    second: Number(match[6] ?? 0),
   }
 }
 
 const partsInZone = (date: Date, timeZone: string): Record<string, number> => {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
   }).formatToParts(date)
-  return Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]))
+  return Object.fromEntries(
+    parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]),
+  )
 }
 
 const dateFromZonedParts = (parts: NonNullable<ReturnType<typeof compactParts>>, timeZone: string): Date => {
@@ -73,7 +89,14 @@ const dateFromZonedParts = (parts: NonNullable<ReturnType<typeof compactParts>>,
   let candidate = wallAsUtc
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const zoned = partsInZone(new Date(candidate), timeZone)
-    const represented = Date.UTC(zoned.year ?? parts.year, (zoned.month ?? parts.month) - 1, zoned.day ?? parts.day, zoned.hour ?? 0, zoned.minute ?? 0, zoned.second ?? 0)
+    const represented = Date.UTC(
+      zoned.year ?? parts.year,
+      (zoned.month ?? parts.month) - 1,
+      zoned.day ?? parts.day,
+      zoned.hour ?? 0,
+      zoned.minute ?? 0,
+      zoned.second ?? 0,
+    )
     candidate += wallAsUtc - represented
   }
   return new Date(candidate)
@@ -97,7 +120,9 @@ const parseDateTime = (property: ContentLine): ParsedDateTime | null => {
     }
   }
   if (property.value.endsWith('Z')) {
-    return localDateTime(new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)))
+    return localDateTime(
+      new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)),
+    )
   }
   const timeZone = property.params.TZID
   if (timeZone) {
@@ -124,13 +149,23 @@ const stableHash = (value: string): string => {
 }
 
 const stableEventId = (feedId: string, uid: string, recurrence: string, fallback: string): string => {
-  const readable = uid.replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 48)
+  const readable = uid
+    .replace(/[^a-zA-Z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 48)
   return `ics-${stableHash(feedId)}-${readable || stableHash(fallback)}${recurrence ? `-${stableHash(recurrence)}` : ''}`
 }
 
 const categoriesOf = (lines: ContentLine[]): string[] => {
   const values = lines.filter((line) => line.name === 'CATEGORIES').flatMap((line) => line.value.split(/(?<!\\),/))
-  return [...new Set(values.map(unescapeText).map((value) => value.trim()).filter(Boolean))]
+  return [
+    ...new Set(
+      values
+        .map(unescapeText)
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ]
 }
 
 const courseAndTitle = (summary: string, categories: string[]): { title: string; course: string } => {
@@ -172,7 +207,8 @@ const assignmentFromEvent = (event: CalendarEvent, course: string, importedAt: s
 })
 
 export const parseIcsResult = (text: string, options: IcsImportOptions = {}): IcsParseResult => {
-  if (!/(?:^|\r?\n)BEGIN:VCALENDAR(?:\r?\n|$)/.test(text)) throw new Error('This file does not contain a valid iCalendar calendar.')
+  if (!/(?:^|\r?\n)BEGIN:VCALENDAR(?:\r?\n|$)/.test(text))
+    throw new Error('This file does not contain a valid iCalendar calendar.')
   const sourceLabel = options.sourceLabel?.trim() || 'Imported ICS'
   const sourceFeedId = options.sourceFeedId?.trim() || `feed-${stableHash(sourceLabel)}`
   const sourceType = options.sourceType ?? 'ics'
@@ -184,8 +220,10 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
   let current: ContentLine[] | null = null
   for (const rawLine of rawLines) {
     if (rawLine === 'BEGIN:VEVENT') current = []
-    else if (rawLine === 'END:VEVENT' && current) { groups.push(current); current = null }
-    else if (current) {
+    else if (rawLine === 'END:VEVENT' && current) {
+      groups.push(current)
+      current = null
+    } else if (current) {
       const line = parseContentLine(rawLine)
       if (line) current.push(line)
     }
@@ -196,9 +234,15 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
   const events = groups.flatMap((group, index) => {
     const rawSummary = firstProperty(group, 'SUMMARY')?.value
     const startProperty = firstProperty(group, 'DTSTART')
-    if (!rawSummary || !startProperty) { skippedEvents += 1; return [] }
+    if (!rawSummary || !startProperty) {
+      skippedEvents += 1
+      return []
+    }
     const start = parseDateTime(startProperty)
-    if (!start) { skippedEvents += 1; return [] }
+    if (!start) {
+      skippedEvents += 1
+      return []
+    }
     const endProperty = firstProperty(group, 'DTEND')
     const parsedEnd = endProperty ? parseDateTime(endProperty) : null
     const summary = unescapeText(rawSummary).trim()
@@ -209,7 +253,11 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
     const fallback = `${index}|${summary}|${startProperty.value}|${endProperty?.value ?? ''}`
     const allDay = start.allDay
     const allDayEnd = parsedEnd?.allDay ? toLocalDate(addDays(new Date(`${parsedEnd.date}T12:00:00`), -1)) : start.date
-    const defaultEnd = allDay ? '23:59' : timeFromMinutes(Math.min(23 * 60 + 59, Number(start.time.slice(0, 2)) * 60 + Number(start.time.slice(3, 5)) + 60))
+    const defaultEnd = allDay
+      ? '23:59'
+      : timeFromMinutes(
+          Math.min(23 * 60 + 59, Number(start.time.slice(0, 2)) * 60 + Number(start.time.slice(3, 5)) + 60),
+        )
     const event: CalendarEvent = {
       id: stableEventId(sourceFeedId, uid, recurrence, fallback),
       createdAt: importedAt,
@@ -218,13 +266,19 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
       title,
       date: start.date,
       startTime: allDay ? '00:00' : start.time,
-      endTime: allDay ? '23:59' : parsedEnd?.time ?? defaultEnd,
-      ...(parsedEnd?.date !== start.date || (allDay && allDayEnd !== start.date) ? { endDate: allDay ? allDayEnd : parsedEnd?.date } : {}),
+      endTime: allDay ? '23:59' : (parsedEnd?.time ?? defaultEnd),
+      ...(parsedEnd?.date !== start.date || (allDay && allDayEnd !== start.date)
+        ? { endDate: allDay ? allDayEnd : parsedEnd?.date }
+        : {}),
       allDay,
       kind: 'event',
       ...(course ? { course } : {}),
-      ...(firstProperty(group, 'DESCRIPTION') ? { description: unescapeText(firstProperty(group, 'DESCRIPTION')?.value ?? '') } : {}),
-      ...(firstProperty(group, 'LOCATION') ? { location: unescapeText(firstProperty(group, 'LOCATION')?.value ?? '') } : {}),
+      ...(firstProperty(group, 'DESCRIPTION')
+        ? { description: unescapeText(firstProperty(group, 'DESCRIPTION')?.value ?? '') }
+        : {}),
+      ...(firstProperty(group, 'LOCATION')
+        ? { location: unescapeText(firstProperty(group, 'LOCATION')?.value ?? '') }
+        : {}),
       ...(categories.length ? { categories } : {}),
       ...(firstProperty(group, 'URL') ? { sourceUrl: unescapeText(firstProperty(group, 'URL')?.value ?? '') } : {}),
       ...(uid ? { uid } : {}),
@@ -244,7 +298,9 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
   }
 }
 
-const dedupeById = <T extends { id: string }>(items: T[]): T[] => [...new Map(items.map((item) => [item.id, item])).values()]
+const dedupeById = <T extends { id: string }>(items: T[]): T[] => [
+  ...new Map(items.map((item) => [item.id, item])).values(),
+]
 
 export const mergeImportedEvents = (existing: CalendarEvent[], imported: CalendarEvent[]): CalendarEvent[] => {
   const byId = new Map(existing.map((event) => [event.id, event]))
@@ -255,7 +311,10 @@ export const mergeImportedEvents = (existing: CalendarEvent[], imported: Calenda
   return [...byId.values()]
 }
 
-export const mergeImportedAssignments = (existing: HomeworkAssignment[], imported: HomeworkAssignment[]): HomeworkAssignment[] => {
+export const mergeImportedAssignments = (
+  existing: HomeworkAssignment[],
+  imported: HomeworkAssignment[],
+): HomeworkAssignment[] => {
   const byId = new Map(existing.map((assignment) => [assignment.id, assignment]))
   for (const assignment of imported) {
     const previous = byId.get(assignment.id)

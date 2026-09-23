@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { areUnitsCompatible, convertForSystem, convertMeasurement, formatTemperature, normalizeMeasurementUnit, splitQuantityAndUnit } from './measurements'
+import {
+  areUnitsCompatible,
+  convertForSystem,
+  convertMeasurement,
+  formatTemperature,
+  normalizeMeasurementUnit,
+  splitQuantityAndUnit,
+} from './measurements'
 
 describe('measurement conversions', () => {
   it('converts only compatible volume and mass units', () => {

@@ -19,7 +19,7 @@ export interface StoredGitHubCredential {
   lastSyncedAt?: string
 }
 
-const requestResult = <T,>(request: IDBRequest<T>): Promise<T> =>
+const requestResult = <T>(request: IDBRequest<T>): Promise<T> =>
   new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed.'))
@@ -119,11 +119,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 
 const isStoredGitHubCredential = (value: unknown): value is StoredGitHubCredential => {
   if (!isRecord(value) || value.version !== 1 || !isRecord(value.repository)) return false
-  return typeof value.repository.owner === 'string'
-    && typeof value.repository.repo === 'string'
-    && typeof value.repository.path === 'string'
-    && typeof value.tokenEnvelope === 'string'
-    && typeof value.paused === 'boolean'
+  return (
+    typeof value.repository.owner === 'string' &&
+    typeof value.repository.repo === 'string' &&
+    typeof value.repository.path === 'string' &&
+    typeof value.tokenEnvelope === 'string' &&
+    typeof value.paused === 'boolean'
+  )
 }
 
 export { isCurrentAppData as isAppData }

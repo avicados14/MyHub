@@ -34,8 +34,12 @@ export const validateStudyBlock = (
   const start = minutesFromTime(candidate.startTime)
   const end = minutesFromTime(candidate.endTime)
   if (end <= start) return { valid: false, warning: 'End time must be after start time.' }
-  const conflict = existingEvents.find((event) => event.id !== candidate.id && event.date === candidate.date && overlaps(start, end, event))
-  return conflict ? { valid: true, warning: `This overlaps “${conflict.title}” from ${conflict.startTime} to ${conflict.endTime}.` } : { valid: true }
+  const conflict = existingEvents.find(
+    (event) => event.id !== candidate.id && event.date === candidate.date && overlaps(start, end, event),
+  )
+  return conflict
+    ? { valid: true, warning: `This overlaps “${conflict.title}” from ${conflict.startTime} to ${conflict.endTime}.` }
+    : { valid: true }
 }
 
 export interface StudyPlanResult {
@@ -74,8 +78,14 @@ export const generateStudyPlan = (
         .filter((range) => range.days.includes(day.getDay()))
         .map((range) => ({
           id: `avoid-${range.id}-${date}`,
-          createdAt: '', updatedAt: '', source: 'generated', kind: 'event',
-          title: range.label || 'Avoid time', date, startTime: range.startTime, endTime: range.endTime,
+          createdAt: '',
+          updatedAt: '',
+          source: 'generated',
+          kind: 'event',
+          title: range.label || 'Avoid time',
+          date,
+          startTime: range.startTime,
+          endTime: range.endTime,
         }))
       const dayEvents = [...existingEvents, ...blocks, ...avoided].filter((event) => event.date === date)
       let cursor = minutesFromTime(settings.earliestTime)
