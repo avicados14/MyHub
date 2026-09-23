@@ -23,6 +23,8 @@ import { consumePrivateCalendarSnapshot } from '../../sync/calendarSnapshot'
 import { useGitHubSync } from '../../sync/GitHubSyncContext'
 import {
   addDays,
+  dateFromLocal,
+  dateTimeInZone,
   formatDate,
   formatTime,
   makeId,
@@ -103,7 +105,8 @@ export default function CalendarPage() {
   const { calendarAccess } = useGitHubSync()
   const [params, setParams] = useSearchParams()
   const view = params.get('view') ?? 'week'
-  const [anchor, setAnchor] = useState(() => new Date())
+  const today = dateTimeInZone(new Date(), data.settings.calendarTimeZone).date
+  const [anchor, setAnchor] = useState(() => dateFromLocal(today))
   const [eventModal, setEventModal] = useState<'add' | CalendarEvent | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null)
@@ -112,7 +115,6 @@ export default function CalendarPage() {
   const [privateBusy, setPrivateBusy] = useState(false)
   const weekStart = startOfWeek(anchor)
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart])
-  const today = toLocalDate(new Date())
   const visibleEvents = useMemo(() => visibleCalendarEvents(data), [data])
 
   const eventsByDate = useMemo(
@@ -275,7 +277,7 @@ export default function CalendarPage() {
       setImportError('Choose at least one .ics file.')
       return
     }
-    const bounds = boundsForWindow(dateWindow)
+    const bounds = boundsForWindow(dateWindow, dateFromLocal(today))
     try {
       const importedAt = new Date().toISOString()
       const previews = await Promise.all(
@@ -289,6 +291,7 @@ export default function CalendarPage() {
             importedAt,
             windowStart: bounds.start,
             windowEnd: bounds.end,
+            timeZone: data.settings.calendarTimeZone,
           })
           const events = parsed.events.filter((event) => inBounds(event.date, bounds))
           const assignments = parsed.assignments.filter((assignment) => inBounds(assignment.dueDate, bounds))
@@ -346,7 +349,7 @@ export default function CalendarPage() {
       setPrivateBusy(true)
       if (!silent) setPrivateStatus('Checking the encrypted private calendar snapshot…')
       try {
-        const parsed = await consumePrivateCalendarSnapshot(calendarAccess)
+        const parsed = await consumePrivateCalendarSnapshot(calendarAccess, data.settings.calendarTimeZone)
         if (!parsed) {
           setPrivateStatus('No encrypted calendar snapshot exists at myhub-data/v1/calendars.enc yet.')
           return
@@ -385,7 +388,7 @@ export default function CalendarPage() {
         setPrivateBusy(false)
       }
     },
-    [calendarAccess, updateData],
+    [calendarAccess, data.settings.calendarTimeZone, updateData],
   )
 
   useEffect(() => {
@@ -456,7 +459,7 @@ export default function CalendarPage() {
             <button className="icon-button" type="button" aria-label="Previous period" onClick={() => navigate(-1)}>
               <ChevronLeft aria-hidden="true" />
             </button>
-            <button className="button button--quiet" type="button" onClick={() => setAnchor(new Date())}>
+            <button className="button button--quiet" type="button" onClick={() => setAnchor(dateFromLocal(today))}>
               Today
             </button>
             <button className="icon-button" type="button" aria-label="Next period" onClick={() => navigate(1)}>

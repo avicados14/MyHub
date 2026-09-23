@@ -107,6 +107,7 @@ describe('AppData migration', () => {
     expect(migrated.packagedFoods).toEqual([])
     expect(migrated.leftovers).toEqual([])
     expect(migrated.settings.study.avoidTimes).toEqual([])
+    expect(migrated.settings.calendarTimeZone).toBeTruthy()
   })
 
   it('removes legacy sample data and linked generated records without touching personal imports', () => {
@@ -163,5 +164,21 @@ describe('AppData migration', () => {
     expect(cleaned.meals.map((record) => record.id)).toEqual(['meal-personal'])
     expect(cleaned.activeGroceryList?.items.map((record) => record.id)).toEqual(['item-personal'])
     expect(cleaned.settings.groceryStaples.map((record) => record.name)).toEqual(['Rice'])
+  })
+
+  it('preserves valid calendar zones and replaces invalid values safely', () => {
+    const current = createEmptyData(new Date('2026-09-23T00:00:00.000Z'))
+    expect(
+      migrateAppData({
+        ...current,
+        settings: { ...current.settings, calendarTimeZone: 'America/Denver' },
+      }).settings.calendarTimeZone,
+    ).toBe('America/Denver')
+    expect(
+      migrateAppData({
+        ...current,
+        settings: { ...current.settings, calendarTimeZone: 'Not/A_Time_Zone' },
+      }).settings.calendarTimeZone,
+    ).not.toBe('Not/A_Time_Zone')
   })
 })

@@ -1,15 +1,41 @@
 import { ArrowUpRight, BookOpenCheck, CalendarClock, ChefHat, CircleAlert, ShoppingBasket } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, ProgressBar, StatusBadge } from '../../components/ui'
 import { visibleAssignments, visibleCalendarEvents } from '../../domain/calendar'
+import { dashboardScheduleWindow, type TimedScheduleItem } from '../../domain/dashboardSchedule'
 import { dueAssignments, eventsForDate, greeting, mealsForDate, nutritionForDate } from '../../domain/selectors'
 import type { MealSlot, Nutrition } from '../../domain/types'
 import '../../styles/crosscut-v2.css'
 import { assetUrl } from '../../utilities/assets'
-import { addDays, formatDate, formatTime, relativeDueLabel, toLocalDate } from '../../utilities/date'
+import { addDays, dateTimeInZone, formatDate, formatTime, relativeDueLabel } from '../../utilities/date'
 
 const mealSlots: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack']
+
+const useMinuteClock = (): Date => {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  return now
+}
+
+const scheduleItem = (item: TimedScheduleItem, state: 'previous' | 'current' | 'next') => (
+  <li className={`schedule-compact__item schedule-compact__item--${state}`} key={`${state}-${item.event.id}`}>
+    <span className="schedule-compact__state">
+      {state === 'current' ? 'Happening now' : state === 'previous' ? 'Just finished' : 'Up next'}
+    </span>
+    <div className="schedule-compact__title">
+      <strong>{item.event.title}</strong>
+      <small>{item.event.course || item.event.sourceLabel || 'Calendar event'}</small>
+    </div>
+    <time dateTime={`${item.event.date}T${item.startTime}`}>
+      {formatTime(item.startTime)}–{formatTime(item.endTime)}
+    </time>
+  </li>
+)
 
 const nutritionMetrics: Array<{
   key: keyof Nutrition
@@ -30,12 +56,15 @@ const nutritionMetrics: Array<{
 
 export default function DashboardPage() {
   const { data } = useApp()
-  const todayDate = new Date()
-  const today = toLocalDate(todayDate)
-  const weekEnd = toLocalDate(addDays(todayDate, 6))
+  const todayDate = useMinuteClock()
+  const zonedNow = dateTimeInZone(todayDate, data.settings.calendarTimeZone)
+  const today = zonedNow.date
+  const weekEnd = dateTimeInZone(addDays(todayDate, 6), data.settings.calendarTimeZone).date
   const events = eventsForDate(data, today)
   const studyBlocks = events.filter((event) => event.kind === 'study')
   const commitments = events.filter((event) => event.kind !== 'study')
+  const nowTime = zonedNow.time
+  const schedule = dashboardScheduleWindow(commitments, todayDate, today, nowTime)
   const assignments = dueAssignments(data).slice(0, 3)
   const meals = mealsForDate(data, today)
   const nutrition = nutritionForDate(data, today)
@@ -43,7 +72,9 @@ export default function DashboardPage() {
   const completedGroceries = data.activeGroceryList?.items.filter((item) => item.checked).length ?? 0
   const groceryTotal = data.activeGroceryList?.items.length ?? 0
   const displayName = data.settings.name.trim()
-  const greetingText = displayName ? `${greeting()}, ${displayName}.` : `${greeting()}.`
+  const greetingText = displayName
+    ? `${greeting(todayDate, data.settings.calendarTimeZone)}, ${displayName}.`
+    : `${greeting(todayDate, data.settings.calendarTimeZone)}.`
   const weekAssignments = visibleAssignments(data).filter(
     (assignment) => assignment.status !== 'complete' && assignment.dueDate >= today && assignment.dueDate <= weekEnd,
   ).length
@@ -82,22 +113,28 @@ export default function DashboardPage() {
             <Link to="/calendar">Open calendar</Link>
           </div>
           {commitments.length ? (
-            <ol className="timeline">
-              {commitments.map((event) => (
-                <li key={event.id} className={`timeline__item timeline__item--${event.kind}`}>
-                  <time>{formatTime(event.startTime)}</time>
-                  <span className="timeline__line" aria-hidden="true" />
-                  <div>
-                    <div className="timeline__title">
-                      <strong>{event.title}</strong>
-                    </div>
-                    <p>
-                      {event.course || event.sourceLabel || 'Calendar event'} · until {formatTime(event.endTime)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className="schedule-compact">
+              {schedule.previous ? <ol>{scheduleItem(schedule.previous, 'previous')}</ol> : <div aria-hidden="true" />}
+              <div className="schedule-compact__now" role="group" aria-label={`Current time ${formatTime(nowTime)}`}>
+                <span>Now</span>
+                <time dateTime={todayDate.toISOString()}>{formatTime(nowTime)}</time>
+              </div>
+              <div className="schedule-compact__after">
+                <ol>
+                  {schedule.current.slice(0, 2).map((item) => scheduleItem(item, 'current'))}
+                  {schedule.current.length < 2 && schedule.next ? scheduleItem(schedule.next, 'next') : null}
+                </ol>
+                {!schedule.current.length && !schedule.next ? (
+                  <p className="schedule-compact__open">Nothing else is scheduled today.</p>
+                ) : null}
+                {schedule.allDayCount ? (
+                  <p className="schedule-compact__all-day">
+                    {schedule.allDayCount} all-day {schedule.allDayCount === 1 ? 'item' : 'items'} also on today’s
+                    calendar
+                  </p>
+                ) : null}
+              </div>
+            </div>
           ) : (
             <EmptyState title="Your day is open" detail="Add a calendar event to reserve time." />
           )}

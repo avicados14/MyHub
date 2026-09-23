@@ -45,18 +45,59 @@ describe('ICS import', () => {
   })
 
   it('uses common TZIDs and UTC timestamps when practical', () => {
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const expected = new Date(Date.UTC(2026, 8, 22, 15, 0))
     const result = parseIcsResult(
       `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:zoned\nDTSTART;TZID=America/Denver:20260922T090000\nDTEND;TZID=America/Denver:20260922T100000\nSUMMARY:Class\nEND:VEVENT\nEND:VCALENDAR`,
+      { timeZone: 'America/Denver' },
     )
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-    })
-    expect(result.events[0]?.startTime).toBe(formatter.format(expected))
+    expect(result.events[0]).toMatchObject({ date: '2026-09-22', startTime: '09:00', endTime: '10:00' })
+  })
+
+  it('converts UTC and foreign-zone timestamps to Mountain Time across date boundaries', () => {
+    const result = parseIcsResult(
+      `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:utc-evening
+DTSTART:20260923T010000Z
+DTEND:20260923T023000Z
+SUMMARY:UTC evening
+END:VEVENT
+BEGIN:VEVENT
+UID:chicago-evening
+DTSTART;TZID=America/Chicago:20260922T210000
+DTEND;TZID=America/Chicago:20260922T220000
+SUMMARY:Chicago evening
+END:VEVENT
+END:VCALENDAR`,
+      { timeZone: 'America/Denver' },
+    )
+    expect(result.events.map((event) => [event.date, event.startTime, event.endTime])).toEqual([
+      ['2026-09-22', '19:00', '20:30'],
+      ['2026-09-22', '20:00', '21:00'],
+    ])
+  })
+
+  it('keeps UTC recurrences tied to UTC through the Mountain Time daylight-saving transition', () => {
+    const result = parseIcsResult(
+      `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:utc-daily
+DTSTART:20261101T070000Z
+DTEND:20261101T080000Z
+RRULE:FREQ=DAILY;COUNT=2
+SUMMARY:UTC recurring event
+END:VEVENT
+END:VCALENDAR`,
+      {
+        timeZone: 'America/Denver',
+        importedAt: '2026-10-31T12:00:00.000Z',
+        windowStart: '2026-11-01',
+        windowEnd: '2026-11-02',
+      },
+    )
+    expect(result.events.map((event) => [event.date, event.startTime, event.endTime])).toEqual([
+      ['2026-11-01', '01:00', '01:00'],
+      ['2026-11-02', '00:00', '01:00'],
+    ])
   })
 
   it('classifies Canvas assignment URLs, maps homework, and dedupes without replacing user progress', () => {

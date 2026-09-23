@@ -62,6 +62,7 @@ const isSnapshotPayload = (value: unknown): value is CalendarSnapshotPayload => 
 export const parsePrivateCalendarSnapshot = (
   plaintext: string,
   importedAt = new Date().toISOString(),
+  timeZone?: string,
 ): ParsedCalendarSnapshot => {
   let value: unknown
   try {
@@ -79,6 +80,7 @@ export const parsePrivateCalendarSnapshot = (
       sourceFeedId: calendar.id,
       sourceType: calendar.type,
       importedAt,
+      timeZone,
     }
     const parsed = parseIcsResult(calendar.ics, options)
     events.push(...parsed.events)
@@ -96,11 +98,12 @@ export const parsePrivateCalendarSnapshot = (
 
 export const consumePrivateCalendarSnapshot = async (
   provider: PrivateCalendarAccessProvider,
+  timeZone?: string,
 ): Promise<ParsedCalendarSnapshot | null> => {
   if (!provider.available)
     throw new Error(provider.reason ?? 'Unlock GitHub Sync to import the private calendar snapshot.')
   const remote = await provider.fetchEncryptedCalendarSnapshot()
   if (!remote) return null
   const plaintext = await provider.decryptCalendarSnapshot(remote.content)
-  return parsePrivateCalendarSnapshot(plaintext)
+  return parsePrivateCalendarSnapshot(plaintext, new Date().toISOString(), timeZone)
 }

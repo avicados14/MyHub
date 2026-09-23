@@ -18,15 +18,15 @@ Version **0.1.0** is a complete Phase 1 web prototype. The school, calendar, foo
 
 Working now:
 
-- Responsive dashboard with connected school and food summaries
+- Responsive dashboard with connected school and food summaries, including a compact previous/current/next schedule centered on the live current time
 - Day, week, and month calendar views
 - Full manual-event creation, editing, and deletion with source-aware display
 - Previewed, confirmed multi-file `.ics` imports for Canvas, Google Calendar, and other exports
-- RFC line unfolding, common timezone/all-day handling, rich event metadata, stable deduplication, and Canvas assignment mapping
+- RFC line unfolding, UTC/TZID conversion into a persisted IANA display time zone, all-day handling, rich event metadata, DST-aware recurrence, stable deduplication, and Canvas assignment mapping
 - Full homework editing, progress/status, subtasks, source links, and imported provenance
 - Deterministic conflict-aware study scheduling through deadlines, including configured avoid-time ranges
 - Study-block locking, completion, removal, accessible form editing, direct week-column drag, and 15-minute resize buttons
-- Structured recipe creation/editing, source metadata, notes, ingredient overrides, persistent current yield, and US/metric display conversion
+- Structured recipe creation/editing, source metadata, notes, ingredient overrides, persistent current yield, and US/metric display conversion; the personal cookbook uses 8 oz for every former 6–8 oz chicken ingredient and includes ingredient-based nutrition for every recipe
 - Reviewable recipe drafts from permitted URL JSON-LD, pasted content, local image OCR, or user-supplied social caption/screenshot/video frame
 - Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with explicit planned, prepared, consumed, and leftover balances; planning never records consumption automatically
 - Packaged-food entry and food-log search by barcode or text through read-only Open Food Facts, local Nutrition Facts OCR with confirmation, and immutable eight-metric nutrition snapshots
@@ -116,7 +116,7 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. The completed release passed 90 unit tests and 123 Playwright tests across desktop, tablet, and mobile. A separate 42-action exploratory walkthrough also completed without runtime or HTTP errors.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. The completed release passed 96 unit tests and 123 Playwright tests across desktop, tablet, and mobile. A separate 42-action exploratory walkthrough also completed without runtime or HTTP errors.
 
 ## GitHub Pages Deployment
 
@@ -136,7 +136,7 @@ GitHub Sync keeps IndexedDB as the offline working store and uploads only a vers
 
 When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. Files larger than 1 MB use GitHub's authenticated raw media representation, as required by the Contents API.[3] A separate producer for that encrypted snapshot is not bundled with this static client.
 
-The configured private repository has been verified end to end in a fresh Chromium profile. It recovered the 27 uploaded cookbook recipes as the only recipe records, imported 3,365 events from the 2 encrypted calendar feeds, retained zero homework assignments, and wrote the combined `AppData` snapshot back as ciphertext. The personalized snapshot includes the approved study, meal, grocery, appearance, and eight nutrition target/limit settings. It also favors lighter breakfast/lunch choices and concentrates most suggested calories and protein in dinner and snack. The private calendar workflow has all three required Actions secrets configured and completed a real refresh successfully.
+The configured private repository has been verified end to end in a fresh Chromium profile. The current encrypted snapshot contains the 27 uploaded cookbook recipes as the only recipe records, 3,328 events reparsed from the 2 encrypted calendar feeds in `America/Denver`, zero homework assignments, eight normalized 8 oz chicken ingredients, and researched nutrition estimates for the four recipes that previously lacked values. The personalized snapshot includes the approved study, meal, grocery, appearance, and eight nutrition target/limit settings. It also favors lighter breakfast/lunch choices and concentrates most suggested calories and protein in dinner and snack. The private calendar workflow has all three required Actions secrets configured and completed a real refresh successfully.
 
 Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
 

@@ -36,6 +36,12 @@ Added a reusable 42-action exploratory Playwright walkthrough for the rendered d
 
 ### Changed
 
+Corrected calendar date and time handling with a persisted IANA display zone. UTC events and source `TZID` values now convert into `America/Denver` for the personalized snapshot, including DST-aware recurrences and date rollovers. The real encrypted calendar data was reparsed into 3,328 valid events; 3,168 previously stored date/time records changed during the correction.
+
+Condensed the Home schedule to the same desktop height as **Focus next**. It now places the live current time in the middle and shows the most relevant previous, currently active, and next commitments instead of stretching through the full day.
+
+Normalized all eight personal-cookbook chicken ingredients that previously read 6–8 oz to a structured 8 oz quantity. Added researched per-serving calories, protein, carbohydrates, fat, sugar, saturated fat, fiber, and sodium for the four recipes that previously lacked nutrition, with USDA/manufacturer provenance and material assumptions kept in the review notice.
+
 Corrected meal-plan semantics so adding a recipe records planned and prepared servings but never records consumption. Daily nutrition and leftover depletion now change only after an explicit consumed-serving action.
 
 Scoped grocery generation to the remaining current planner week, excluded historical persisted meals, used the greater of planned and prepared servings, applied saved yield-specific ingredient overrides, and stored the source date window and meal IDs on active and historical lists.
@@ -50,7 +56,7 @@ Fixed Settings section navigation so it scrolls within the HashRouter route inst
 
 Made Playwright web-server startup collision-safe by allocating an available local loopback port while retaining deterministic port `4287` in CI. The Pages validation command runs the configured desktop, tablet, and mobile Chromium projects.
 
-Rewrote the requirements audit around the completed integrated release. The final evidence records 90 unit tests, 123 responsive browser tests, the 42-action exploratory walkthrough, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup now describe the same release and privacy model.
+Rewrote the requirements audit around the completed integrated release. The final evidence records 96 unit tests, 123 responsive browser tests, the 42-action exploratory walkthrough, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup now describe the same release and privacy model.
 
 Applied the current Web Interface Guidelines to the cross-cutting surface, including explicit Escape handling for universal search. No secrets, live private repository requests, private calendar URLs or contents, cookbook data, passphrases, or personal access tokens were added.
 
@@ -62,7 +68,7 @@ Updated GitHub Contents reads for encrypted files larger than 1 MB. The client n
 
 Fixed image-less dashboard recipe cards so they render the intentional placeholder instead of requesting the application document as an image. Imported recipe previews and packaged-food images now reserve explicit dimensions.
 
-Verified the real private repository in a fresh Chromium profile. MyHub recovered 27 cookbook recipes, imported 3,365 events from 2 encrypted calendar feeds, wrote the combined state back as ciphertext, and decrypted the stored remote snapshot to the same counts.
+Verified the real private repository in a fresh Chromium profile. MyHub recovered 27 cookbook recipes, imported 3,328 corrected events from 2 encrypted calendar feeds, wrote the combined state back as ciphertext, and decrypted the stored remote snapshot to the same counts.
 
 ### Security
 

@@ -1,7 +1,7 @@
 import type { AppData, CalendarEvent, HomeworkAssignment, MealEntry, Nutrition } from './types'
 import { eventCoversDate, visibleAssignments, visibleCalendarEvents } from './calendar'
 import { sumNutrition } from './recipe'
-import { dateFromLocal, toLocalDate } from '../utilities/date'
+import { dateFromLocal, dateTimeInZone, toLocalDate } from '../utilities/date'
 
 export const eventsForDate = (data: AppData, date = toLocalDate(new Date())): CalendarEvent[] =>
   visibleCalendarEvents(data)
@@ -19,8 +19,8 @@ export const mealsForDate = (data: AppData, date = toLocalDate(new Date())): Mea
 export const nutritionForDate = (data: AppData, date = toLocalDate(new Date())): Nutrition =>
   sumNutrition(data.foodLog.filter((entry) => entry.date === date).map((entry) => entry.nutritionSnapshot))
 
-export const greeting = (date = new Date()): string => {
-  const hour = date.getHours()
+export const greeting = (date = new Date(), timeZone?: string): string => {
+  const hour = Number(dateTimeInZone(date, timeZone).time.slice(0, 2))
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
   return 'Good evening'

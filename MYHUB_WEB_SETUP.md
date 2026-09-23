@@ -128,7 +128,7 @@ Path: myhub-data/v1/snapshot.enc
 
 Enter the fine-grained token and an encryption passphrase of at least 12 characters. MyHub encrypts the token into a separate IndexedDB credential record and encrypts `AppData` before upload. The passphrase is never saved and must be entered again after a page/browser restart. Losing it makes the remote snapshot and stored token unrecoverable through MyHub.
 
-The existing private snapshot is already populated. On a new browser, choose **Connect and sync** and wait for the status to become **current**. MyHub pulls the encrypted snapshot before treating an empty device as authoritative. The verified snapshot contains 27 cookbook recipes and both calendar feeds. Open **Calendar** after unlock to import the encrypted companion snapshot; the current source files produce 3,365 calendar events.
+The existing private snapshot is already populated. On a new browser, choose **Connect and sync** and wait for the status to become **current**. MyHub pulls the encrypted snapshot before treating an empty device as authoritative. The verified snapshot contains 27 cookbook recipes and both calendar feeds. Its calendar setting is `America/Denver`, and the current encrypted state contains 3,328 reparsed events. Open **Calendar** after unlock to check or refresh the encrypted companion snapshot.
 
 Use **Sync now** for an immediate check, **Pause** to stop remote writes while preserving local operation, and **Unlink** to remove this browser's encrypted credential record without deleting the remote snapshot. If both copies changed, choose **Use this device** or **Use GitHub**; MyHub does not silently discard either side.
 
@@ -164,6 +164,10 @@ The portion after `#` is handled inside the browser, so GitHub Pages does not ne
 ### Canvas refresh fails
 
 Many Canvas ICS servers block browser-origin requests. Download the `.ics` file and use **Calendar → Import .ics files**, or unlock GitHub Sync and choose **Check private snapshot**. MyHub does not bypass Canvas restrictions or proxy private feed URLs through an unknown service.
+
+### Calendar items appear on the wrong day or at the wrong time
+
+Open **Settings → Calendar feeds** and verify **Calendar time zone**. MyHub stores UTC and source `TZID` values as local `YYYY-MM-DD` and `HH:mm` fields in that selected IANA zone. After changing the zone, open Calendar and choose **Check private snapshot** or re-import the local ICS file so existing imported records are rebuilt in the new zone.
 
 ### The encrypted calendar snapshot will not load
 

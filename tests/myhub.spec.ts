@@ -265,6 +265,7 @@ test('settings section links are shareable and stay on the settings route', asyn
 test('settings controls are labeled and persist configuration changes', async ({ page }) => {
   await page.goto('/#/settings')
   await page.getByLabel('Appearance').selectOption('dark')
+  await page.getByLabel('Calendar time zone').selectOption('America/Denver')
   await page.getByLabel('Sugar limit').fill('61')
   await page.getByLabel('Saturated fat limit').fill('26')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -286,6 +287,7 @@ test('settings controls are labeled and persist configuration changes', async ({
   await waitForStoredStaple(page, 'Tahini', false)
   await page.reload()
   await expect(page.getByLabel('Appearance')).toHaveValue('dark')
+  await expect(page.getByLabel('Calendar time zone')).toHaveValue('America/Denver')
   await expect(page.getByLabel('Sugar limit')).toHaveValue('61')
   await expect(page.getByLabel('Saturated fat limit')).toHaveValue('26')
   await expect(page.getByLabel('Label')).toHaveValue('Lab')

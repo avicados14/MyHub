@@ -215,9 +215,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <div className="topbar__identity">
             <span className="topbar__date">
-              {new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(
-                new Date(),
-              )}
+              {new Intl.DateTimeFormat(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                timeZone: data.settings.calendarTimeZone,
+              }).format(new Date())}
             </span>
             <span className="avatar" aria-hidden="true">
               {displayName.slice(0, 1).toUpperCase() || 'M'}

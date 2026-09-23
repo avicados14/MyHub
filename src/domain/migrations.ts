@@ -23,6 +23,16 @@ const isString = (value: unknown): value is string => typeof value === 'string'
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const recordArray = (value: unknown): UnknownRecord[] => (Array.isArray(value) ? value.filter(isRecord) : [])
 
+const normalizeTimeZone = (value: unknown, fallback: string): string => {
+  if (!isString(value) || !value.trim()) return fallback
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(0)
+    return value
+  } catch {
+    return fallback
+  }
+}
+
 const LEGACY_SAMPLE_LABELS = new Set(['Sample data', 'Sample schedule', 'MyHub demo recipe'])
 const LEGACY_SAMPLE_STAPLES = new Set(['Milk', 'Eggs', 'Bread', 'Coffee', 'Fruit'])
 
@@ -276,6 +286,7 @@ export const migrateV1ToV2 = (value: UnknownRecord): AppData => {
       name: isString(settings.name) ? settings.name : defaults.settings.name,
       measurementSystem: settings.measurementSystem === 'metric' ? 'metric' : 'us',
       appearance: settings.appearance === 'light' || settings.appearance === 'dark' ? settings.appearance : 'system',
+      calendarTimeZone: normalizeTimeZone(settings.calendarTimeZone, defaults.settings.calendarTimeZone ?? 'UTC'),
       nutritionTargets: asNutrition(settings.nutritionTargets),
       study: {
         earliestTime: isString(study.earliestTime) ? study.earliestTime : defaults.settings.study.earliestTime,
@@ -304,7 +315,17 @@ export const migrateV1ToV2 = (value: UnknownRecord): AppData => {
 export const migrateAppData = (value: unknown): AppData => {
   if (!isRecord(value)) throw new Error('MyHub data must be a JSON object.')
   if (value.schemaVersion === 1) return removeLegacySampleData(migrateV1ToV2(value))
-  if (value.schemaVersion === CURRENT_SCHEMA_VERSION) return removeLegacySampleData(value as unknown as AppData)
+  if (value.schemaVersion === CURRENT_SCHEMA_VERSION) {
+    const current = value as unknown as AppData
+    const fallback = createEmptyData(new Date(current.initializedAt)).settings.calendarTimeZone ?? 'UTC'
+    return removeLegacySampleData({
+      ...current,
+      settings: {
+        ...current.settings,
+        calendarTimeZone: normalizeTimeZone(current.settings.calendarTimeZone, fallback),
+      },
+    })
+  }
   throw new Error(`Unsupported MyHub schema version: ${String(value.schemaVersion)}.`)
 }
 

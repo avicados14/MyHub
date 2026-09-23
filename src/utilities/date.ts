@@ -5,6 +5,29 @@ export const toLocalDate = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+export const dateTimeInZone = (date: Date, timeZone?: string): { date: string; time: string } => {
+  if (!timeZone) {
+    return {
+      date: toLocalDate(date),
+      time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+    }
+  }
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    time: `${values.hour}:${values.minute}`,
+  }
+}
+
 export const addDays = (date: Date, amount: number): Date => {
   const next = new Date(date)
   next.setDate(next.getDate() + amount)

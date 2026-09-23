@@ -12,6 +12,7 @@ export interface IcsImportOptions {
   importedAt?: string
   windowStart?: string
   windowEnd?: string
+  timeZone?: string
 }
 
 export interface IcsParseResult {
@@ -38,8 +39,11 @@ interface ParsedComponent {
   index: number
   summary: string
   start: ParsedDateTime
+  sourceStart: ParsedDateTime
   startProperty: ContentLine
   end?: ParsedDateTime
+  sourceEnd?: ParsedDateTime
+  endProperty?: ContentLine
   uid: string
   recurrenceKey: string
 }
@@ -127,7 +131,21 @@ const localDateTime = (date: Date): ParsedDateTime => ({
   allDay: false,
 })
 
-const parseDateTime = (property: ContentLine): ParsedDateTime | null => {
+const zonedDateTime = (date: Date, timeZone?: string): ParsedDateTime => {
+  if (!timeZone) return localDateTime(date)
+  try {
+    const parts = partsInZone(date, timeZone)
+    return {
+      date: `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`,
+      time: `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`,
+      allDay: false,
+    }
+  } catch {
+    return localDateTime(date)
+  }
+}
+
+const parseSourceDateTime = (property: ContentLine): ParsedDateTime | null => {
   const parts = compactParts(property.value.trim())
   if (!parts) return null
   const allDay = property.params.VALUE?.toUpperCase() === 'DATE' || !property.value.includes('T')
@@ -138,24 +156,33 @@ const parseDateTime = (property: ContentLine): ParsedDateTime | null => {
       allDay: true,
     }
   }
-  if (property.value.endsWith('Z')) {
-    return localDateTime(
-      new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)),
-    )
-  }
-  const timeZone = property.params.TZID
-  if (timeZone) {
-    try {
-      return localDateTime(dateFromZonedParts(parts, timeZone))
-    } catch {
-      // Unknown TZIDs are treated as floating local time instead of dropping private data.
-    }
-  }
   return {
     date: `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`,
     time: `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`,
     allDay: false,
   }
+}
+
+const dateTimeInTargetZone = (source: ParsedDateTime, property: ContentLine, timeZone?: string): ParsedDateTime => {
+  if (source.allDay) return source
+  const [year = 1970, month = 1, day = 1] = source.date.split('-').map(Number)
+  const [hour = 0, minute = 0] = source.time.split(':').map(Number)
+  const parts = { year, month, day, hour, minute, second: 0 }
+  if (property.value.endsWith('Z')) {
+    return zonedDateTime(
+      new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)),
+      timeZone,
+    )
+  }
+  const sourceTimeZone = property.params.TZID
+  if (sourceTimeZone) {
+    try {
+      return zonedDateTime(dateFromZonedParts(parts, sourceTimeZone), timeZone)
+    } catch {
+      // Unknown TZIDs are treated as floating local time instead of dropping private data.
+    }
+  }
+  return source
 }
 
 const stableHash = (value: string): string => {
@@ -264,7 +291,7 @@ const exdateKeys = (group: ContentLine[]): Set<string> => {
   const keys = new Set<string>()
   for (const property of group.filter((line) => line.name === 'EXDATE')) {
     for (const value of property.value.split(',')) {
-      const parsed = parseDateTime({ ...property, value })
+      const parsed = parseSourceDateTime({ ...property, value })
       if (parsed) keys.add(recurrenceKeyOf(parsed))
     }
   }
@@ -275,47 +302,59 @@ const recurrenceStarts = (
   component: ParsedComponent,
   options: IcsImportOptions,
   skippedKeys: Set<string>,
-): Array<{ start: ParsedDateTime; key: string }> => {
+): Array<{ start: ParsedDateTime; sourceStart: ParsedDateTime; key: string }> => {
   const property = firstProperty(component.group, 'RRULE')
-  if (!property) return [{ start: component.start, key: '' }]
+  if (!property) return [{ start: component.start, sourceStart: component.sourceStart, key: '' }]
   try {
     const parsed = RRule.parseString(property.value)
     // Sub-hourly feeds can explode even inside a finite date window and are not normal school-calendar forms.
     if (parsed.freq === RRule.HOURLY || parsed.freq === RRule.MINUTELY || parsed.freq === RRule.SECONDLY) {
-      return [{ start: component.start, key: recurrenceKeyOf(component.start) }]
+      return [
+        { start: component.start, sourceStart: component.sourceStart, key: recurrenceKeyOf(component.sourceStart) },
+      ]
     }
-    const rule = new RRule({ ...parsed, dtstart: pseudoUtcDate(component.start) })
+    const rule = new RRule({ ...parsed, dtstart: pseudoUtcDate(component.sourceStart) })
     const bounds = recurrenceBounds(options)
     const starts = rule.between(bounds.start, bounds.end, true).slice(0, MAX_OCCURRENCES_PER_EVENT)
     return starts.flatMap((date) => {
-      const start = parsedFromPseudoUtc(date, component.start.allDay)
-      const key = recurrenceKeyOf(start)
-      return skippedKeys.has(key) ? [] : [{ start, key }]
+      const sourceStart = parsedFromPseudoUtc(date, component.sourceStart.allDay)
+      const key = recurrenceKeyOf(sourceStart)
+      const start = dateTimeInTargetZone(sourceStart, component.startProperty, options.timeZone)
+      return skippedKeys.has(key) ? [] : [{ start, sourceStart, key }]
     })
   } catch {
-    return [{ start: component.start, key: recurrenceKeyOf(component.start) }]
+    return [{ start: component.start, sourceStart: component.sourceStart, key: recurrenceKeyOf(component.sourceStart) }]
   }
 }
 
-const shiftedEnd = (component: ParsedComponent, occurrenceStart: ParsedDateTime): ParsedDateTime | undefined => {
-  if (!component.end) return undefined
-  const sourceStart = pseudoUtcDate(component.start)
-  const sourceEnd = pseudoUtcDate(component.end)
+const shiftedEnd = (
+  component: ParsedComponent,
+  occurrenceSourceStart: ParsedDateTime,
+  timeZone?: string,
+): ParsedDateTime | undefined => {
+  if (!component.sourceEnd || !component.endProperty) return undefined
+  const sourceStart = pseudoUtcDate(component.sourceStart)
+  const sourceEnd = pseudoUtcDate(component.sourceEnd)
   const duration = Math.max(0, sourceEnd.getTime() - sourceStart.getTime())
-  return parsedFromPseudoUtc(new Date(pseudoUtcDate(occurrenceStart).getTime() + duration), component.end.allDay)
+  const occurrenceSourceEnd = parsedFromPseudoUtc(
+    new Date(pseudoUtcDate(occurrenceSourceStart).getTime() + duration),
+    component.sourceEnd.allDay,
+  )
+  return dateTimeInTargetZone(occurrenceSourceEnd, component.endProperty, timeZone)
 }
 
 const buildEvent = (
   component: ParsedComponent,
   occurrenceStart: ParsedDateTime,
+  occurrenceSourceStart: ParsedDateTime,
   occurrenceKey: string,
   options: Required<Pick<IcsImportOptions, 'sourceLabel' | 'sourceFeedId' | 'sourceType' | 'importedAt'>> &
-    Pick<IcsImportOptions, 'sourceUrl'>,
+    Pick<IcsImportOptions, 'sourceUrl' | 'timeZone'>,
 ): CalendarEvent => {
   const { group, index, summary, uid } = component
   const categories = categoriesOf(group)
   const { title, course } = courseAndTitle(summary, categories)
-  const occurrenceEnd = shiftedEnd(component, occurrenceStart)
+  const occurrenceEnd = shiftedEnd(component, occurrenceSourceStart, options.timeZone)
   const allDay = occurrenceStart.allDay
   const allDayEnd = occurrenceEnd?.allDay
     ? toLocalDate(addDays(new Date(`${occurrenceEnd.date}T12:00:00`), -1))
@@ -374,6 +413,7 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
     sourceType: options.sourceType ?? 'ics',
     importedAt: options.importedAt ?? new Date().toISOString(),
     ...(options.sourceUrl ? { sourceUrl: options.sourceUrl } : {}),
+    ...(options.timeZone ? { timeZone: options.timeZone } : {}),
   }
   const rawLines = unfoldLines(text)
   const calendarLines = rawLines.map(parseContentLine).filter((line): line is ContentLine => line !== null)
@@ -396,28 +436,35 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
     const rawSummary = firstProperty(group, 'SUMMARY')?.value
     const startProperty = firstProperty(group, 'DTSTART')
     const recurrenceProperty = firstProperty(group, 'RECURRENCE-ID')
-    const recurrence = recurrenceProperty ? parseDateTime(recurrenceProperty) : null
     const cancelled = firstProperty(group, 'STATUS')?.value.toUpperCase() === 'CANCELLED'
-    if ((!rawSummary && !cancelled) || (!startProperty && !recurrence)) {
+    if ((!rawSummary && !cancelled) || (!startProperty && !recurrenceProperty)) {
       skippedEvents += 1
       return []
     }
     const effectiveStartProperty = startProperty ?? recurrenceProperty!
-    const start = parseDateTime(effectiveStartProperty)
-    if (!start) {
+    const sourceStart = parseSourceDateTime(effectiveStartProperty)
+    if (!sourceStart) {
       skippedEvents += 1
       return []
     }
+    const start = dateTimeInTargetZone(sourceStart, effectiveStartProperty, options.timeZone)
+    const endProperty = firstProperty(group, 'DTEND')
+    const sourceEnd = endProperty ? (parseSourceDateTime(endProperty) ?? undefined) : undefined
+    const end = sourceEnd && endProperty ? dateTimeInTargetZone(sourceEnd, endProperty, options.timeZone) : undefined
+    const sourceRecurrence = recurrenceProperty ? parseSourceDateTime(recurrenceProperty) : null
     return [
       {
         group,
         index,
         summary: unescapeText(rawSummary ?? 'Cancelled occurrence').trim(),
         start,
+        sourceStart,
         startProperty: effectiveStartProperty,
-        end: firstProperty(group, 'DTEND') ? (parseDateTime(firstProperty(group, 'DTEND')!) ?? undefined) : undefined,
+        end,
+        sourceEnd,
+        endProperty,
         uid: unescapeText(firstProperty(group, 'UID')?.value ?? ''),
-        recurrenceKey: recurrence ? recurrenceKeyOf(recurrence) : '',
+        recurrenceKey: sourceRecurrence ? recurrenceKeyOf(sourceRecurrence) : '',
       },
     ]
   })
@@ -438,7 +485,7 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
     for (const master of masters) {
       const excluded = new Set([...exdateKeys(master.group), ...overrideKeys])
       for (const occurrence of recurrenceStarts(master, options, excluded)) {
-        const event = buildEvent(master, occurrence.start, occurrence.key, normalizedOptions)
+        const event = buildEvent(master, occurrence.start, occurrence.sourceStart, occurrence.key, normalizedOptions)
         if (!explicitWindowContains(event, options)) continue
         events.push(event)
         if (isCanvasAssignment(master.group, normalizedOptions.sourceType, master.summary)) {
@@ -455,7 +502,13 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
 
     for (const override of overrides) {
       if (firstProperty(override.group, 'STATUS')?.value.toUpperCase() === 'CANCELLED') continue
-      const event = buildEvent(override, override.start, override.recurrenceKey, normalizedOptions)
+      const event = buildEvent(
+        override,
+        override.start,
+        override.sourceStart,
+        override.recurrenceKey,
+        normalizedOptions,
+      )
       if (!explicitWindowContains(event, options)) continue
       events.push(event)
       if (isCanvasAssignment(override.group, normalizedOptions.sourceType, override.summary)) {
