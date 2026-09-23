@@ -7,9 +7,13 @@ const recipe = (id: string, amount: number, unit: string): Recipe => ({
   ...base, id, name: id, description: '', image: '', category: 'Dinner', tags: [], favorite: false,
   originalYield: 1, prepMinutes: 0, cookMinutes: 0,
   ingredients: [{ id: `${id}-ingredient`, name: 'chicken', canonicalName: 'chicken', quantity: amount, unit, category: 'Meat & Seafood' }],
-  steps: [], nutritionPerServing: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }, sourceLabel: 'test',
+  steps: [], nutritionPerServing: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 },
+  nutritionProvenance: { kind: 'unknown', capturedAt: base.updatedAt, estimated: false, sourceLabel: 'test' }, sourceLabel: 'test',
 })
-const meal = (id: string, recipeId: string): MealEntry => ({ ...base, id, date: '2026-09-22', slot: 'dinner', recipeId, servings: 1, preparedServings: 0, consumedServings: 0 })
+const meal = (id: string, recipeId: string): MealEntry => ({
+  ...base, id, date: '2026-09-22', slot: 'dinner', recipeId, servings: 1, preparedServings: 0, consumedServings: 0,
+  sourceSnapshot: { sourceType: 'recipe', sourceId: recipeId, name: recipeId, nutritionPerServing: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }, nutritionProvenance: { kind: 'unknown', capturedAt: base.updatedAt, estimated: false }, capturedAt: base.updatedAt },
+})
 
 describe('grocery calculations', () => {
   it('combines 8 oz and 1 lb into 1.5 lb', () => {

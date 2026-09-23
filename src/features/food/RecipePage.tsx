@@ -20,7 +20,14 @@ export default function RecipePage() {
   const addToPlan = (form: HTMLFormElement) => {
     const values = new FormData(form)
     const timestamp = new Date().toISOString()
-    const entry: MealEntry = { id: makeId('meal'), createdAt: timestamp, updatedAt: timestamp, source: 'manual', date: String(values.get('date')), slot: String(values.get('slot')) as MealSlot, recipeId: recipe.id, servings: Number(values.get('servings')), preparedServings: Number(values.get('preparedServings')), consumedServings: 0 }
+    const entry: MealEntry = {
+      id: makeId('meal'), createdAt: timestamp, updatedAt: timestamp, source: 'manual', date: String(values.get('date')), slot: String(values.get('slot')) as MealSlot,
+      recipeId: recipe.id, servings: Number(values.get('servings')), preparedServings: Number(values.get('preparedServings')), consumedServings: 0,
+      sourceSnapshot: {
+        sourceType: 'recipe', sourceId: recipe.id, name: recipe.name, image: recipe.image,
+        nutritionPerServing: { ...recipe.nutritionPerServing }, nutritionProvenance: { ...recipe.nutritionProvenance }, capturedAt: timestamp,
+      },
+    }
     updateData((previous) => ({ ...previous, meals: [...previous.meals.filter((meal) => !(meal.date === entry.date && meal.slot === entry.slot)), entry] }), `${recipe.name} added to your meal plan.`)
     setPlanOpen(false)
   }

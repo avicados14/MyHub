@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createDemoData } from './seed'
+import { createTestFixtureData } from '../test/fixtures'
 import { formatQuantity, remainingPreparedServings, scaledIngredients, sumNutrition } from './recipe'
 
 describe('recipe calculations', () => {
   it('scales a four-serving recipe to six without changing the base recipe', () => {
-    const recipe = createDemoData(new Date(2026, 8, 22)).recipes.find((item) => item.id === 'recipe-burrito')!
+    const recipe = createTestFixtureData(new Date(2026, 8, 22)).recipes.find((item) => item.id === 'recipe-burrito')!
     const scaled = scaledIngredients(recipe, 6)
     expect(scaled.find((item) => item.name === 'chicken breast')?.quantity).toBe(1.5)
     expect(scaled.find((item) => item.name === 'rice')?.quantity).toBe(3)

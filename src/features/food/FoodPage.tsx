@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, Field, Modal, PageHeader, ProgressBar, SegmentedControl, StatusBadge } from '../../components/ui'
+import { createUnknownNutritionProvenance } from '../../domain/defaults'
 import { multiplyNutrition, sumNutrition } from '../../domain/recipe'
 import type { FoodLogEntry, GroceryCategory, MealEntry, MealSlot, Recipe } from '../../domain/types'
 import { addDays, formatDate, makeId, startOfWeek, toLocalDate } from '../../utilities/date'
@@ -38,6 +39,7 @@ export default function FoodPage() {
       cookMinutes: Number(values.get('cookMinutes')), ingredients,
       steps: String(values.get('steps')).split('\n').filter(Boolean).map((text, index) => ({ id: makeId(`step-${index}`), text })),
       nutritionPerServing: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 },
+      nutritionProvenance: createUnknownNutritionProvenance(timestamp, 'Manual recipe'),
       sourceLabel: 'Manual recipe', needsReview: ingredients.some((item) => item.quantity === null),
     }
     updateData((previous) => ({ ...previous, recipes: [...previous.recipes, recipe] }), 'Recipe saved. Review any unquantified ingredients before grocery generation.')
@@ -48,9 +50,15 @@ export default function FoodPage() {
     const values = new FormData(form)
     const timestamp = new Date().toISOString()
     const recipeId = String(values.get('recipeId'))
+    const recipe = data.recipes.find((item) => item.id === recipeId)
+    if (!recipe) return
     const entry: MealEntry = {
       id: makeId('meal'), createdAt: timestamp, updatedAt: timestamp, source: 'manual', date: mealTarget.date,
       slot: mealTarget.slot, recipeId, servings: Number(values.get('servings')), preparedServings: Number(values.get('preparedServings')), consumedServings: 0,
+      sourceSnapshot: {
+        sourceType: 'recipe', sourceId: recipe.id, name: recipe.name, image: recipe.image,
+        nutritionPerServing: { ...recipe.nutritionPerServing }, nutritionProvenance: { ...recipe.nutritionProvenance }, capturedAt: timestamp,
+      },
     }
     updateData((previous) => ({ ...previous, meals: [...previous.meals.filter((meal) => !(meal.date === entry.date && meal.slot === entry.slot)), entry] }), `${mealTarget.slot[0]?.toUpperCase()}${mealTarget.slot.slice(1)} planned.`)
     setMealOpen(false)
@@ -62,7 +70,8 @@ export default function FoodPage() {
     const servings = Number(values.get('servings'))
     if (!recipe) return
     const timestamp = new Date().toISOString()
-    const entry: FoodLogEntry = { id: makeId('food-log'), createdAt: timestamp, updatedAt: timestamp, source: 'manual', date: String(values.get('date')), name: recipe.name, servings, nutritionSnapshot: multiplyNutrition(recipe.nutritionPerServing, servings), origin: 'recipe' }
+    const sourceSnapshot = { sourceType: 'recipe' as const, sourceId: recipe.id, name: recipe.name, image: recipe.image, nutritionPerServing: { ...recipe.nutritionPerServing }, nutritionProvenance: { ...recipe.nutritionProvenance }, capturedAt: timestamp }
+    const entry: FoodLogEntry = { id: makeId('food-log'), createdAt: timestamp, updatedAt: timestamp, source: 'manual', date: String(values.get('date')), name: recipe.name, servings, nutritionSnapshot: multiplyNutrition(recipe.nutritionPerServing, servings), provenanceSnapshot: { ...recipe.nutritionProvenance }, sourceSnapshot, origin: 'recipe' }
     updateData((previous) => ({ ...previous, foodLog: [...previous.foodLog, entry] }), `${recipe.name} added to today’s nutrition.`)
     setFoodOpen(false)
   }

@@ -1,16 +1,47 @@
-import { CloudOff, Database, Download, RefreshCw, ShieldCheck, Upload } from 'lucide-react'
+import {
+  AlertTriangle,
+  Cloud,
+  CloudOff,
+  Database,
+  Download,
+  Github,
+  KeyRound,
+  Link2Off,
+  LockKeyhole,
+  Pause,
+  Play,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/AppContext'
 import { Card, Field, PageHeader, StatusBadge } from '../../components/ui'
 import { parseIcs } from '../../domain/ics'
-import type { Nutrition, StudySettings, UserSettings } from '../../domain/types'
+import type { CalendarFeed, Nutrition, StudySettings, UserSettings } from '../../domain/types'
 import { createBackup, parseBackup } from '../../storage/database'
+import { useGitHubSync, type GitHubSyncStatus } from '../../sync/GitHubSyncContext'
+
+const syncTone = (status: GitHubSyncStatus): 'neutral' | 'danger' | 'attention' | 'success' => {
+  if (status === 'current') return 'success'
+  if (status === 'conflict' || status === 'locked') return 'attention'
+  if (status === 'error' || status === 'offline') return 'danger'
+  return 'neutral'
+}
 
 export default function SettingsPage() {
-  const { data, updateData, replaceData, resetDemoData, announce } = useApp()
+  const { data, updateData, replaceData, clearAllData, announce } = useApp()
+  const github = useGitHubSync()
   const importInput = useRef<HTMLInputElement>(null)
   const icsInput = useRef<HTMLInputElement>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [owner, setOwner] = useState(github.target.owner)
+  const [repo, setRepo] = useState(github.target.repo)
+  const [path, setPath] = useState(github.target.path)
+  const [token, setToken] = useState('')
+  const [passphrase, setPassphrase] = useState('')
+  const [syncBusy, setSyncBusy] = useState(false)
 
   useEffect(() => {
     const preferred = data.settings.appearance === 'system'
@@ -20,9 +51,22 @@ export default function SettingsPage() {
     document.documentElement.style.colorScheme = preferred
   }, [data.settings.appearance])
 
+  useEffect(() => {
+    setOwner(github.target.owner)
+    setRepo(github.target.repo)
+    setPath(github.target.path)
+  }, [github.target.owner, github.target.path, github.target.repo])
+
   const updateSettings = (change: Partial<UserSettings>, message = 'Settings saved.') => updateData((previous) => ({ ...previous, settings: { ...previous.settings, ...change } }), message)
   const updateStudy = (change: Partial<StudySettings>) => updateSettings({ study: { ...data.settings.study, ...change } })
   const updateNutrition = (change: Partial<Nutrition>) => updateSettings({ nutritionTargets: { ...data.settings.nutritionTargets, ...change } })
+  const canvasFeed = data.settings.calendarFeeds.find((feed) => feed.kind === 'canvas')
+
+  const upsertCanvasFeed = (change: Partial<CalendarFeed>) => {
+    const current: CalendarFeed = canvasFeed ?? { id: 'calendar-feed-canvas', name: 'Canvas', kind: 'canvas', url: '', enabled: true, status: 'not-configured' }
+    const next = { ...current, ...change }
+    updateSettings({ calendarFeeds: [...data.settings.calendarFeeds.filter((feed) => feed.id !== current.id), next] })
+  }
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(createBackup(data), null, 2)], { type: 'application/json' })
@@ -32,7 +76,7 @@ export default function SettingsPage() {
     link.download = `myhub-backup-${new Date().toISOString().slice(0, 10)}.json`
     link.click()
     URL.revokeObjectURL(url)
-    announce('MyHub backup downloaded.')
+    announce('Plaintext MyHub backup downloaded.')
   }
 
   const importData = async (file?: File) => {
@@ -52,7 +96,8 @@ export default function SettingsPage() {
     if (!file) return
     try {
       const events = parseIcs(await file.text(), 'Canvas ICS file')
-      updateData((previous) => ({ ...previous, events: [...previous.events.filter((item) => !events.some((incoming) => incoming.id === item.id)), ...events], settings: { ...previous.settings, canvas: { ...previous.settings.canvas, status: 'connected', lastRefresh: new Date().toISOString() } } }), `Imported ${events.length} calendar events from ${file.name}.`)
+      updateData((previous) => ({ ...previous, events: [...previous.events.filter((item) => !events.some((incoming) => incoming.id === item.id)), ...events] }), `Imported ${events.length} calendar events from ${file.name}.`)
+      upsertCanvasFeed({ status: 'connected', lastRefresh: new Date().toISOString() })
     } catch (error) {
       announce(error instanceof Error ? error.message : 'The calendar file could not be imported.')
     } finally {
@@ -61,29 +106,73 @@ export default function SettingsPage() {
   }
 
   const refreshCanvas = async () => {
-    const url = data.settings.canvas.feedUrl.trim()
+    const url = canvasFeed?.url.trim() ?? ''
     if (!url) { announce('Add your Canvas ICS feed URL first, or import an ICS file.'); return }
     setRefreshing(true)
     try {
       const response = await fetch(url)
       if (!response.ok) throw new Error(`Canvas returned ${response.status}.`)
       const events = parseIcs(await response.text(), 'Canvas ICS feed')
-      updateData((previous) => ({ ...previous, events: [...previous.events.filter((item) => item.sourceLabel !== 'Canvas ICS feed'), ...events], settings: { ...previous.settings, canvas: { ...previous.settings.canvas, status: 'connected', lastRefresh: new Date().toISOString() } } }), `Canvas refreshed with ${events.length} events.`)
+      updateData((previous) => ({ ...previous, events: [...previous.events.filter((item) => item.sourceLabel !== 'Canvas ICS feed'), ...events] }), `Canvas refreshed with ${events.length} events.`)
+      upsertCanvasFeed({ status: 'connected', lastRefresh: new Date().toISOString() })
     } catch {
-      updateData((previous) => ({ ...previous, settings: { ...previous.settings, canvas: { ...previous.settings.canvas, status: 'error' } } }), 'The browser could not refresh that feed. Canvas often blocks direct browser requests; download the ICS file and use Import ICS instead.')
+      upsertCanvasFeed({ status: 'error' })
+      announce('The browser could not refresh that feed. Canvas often blocks direct browser requests; download the ICS file and use Import ICS instead.')
     } finally { setRefreshing(false) }
   }
 
+  const connectOrUnlock = async () => {
+    setSyncBusy(true)
+    try {
+      if (github.status === 'locked' || (github.status === 'error' && !token)) await github.unlock(passphrase)
+      else await github.connect({ owner, repo, path, token, passphrase })
+      setToken('')
+      setPassphrase('')
+    } catch {
+      // The provider exposes a safe, token-free error message in the UI.
+    } finally {
+      setSyncBusy(false)
+    }
+  }
+
+  const runSyncAction = async (action: () => Promise<void>) => {
+    setSyncBusy(true)
+    try { await action() } catch { /* provider reports errors without secrets */ } finally { setSyncBusy(false) }
+  }
+
+  const isConfigured = github.configured
+  const needsUnlock = isConfigured && (github.status === 'locked' || github.status === 'error')
+  const activeCanvasStatus = canvasFeed?.status ?? 'not-configured'
+
   return <>
-    <PageHeader title="Settings" description="Tune your planning rules and keep control of your local data." />
+    <PageHeader title="Settings" description="Tune planning rules, encrypted sync, and data controls." />
     <div className="settings-layout">
-      <div className="settings-nav" aria-label="Settings sections"><a href="#general">General</a><a href="#study">Study planner</a><a href="#canvas">Canvas</a><a href="#nutrition">Nutrition</a><a href="#data">Data & privacy</a></div>
+      <nav className="settings-nav" aria-label="Settings sections"><a href="#general">General</a><a href="#study">Study planner</a><a href="#canvas">Calendars</a><a href="#nutrition">Nutrition</a><a href="#github-sync">GitHub Sync</a><a href="#data">Data & privacy</a></nav>
       <div className="settings-content">
-        <Card className="settings-card" as="section"><div className="settings-card__header" id="general"><h2>General</h2><p>Choose display and measurement preferences.</p></div><div className="settings-fields"><Field label="Your name"><input name="name" autoComplete="name" value={data.settings.name} onChange={(event) => updateSettings({ name: event.target.value })} /></Field><Field label="Appearance"><select name="appearance" value={data.settings.appearance} onChange={(event) => updateSettings({ appearance: event.target.value as UserSettings['appearance'] })}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></Field><Field label="Measurement system"><select name="measurementSystem" value={data.settings.measurementSystem} onChange={(event) => updateSettings({ measurementSystem: event.target.value as UserSettings['measurementSystem'] })}><option value="us">US customary</option><option value="metric">Metric</option></select></Field></div></Card>
-        <Card className="settings-card" as="section"><div className="settings-card__header" id="study"><h2>Study planner</h2><p>MyHub schedules only inside this daily window.</p></div><div className="settings-fields settings-fields--grid"><Field label="Earliest study time"><input name="earliestTime" type="time" value={data.settings.study.earliestTime} onChange={(event) => updateStudy({ earliestTime: event.target.value })} /></Field><Field label="Latest study time"><input name="latestTime" type="time" value={data.settings.study.latestTime} onChange={(event) => updateStudy({ latestTime: event.target.value })} /></Field><Field label="Default block (minutes)"><input name="defaultBlockMinutes" type="number" min="15" step="5" value={data.settings.study.defaultBlockMinutes} onChange={(event) => updateStudy({ defaultBlockMinutes: Number(event.target.value) })} /></Field><Field label="Break (minutes)"><input name="breakMinutes" type="number" min="0" step="5" value={data.settings.study.breakMinutes} onChange={(event) => updateStudy({ breakMinutes: Number(event.target.value) })} /></Field><Field label="Maximum block (minutes)"><input name="maxBlockMinutes" type="number" min="15" step="5" value={data.settings.study.maxBlockMinutes} onChange={(event) => updateStudy({ maxBlockMinutes: Number(event.target.value) })} /></Field></div></Card>
-        <Card className="settings-card" as="section"><div className="settings-card__header" id="canvas"><div><h2>Canvas calendar</h2><p>Use the ICS feed fields Canvas actually provides. No Canvas password is needed.</p></div><StatusBadge tone={data.settings.canvas.status === 'connected' ? 'success' : data.settings.canvas.status === 'error' ? 'danger' : 'neutral'}>{data.settings.canvas.status.replace('-', ' ')}</StatusBadge></div><div className="settings-fields"><Field label="Canvas ICS feed URL" hint="Saved only in this browser. Direct refresh depends on the feed’s CORS policy."><input name="canvasUrl" type="url" autoComplete="off" spellCheck={false} placeholder="https://canvas.example.edu/feeds/calendars/…" value={data.settings.canvas.feedUrl} onChange={(event) => updateSettings({ canvas: { ...data.settings.canvas, feedUrl: event.target.value, status: 'not-configured' } })} /></Field><div className="button-row"><button className="button button--secondary" type="button" disabled={refreshing} onClick={() => void refreshCanvas()}><RefreshCw aria-hidden="true" /> {refreshing ? 'Refreshing…' : 'Refresh feed'}</button><button className="button button--quiet" type="button" onClick={() => icsInput.current?.click()}><Upload aria-hidden="true" /> Import ICS file</button><input ref={icsInput} className="sr-only" type="file" accept=".ics,text/calendar" aria-label="Import Canvas ICS file" onChange={(event) => void importIcs(event.target.files?.[0])} /></div>{data.settings.canvas.status === 'error' ? <div className="inline-alert"><CloudOff aria-hidden="true" /><span><strong>Direct refresh was blocked.</strong> Download the calendar file from Canvas and import it here instead.</span></div> : null}{data.settings.canvas.lastRefresh ? <p>Last refreshed {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(data.settings.canvas.lastRefresh))}</p> : null}</div></Card>
+        <Card className="settings-card" as="section"><div className="settings-card__header" id="general"><h2>General</h2><p>Choose display and measurement preferences.</p></div><div className="settings-fields"><Field label="Your name"><input name="name" autoComplete="name" placeholder="Optional" value={data.settings.name} onChange={(event) => updateSettings({ name: event.target.value })} /></Field><Field label="Appearance"><select name="appearance" value={data.settings.appearance} onChange={(event) => updateSettings({ appearance: event.target.value as UserSettings['appearance'] })}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></Field><Field label="Measurement system"><select name="measurementSystem" value={data.settings.measurementSystem} onChange={(event) => updateSettings({ measurementSystem: event.target.value as UserSettings['measurementSystem'] })}><option value="us">US customary</option><option value="metric">Metric</option></select></Field></div></Card>
+
+        <Card className="settings-card" as="section"><div className="settings-card__header" id="study"><h2>Study planner</h2><p>MyHub schedules only inside this daily window. Version 2 also stores explicit avoid-time ranges.</p></div><div className="settings-fields settings-fields--grid"><Field label="Earliest study time"><input name="earliestTime" type="time" value={data.settings.study.earliestTime} onChange={(event) => updateStudy({ earliestTime: event.target.value })} /></Field><Field label="Latest study time"><input name="latestTime" type="time" value={data.settings.study.latestTime} onChange={(event) => updateStudy({ latestTime: event.target.value })} /></Field><Field label="Default block (minutes)"><input name="defaultBlockMinutes" type="number" min="15" step="5" value={data.settings.study.defaultBlockMinutes} onChange={(event) => updateStudy({ defaultBlockMinutes: Number(event.target.value) })} /></Field><Field label="Break (minutes)"><input name="breakMinutes" type="number" min="0" step="5" value={data.settings.study.breakMinutes} onChange={(event) => updateStudy({ breakMinutes: Number(event.target.value) })} /></Field><Field label="Maximum block (minutes)"><input name="maxBlockMinutes" type="number" min="15" step="5" value={data.settings.study.maxBlockMinutes} onChange={(event) => updateStudy({ maxBlockMinutes: Number(event.target.value) })} /></Field></div></Card>
+
+        <Card className="settings-card" as="section"><div className="settings-card__header" id="canvas"><div><h2>Calendar feeds</h2><p>Version 2 supports multiple feeds. Configure the Canvas feed here; no Canvas password is needed.</p></div><StatusBadge tone={activeCanvasStatus === 'connected' ? 'success' : activeCanvasStatus === 'error' ? 'danger' : 'neutral'}>{activeCanvasStatus.replace('-', ' ')}</StatusBadge></div><div className="settings-fields"><Field label="Canvas ICS feed URL" hint="Saved in AppData. Direct refresh depends on the feed’s CORS policy."><input name="canvasUrl" type="url" autoComplete="off" spellCheck={false} placeholder="https://canvas.example.edu/feeds/calendars/…" value={canvasFeed?.url ?? ''} onChange={(event) => upsertCanvasFeed({ url: event.target.value, status: 'not-configured' })} /></Field><div className="button-row"><button className="button button--secondary" type="button" disabled={refreshing} onClick={() => void refreshCanvas()}><RefreshCw aria-hidden="true" /> {refreshing ? 'Refreshing…' : 'Refresh feed'}</button><button className="button button--quiet" type="button" onClick={() => icsInput.current?.click()}><Upload aria-hidden="true" /> Import ICS file</button><input ref={icsInput} className="sr-only" type="file" accept=".ics,text/calendar" aria-label="Import Canvas ICS file" onChange={(event) => void importIcs(event.target.files?.[0])} /></div>{activeCanvasStatus === 'error' ? <div className="inline-alert"><CloudOff aria-hidden="true" /><span><strong>Direct refresh was blocked.</strong> Download the calendar file from Canvas and import it here instead.</span></div> : null}{canvasFeed?.lastRefresh ? <p>Last refreshed {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(canvasFeed.lastRefresh))}</p> : null}</div></Card>
+
         <Card className="settings-card" as="section"><div className="settings-card__header" id="nutrition"><h2>Nutrition targets</h2><p>These targets power dashboard and food progress indicators.</p></div><div className="settings-fields settings-fields--grid">{(['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium'] as const).map((key) => <Field key={key} label={`${key[0]?.toUpperCase()}${key.slice(1)}`}><input name={key} type="number" min="0" value={data.settings.nutritionTargets[key]} onChange={(event) => updateNutrition({ [key]: Number(event.target.value) })} /></Field>)}</div></Card>
-        <Card className="settings-card settings-card--data" as="section"><div className="settings-card__header" id="data"><div><h2>Data & privacy</h2><p>Your academic and food records stay in this browser unless you export them.</p></div><span className="section-icon section-icon--mint"><ShieldCheck aria-hidden="true" /></span></div><div className="data-actions"><div><Database aria-hidden="true" /><span><strong>Local IndexedDB</strong><small>No account, analytics, ads, or cloud sync.</small></span></div><div className="button-row"><button className="button button--secondary" type="button" onClick={exportData}><Download aria-hidden="true" /> Export data</button><button className="button button--quiet" type="button" onClick={() => importInput.current?.click()}><Upload aria-hidden="true" /> Import data</button><input ref={importInput} className="sr-only" type="file" accept="application/json,.json" aria-label="Import MyHub JSON backup" onChange={(event) => void importData(event.target.files?.[0])} /></div></div><div className="danger-zone"><div><strong>Reset demo data</strong><span>Replace this browser’s current MyHub data with the original sample records.</span></div><button className="button button--danger" type="button" onClick={() => { if (window.confirm('Reset all local MyHub data? Export first if you need a copy. This cannot be undone.')) resetDemoData() }}>Reset demo data</button></div></Card>
+
+        <Card className="settings-card settings-card--sync" as="section">
+          <div className="settings-card__header" id="github-sync"><div><h2>GitHub Sync</h2><p>Optional encrypted synchronization for the dedicated private data repository.</p></div><StatusBadge tone={syncTone(github.status)}>{github.paused ? 'paused' : github.status}</StatusBadge></div>
+          <div className="settings-fields">
+            <div className="sync-intro"><span className="section-icon section-icon--blue"><Github aria-hidden="true" /></span><div><strong>Private, encrypted, local first</strong><p>IndexedDB remains immediate offline storage. MyHub encrypts AppData in this browser before sending it to GitHub.</p></div></div>
+            {!needsUnlock && !isConfigured ? <div className="settings-fields settings-fields--grid sync-grid"><Field label="Repository owner"><input name="githubOwner" autoCapitalize="none" spellCheck={false} value={owner} onChange={(event) => setOwner(event.target.value)} /></Field><Field label="Repository name"><input name="githubRepo" autoCapitalize="none" spellCheck={false} value={repo} onChange={(event) => setRepo(event.target.value)} /></Field><Field label="Snapshot path"><input name="githubPath" autoCapitalize="none" spellCheck={false} value={path} onChange={(event) => setPath(event.target.value)} /></Field><Field label="Fine-grained token" hint="Limit it to MyHub-Data with Contents read/write only. Do not grant workflows, administration, or a classic PAT."><input name="githubToken" type="password" autoComplete="off" spellCheck={false} value={token} onChange={(event) => setToken(event.target.value)} /></Field><Field label="Encryption passphrase" hint="At least 12 characters. It stays only in memory and cannot be recovered by MyHub."><input name="githubPassphrase" type="password" autoComplete="off" value={passphrase} onChange={(event) => setPassphrase(event.target.value)} /></Field></div> : null}
+            {needsUnlock ? <div className="unlock-panel"><LockKeyhole aria-hidden="true" /><Field label="Encryption passphrase" hint="Unlocks the separately encrypted token and remote snapshot for this tab only."><input name="githubUnlockPassphrase" type="password" autoComplete="off" value={passphrase} onChange={(event) => setPassphrase(event.target.value)} /></Field></div> : null}
+            {!isConfigured || needsUnlock ? <button className="button button--primary" type="button" disabled={syncBusy || !passphrase} onClick={() => void connectOrUnlock()}><KeyRound aria-hidden="true" /> {syncBusy || github.status === 'connecting' ? 'Connecting…' : needsUnlock ? 'Unlock sync' : 'Connect and sync'}</button> : null}
+            {isConfigured && !needsUnlock ? <div className="sync-status" role="status"><Cloud aria-hidden="true" /><div><strong>{github.target.owner}/{github.target.repo}</strong><span>{github.target.path}</span>{github.lastSyncedAt ? <small>Last synced {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(github.lastSyncedAt))}</small> : null}</div></div> : null}
+            {github.errorMessage ? <div className="inline-alert"><AlertTriangle aria-hidden="true" /><span><strong>GitHub Sync needs attention.</strong>{github.errorMessage}</span></div> : null}
+            {github.status === 'conflict' ? <div className="conflict-actions" aria-labelledby="sync-conflict-heading"><div><strong id="sync-conflict-heading">Choose the copy to keep</strong><p>Neither copy will be discarded until you choose.</p></div><div className="button-row"><button className="button button--secondary" type="button" disabled={syncBusy} onClick={() => void runSyncAction(github.resolveUseDevice)}>Use this device</button><button className="button button--secondary" type="button" disabled={syncBusy} onClick={() => void runSyncAction(github.resolveUseGitHub)}>Use GitHub</button></div></div> : null}
+            {isConfigured && !needsUnlock ? <div className="button-row"><button className="button button--secondary" type="button" disabled={syncBusy || github.paused} onClick={() => void runSyncAction(github.syncNow)}><RefreshCw aria-hidden="true" /> Sync now</button><button className="button button--quiet" type="button" disabled={syncBusy} onClick={() => void runSyncAction(() => github.setPaused(!github.paused))}>{github.paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />} {github.paused ? 'Resume' : 'Pause'}</button><button className="button button--quiet" type="button" disabled={syncBusy} onClick={() => { if (window.confirm('Unlink GitHub Sync on this device? The remote encrypted snapshot will remain.')) void runSyncAction(github.unlink) }}><Link2Off aria-hidden="true" /> Unlink</button></div> : null}
+            {isConfigured && !needsUnlock ? <div className="remote-delete"><div><strong>Delete latest remote snapshot</strong><span>This removes the current file and pauses sync. GitHub commit history, forks, caches, or retention may still contain earlier encrypted versions; MyHub cannot guarantee historical erasure.</span></div><button className="button button--danger" type="button" disabled={syncBusy} onClick={() => { if (window.confirm('Delete the latest encrypted snapshot from GitHub and pause sync? GitHub history may retain earlier versions.')) void runSyncAction(github.clearRemoteSnapshot) }}><Trash2 aria-hidden="true" /> Delete remote snapshot</button></div> : null}
+          </div>
+        </Card>
+
+        <Card className="settings-card settings-card--data" as="section"><div className="settings-card__header" id="data"><div><h2>Data & privacy</h2><p>Your records live in local IndexedDB and, only if enabled, in an encrypted GitHub snapshot.</p></div><span className="section-icon section-icon--mint"><ShieldCheck aria-hidden="true" /></span></div><div className="data-actions"><div><Database aria-hidden="true" /><span><strong>Local IndexedDB</strong><small>No account, analytics, ads, or backend. Sync credentials are stored separately from AppData.</small></span></div><div className="button-row"><button className="button button--secondary" type="button" onClick={exportData}><Download aria-hidden="true" /> Export data</button><button className="button button--quiet" type="button" onClick={() => importInput.current?.click()}><Upload aria-hidden="true" /> Import data</button><input ref={importInput} className="sr-only" type="file" accept="application/json,.json" aria-label="Import MyHub JSON backup" onChange={(event) => void importData(event.target.files?.[0])} /></div></div><div className="plaintext-warning"><AlertTriangle aria-hidden="true" /><p><strong>JSON exports are plaintext.</strong> They may contain private academic and food records. Store them securely and never commit them to a repository.</p></div><div className="danger-zone"><div><strong>Clear all data</strong><span>Erase events, assignments, recipes, meals, logs, packaged foods, leftovers, pantry, and grocery records on this device. Non-personal defaults and GitHub connection settings remain.</span></div><button className="button button--danger" type="button" onClick={() => { if (window.confirm('Clear all MyHub data on this device? Export first if you need a copy. This cannot be undone. The GitHub snapshot is not deleted.')) clearAllData() }}>Clear all data</button></div></Card>
       </div>
     </div>
   </>

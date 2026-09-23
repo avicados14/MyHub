@@ -95,9 +95,27 @@ The Vite base path is set to `/MyHub/` in GitHub Actions, as required for reposi
 
 Open **Settings → Data & privacy**.
 
-Choose **Export data** to download a JSON backup. To restore it, choose **Import data**, select the file, review the timestamp, and confirm replacement.
+Choose **Export data** to download a JSON backup. To restore it, choose **Import data**, select the file, review the timestamp, and confirm replacement. JSON exports are plaintext; keep them out of repositories and untrusted cloud folders.
 
-The deployed site and local development site do not share IndexedDB. Export and import are the Phase 1 transfer method.
+The deployed site and local development site do not share IndexedDB. Export/import or optional encrypted GitHub Sync can transfer data between them.
+
+## 9. Configure Optional Encrypted GitHub Sync
+
+Create or use the dedicated repository `avicados14/MyHub-Data` and confirm it is **private**. Create a **fine-grained personal access token** restricted to only that repository with **Contents: read and write**. Do not create a classic PAT and do not grant Actions/workflow, administration, organization, or unrelated repository access.
+
+In **Settings → GitHub Sync**, keep or update the defaults:
+
+```text
+Owner: avicados14
+Repository: MyHub-Data
+Path: myhub-data/v1/snapshot.enc
+```
+
+Enter the fine-grained token and an encryption passphrase of at least 12 characters. MyHub encrypts the token into a separate IndexedDB credential record and encrypts `AppData` before upload. The passphrase is never saved and must be entered again after a page/browser restart. Losing it makes the remote snapshot and stored token unrecoverable through MyHub.
+
+Use **Sync now** for an immediate check, **Pause** to stop remote writes while preserving local operation, and **Unlink** to remove this browser's encrypted credential record without deleting the remote snapshot. If both copies changed, choose **Use this device** or **Use GitHub**; MyHub does not silently discard either side.
+
+**Delete remote snapshot** removes the latest file and pauses sync. GitHub history, forks, caches, and retention can still preserve earlier encrypted versions, so historical erasure cannot be guaranteed.
 
 ## Troubleshooting
 
@@ -133,6 +151,14 @@ Many Canvas ICS servers block browser-origin requests. Download the `.ics` file 
 ### Data disappeared
 
 Confirm you are using the same browser profile and the same address. Browser storage can be cleared by the user, private-browsing rules, or device storage management. Restore the latest JSON export and make regular backups.
+
+### GitHub Sync is locked
+
+The passphrase is intentionally memory-only. Enter it again after restarting or reloading the app. If it no longer works, verify that you are using the original passphrase; authenticated decryption rejects wrong passphrases and modified ciphertext.
+
+### GitHub Sync reports a conflict
+
+Both local and remote data changed after the last acknowledged digest, or GitHub changed during a conditional write. Review the two explicit actions. **Use this device** refetches the latest SHA and overwrites the remote snapshot; **Use GitHub** replaces local AppData with the decrypted remote snapshot.
 
 ### Browser tests cannot launch
 

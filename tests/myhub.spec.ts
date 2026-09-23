@@ -1,11 +1,31 @@
 import { expect, test } from '@playwright/test'
 
-test('dashboard renders connected school and food data', async ({ page }) => {
+const waitForStoredCollectionSize = async (page: import('@playwright/test').Page, key: string, size: number) => {
+  await expect.poll(() => page.evaluate(async ({ key, size }) => {
+    const request = indexedDB.open('myhub-local', 2)
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const transaction = database.transaction('application', 'readonly')
+    const get = transaction.objectStore('application').get('state')
+    const state = await new Promise<Record<string, unknown>>((resolve, reject) => {
+      get.onsuccess = () => resolve(get.result as Record<string, unknown>)
+      get.onerror = () => reject(get.error)
+    })
+    database.close()
+    return Array.isArray(state?.[key]) ? state[key].length === size : false
+  }, { key, size })).toBe(true)
+}
+
+test('fresh install opens with empty personal collections', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Avi/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening)\./ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Today’s schedule' })).toBeVisible()
-  await expect(page.getByText('Fluid Mechanics')).toBeVisible()
-  await expect(page.getByText('Chicken Burrito Bowls').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your day is open' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No meals planned' })).toBeVisible()
+  await expect(page.getByText('0 open assignments')).toBeVisible()
+  await expect(page.getByText('0 ingredients tracked at home')).toBeVisible()
 })
 
 test('user adds homework and generates study sessions', async ({ page }) => {
@@ -26,22 +46,32 @@ test('user adds homework and generates study sessions', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Materials quiz review' })).toBeVisible()
 })
 
-test('recipe yield scaling updates ingredient quantities', async ({ page }) => {
-  await page.goto('/#/food/recipes/recipe-burrito')
-  await expect(page.getByRole('heading', { name: 'Chicken Burrito Bowls' })).toBeVisible()
-  await page.getByRole('button', { name: 'Increase servings' }).click()
-  await page.getByRole('button', { name: 'Increase servings' }).click()
-  await expect(page.getByText('1½ lb')).toBeVisible()
-  await expect(page.getByText('3 cup')).toBeVisible()
+test('user creates a recipe from an empty library', async ({ page }) => {
+  await page.goto('/#/food')
+  await expect(page.getByRole('heading', { name: 'No matching recipes' })).toBeVisible()
+  await page.getByRole('button', { name: 'Add recipe' }).click()
+  await page.getByLabel('Recipe name').fill('Lemon chickpea bowls')
+  await page.getByLabel('Description').fill('A quick weeknight bowl.')
+  await page.getByLabel('Ingredients').fill('2 cup chickpeas\n1 cup rice')
+  await page.getByLabel('Steps').fill('Cook the rice.\nAssemble the bowls.')
+  await page.getByRole('button', { name: 'Save recipe' }).click()
+  await expect(page.getByRole('heading', { name: 'Lemon chickpea bowls' })).toBeVisible()
+  await waitForStoredCollectionSize(page, 'recipes', 1)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Lemon chickpea bowls' })).toBeVisible()
 })
 
-test('grocery flow reaches mobile-friendly shopping list', async ({ page }) => {
-  await page.goto('/#/grocery')
-  await page.getByRole('button', { name: 'Generate from meal plan', exact: true }).click()
-  await expect(page.getByRole('heading', { name: /check what you already have/i })).toBeVisible()
-  await page.getByRole('button', { name: 'Build shopping list' }).click()
-  await expect(page.getByRole('heading', { name: 'Weekly groceries' })).toBeVisible()
-  const firstItem = page.locator('.grocery-check').first()
-  await firstItem.click()
-  await expect(firstItem).toHaveClass(/is-checked/)
+test('clear all data requires confirmation and restores an empty install', async ({ page }) => {
+  await page.goto('/#/school')
+  await page.getByRole('button', { name: 'Add homework' }).click()
+  await page.getByLabel('Assignment title').fill('Temporary assignment')
+  await page.getByLabel('Course').fill('TEST 101')
+  await page.getByRole('dialog', { name: 'Add homework' }).getByRole('button', { name: 'Add homework', exact: true }).click()
+  await page.goto('/#/settings')
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Clear all data' }).click()
+  await waitForStoredCollectionSize(page, 'assignments', 0)
+  await page.goto('/#/school')
+  await expect(page.getByRole('heading', { name: 'Temporary assignment' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Homework is clear' })).toBeVisible()
 })

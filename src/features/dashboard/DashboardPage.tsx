@@ -22,7 +22,7 @@ export default function DashboardPage() {
       <header className="dashboard-welcome">
         <div>
           <p className="date-kicker">{formatDate(today, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-          <h1>{greeting()}, {data.settings.name}.</h1>
+          <h1>{greeting()}{data.settings.name ? `, ${data.settings.name}` : ''}.</h1>
           <p>Your day is mapped. Here’s where your attention matters next.</p>
         </div>
         <Link className="button button--primary" to="/school">Plan study time <ArrowUpRight aria-hidden="true" /></Link>

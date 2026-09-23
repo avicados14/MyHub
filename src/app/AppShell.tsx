@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Settings aria-hidden="true" />
             <span>Settings</span>
           </NavLink>
-          <div className="privacy-note"><span aria-hidden="true" />Stored only in this browser</div>
+          <div className="privacy-note"><span aria-hidden="true" />Local first · encrypted sync optional</div>
         </div>
       </aside>
       {menuOpen ? <button className="scrim" type="button" aria-label="Close navigation" onClick={closeNavigation} /> : null}
@@ -103,7 +103,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <div className="topbar__identity">
             <span className="topbar__date">{new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</span>
-            <span className="avatar" aria-hidden="true">{data.settings.name.slice(0, 1).toUpperCase()}</span>
+            <span className="avatar" aria-hidden="true">{data.settings.name.slice(0, 1).toUpperCase() || 'M'}</span>
           </div>
         </header>
         <main id="main-content" className="page" tabIndex={-1}>{children}</main>

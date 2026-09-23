@@ -11,7 +11,10 @@ Application data provider and commands
         ↓
 Pure TypeScript domain functions
         ↓
-Typed IndexedDB and backup boundary
+Typed IndexedDB, migration, and backup boundary
+
+        ↓ optional
+GitHubSyncProvider → Web Crypto → private GitHub Contents API
 
 External sources → adapter boundary → reviewed local records
 ```
@@ -55,7 +58,7 @@ scale factor = requested servings / original yield
 
 The base recipe is never repeatedly multiplied, which avoids accumulated rounding drift. Unquantified ingredients such as “salt to taste” stay unquantified. Common cooking fractions are formatted at the display edge.
 
-Food-log entries store nutrition snapshots. Later recipe edits therefore do not rewrite historical nutrition. Prepared and consumed servings remain separate, and remaining servings cannot become negative.
+Food-log entries and meal entries store immutable source and nutrition snapshots. Later recipe or packaged-food edits therefore do not rewrite historical nutrition or planned-meal facts. Prepared and consumed servings remain separate, and remaining servings cannot become negative. Durable `PackagedFood`, `Leftover`, and nutrition-provenance contracts are present even where their full workflows remain future feature work.
 
 ### Pantry and Grocery
 
@@ -71,18 +74,28 @@ The main aggregate is `AppData`:
 
 | Area | Records |
 |---|---|
-| School | Calendar events, homework assignments, subtasks, study settings |
-| Food | Recipes, ingredients, steps, meal entries, food-log snapshots |
+| School | Calendar events, multiple calendar feeds, homework assignments, subtasks, study settings, avoid-time ranges |
+| Food | Recipes, packaged foods, ingredients, steps, immutable meal-source snapshots, leftovers, food-log snapshots, nutrition provenance |
 | Inventory | Pantry items, active grocery list, immutable grocery history |
-| Preferences | Appearance, measurement system, nutrition targets, Canvas status |
+| Preferences | Appearance, measurement system, nutrition targets, meal-planning mode/preferences, grocery categories/staples |
 
-`AppData.schemaVersion` is currently `1`. The backup envelope adds its own `formatVersion`, application version, and export timestamp.
+`AppData.schemaVersion` is currently `2`. `migrateAppData` explicitly transforms schema version 1 state and backup data into version 2, adding durable defaults and immutable snapshots without removing legacy records. Unknown future schema versions are rejected. The backup envelope adds its own `formatVersion`, application version, and export timestamp.
 
 ## Persistence
 
 `src/storage/database.ts` owns IndexedDB access. Feature modules cannot depend on the browser database API. The current implementation persists one transactionally replaced application aggregate in the `application` object store. This keeps connected state coherent during Phase 1 and leaves a clear migration path to indexed aggregate stores if data volume or query complexity grows.
 
-Loading invalid or missing state produces removable demo data. Persistence errors are announced in an accessible live region. JSON imports validate the backup format and schema before replacement.
+Missing state produces an empty version 2 aggregate with non-personal defaults; production code contains no demo seed path. Test samples live only in `src/test/fixtures.ts`. Persistence errors are announced in an accessible live region. JSON imports validate and migrate the backup before replacement. The exported backup is explicitly plaintext.
+
+The `credentials` object store is separate from the `application` store. Its GitHub record contains repository coordinates, sync metadata, and a Web Crypto encrypted token envelope. It is never nested in `AppData` and is consequently excluded from AppData backups and remote snapshots. The passphrase is never persisted; the unlocked token and passphrase exist only in provider refs for the lifetime of the page.
+
+## Encrypted GitHub Sync
+
+`GitHubSyncProvider` is nested inside `AppProvider`, so local IndexedDB remains authoritative for immediate/offline interactions. The provider uses PBKDF2-SHA-256 with 310,000 iterations and a random 16-byte salt to derive an AES-256-GCM key. Every envelope receives a random 12-byte IV, versioned algorithm metadata is authenticated as additional data, and authentication failure rejects a wrong passphrase or any tampering.
+
+`GitHubContentsClient` uses GitHub's REST Contents API against the default private target `avicados14/MyHub-Data` and `myhub-data/v1/snapshot.enc`. It checks repository privacy, conditionally creates or updates using the blob SHA, serializes writes, and surfaces 409/422 write races as conflicts. The sync state machine is `disconnected`, `locked`, `connecting`, `syncing`, `current`, `offline`, `conflict`, or `error`. A SHA plus last-synced plaintext digest identifies one-sided changes; divergent changes require an explicit **Use this device** or **Use GitHub** action.
+
+This static Pages architecture uses a user-managed fine-grained token limited to the dedicated repository and Contents read/write. It never requests workflow or administration scopes and does not recommend classic PATs. Because browser JavaScript must use the unlocked token, this is an advanced personal-sync design rather than a server-mediated OAuth boundary. Remote deletion removes the latest path but cannot guarantee removal from Git history, forks, caches, or provider retention.
 
 ## Integration Boundaries
 
@@ -97,7 +110,7 @@ Canvas supports a direct best-effort ICS URL request and a reliable local `.ics`
 
 ## Historical Snapshots
 
-Food logs and grocery history store copies of the relevant facts at the time of the action. Editing a recipe later does not alter a logged meal or completed grocery trip. This rule must remain true in future web migrations, backend APIs, and SwiftData models.
+Meal entries, food logs, and grocery history store copies of the relevant facts at the time of the action. Editing a recipe or packaged food later does not alter a planned/logged meal or completed grocery trip. This rule must remain true in future web migrations, backend APIs, and SwiftData models.
 
 ## Testing Strategy
 

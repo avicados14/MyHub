@@ -30,7 +30,8 @@ Working now:
 - Pantry inventory across pantry, refrigerator, and freezer
 - Grocery aggregation, Pantry Check, shopping, completion, pantry handoff, and immutable history
 - Universal search across recipes, homework, and pantry items
-- IndexedDB persistence, JSON export/import, and demo reset
+- Empty first run, IndexedDB persistence, versioned migration, JSON export/import, and confirmed clear-all
+- Optional encrypted GitHub Sync to a dedicated private data repository
 - Light, dark, desktop, tablet, and mobile layouts
 - GitHub Pages deployment workflow
 
@@ -39,7 +40,7 @@ In development or intentionally limited:
 - Canvas URL refresh is best-effort because many feeds block direct browser requests. Local `.ics` import is the reliable fallback.
 - Recipe URL, social-media, image, video, OCR, barcode, and public nutrition database adapters are not connected to a server in this static prototype. Manual entry remains functional.
 - Drag-and-drop is not required for any task; accessible button and form controls provide the current editing path.
-- Local data does not synchronize between devices.
+- GitHub Sync is snapshot-based rather than a transactional database; simultaneous edits require an explicit choice of copy.
 
 Planned for native iOS and iPadOS after web review:
 
@@ -120,13 +121,21 @@ In the repository, choose **Settings → Pages → Build and deployment → GitH
 
 ## Data Storage
 
-Structured data is stored in IndexedDB under the current browser profile and origin. Data survives ordinary reloads and browser restarts, but it is not a cloud backup and does not automatically appear on another device.
+Structured data is stored immediately in IndexedDB under the current browser profile and origin. A fresh installation starts with empty events, assignments, recipes, packaged foods, meals, leftovers, food logs, pantry, and grocery records. Version 1 local data and JSON backups migrate to the version 2 schema without dropping records.
 
-Use **Settings → Data & privacy → Export data** to download a portable JSON backup. Import validates the MyHub backup envelope before replacing local data.
+Use **Settings → Data & privacy → Export data** to download a portable JSON backup. Import validates and migrates the MyHub backup envelope before replacing local data. **JSON exports are plaintext** and may contain private academic and food records.
 
-## Resetting Demo Data
+## Optional GitHub Sync
 
-Open **Settings → Data & privacy**, export anything you want to keep, and choose **Reset demo data**. MyHub asks for explicit confirmation before replacing current local data.
+GitHub Sync keeps IndexedDB as the offline working store and uploads only a versioned encrypted snapshot to the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc` by default. It uses PBKDF2-SHA-256 with 310,000 iterations and AES-256-GCM. The encryption passphrase remains only in component/context memory.
+
+Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
+
+The target repository must be private. Conditional writes use the current blob SHA, writes are serialized, and conflicts require choosing **Use this device** or **Use GitHub**. Deleting the latest remote snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
+
+## Clearing Data
+
+Open **Settings → Data & privacy**, export anything you want to keep, and choose **Clear all data**. MyHub asks for explicit confirmation and restores empty personal collections while retaining reasonable non-personal defaults. The GitHub connection is not deleted; pause/unlink it separately, and use the explicit remote-delete control if needed.
 
 ## Repository Structure
 
@@ -149,13 +158,13 @@ The future Apple application will reimplement the proven workflows using SwiftUI
 
 ## Privacy
 
-MyHub has no advertising, behavioral analytics, trackers, accounts, or marketing software. Core data and calculations stay in the browser. A user-initiated Canvas feed request goes directly from the browser to the provided URL; if the request is blocked, MyHub does not route it through another service.
+MyHub has no advertising, behavioral analytics, trackers, accounts, or marketing software. Core data and calculations stay in the browser unless the user enables optional client-side encrypted GitHub Sync. A user-initiated Canvas feed request goes directly from the browser to the provided URL; if the request is blocked, MyHub does not route it through another service.
 
 Exported JSON backups can contain private academic and food records. Store them accordingly. Do not commit personal backup files or private feed URLs.
 
 ## Known Limitations
 
-GitHub Pages is static hosting. It cannot safely hold private API keys or act as a cross-origin proxy. Some automatic imports therefore require a future backend or native adapter. IndexedDB can also be cleared by browser or device storage management, so regular exports are recommended.
+GitHub Pages is static hosting. MyHub therefore uses a user-supplied, repository-scoped fine-grained token instead of embedding a client secret. The browser necessarily holds the unlocked token and passphrase in memory while sync is active, so a compromised page/runtime can access them; unlinking clears the durable encrypted credential, not GitHub history. Some automatic imports still require a future backend or native adapter. IndexedDB can be cleared by browser or device storage management, so regular backups or encrypted sync are recommended.
 
 ## Roadmap
 
