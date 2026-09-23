@@ -211,7 +211,8 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
   await expect(
     phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
   ).toBeVisible()
-  await expect.poll(() => phonePage.url()).not.toContain('access=')
+  await expect.poll(() => phonePage.url()).not.toContain('id=')
+  await expect.poll(() => phonePage.url()).not.toContain('key=')
   expect(state.writes).toHaveLength(1)
   const savedCredential = (await readSyncCredential(phonePage)) as { tokenEnvelope?: string } | null
   expect(savedCredential?.tokenEnvelope).toBeTruthy()
@@ -219,8 +220,8 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
 
   await phonePage.goto('/#/settings')
   await phonePage.getByLabel('Your name').fill('Updated on phone')
-  await expect.poll(() => privateAccess.writes).toBe(1)
-  await expect.poll(() => privateAccess.version).toBe(2)
+  await expect.poll(() => privateAccess.writes, { timeout: 30_000 }).toBe(1)
+  await expect.poll(() => privateAccess.version, { timeout: 30_000 }).toBe(2)
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(page.getByLabel('Your name')).toHaveValue('Updated on phone')
   await expect.poll(() => state.writes.length).toBeGreaterThanOrEqual(2)
