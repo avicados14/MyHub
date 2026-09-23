@@ -374,7 +374,9 @@ export default function RecipeImporter({ open, onClose, onDraft }: RecipeImporte
               </div>
               <StatusBadge tone="attention">Needs Review</StatusBadge>
             </div>
-            {draft.image ? <img src={draft.image} alt="Imported recipe source preview" /> : null}
+            {draft.image ? (
+              <img src={draft.image} alt="Imported recipe source preview" width="640" height="426" />
+            ) : null}
             <dl>
               <div>
                 <dt>Source</dt>

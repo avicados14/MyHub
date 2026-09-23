@@ -128,6 +128,8 @@ Path: myhub-data/v1/snapshot.enc
 
 Enter the fine-grained token and an encryption passphrase of at least 12 characters. MyHub encrypts the token into a separate IndexedDB credential record and encrypts `AppData` before upload. The passphrase is never saved and must be entered again after a page/browser restart. Losing it makes the remote snapshot and stored token unrecoverable through MyHub.
 
+The existing private snapshot is already populated. On a new browser, choose **Connect and sync** and wait for the status to become **current**. MyHub pulls the encrypted snapshot before treating an empty device as authoritative. The verified snapshot contains 27 cookbook recipes and both calendar feeds. Open **Calendar** after unlock to import the encrypted companion snapshot; the current source files produce 3,365 calendar events.
+
 Use **Sync now** for an immediate check, **Pause** to stop remote writes while preserving local operation, and **Unlink** to remove this browser's encrypted credential record without deleting the remote snapshot. If both copies changed, choose **Use this device** or **Use GitHub**; MyHub does not silently discard either side.
 
 **Delete remote snapshot** removes the latest file and pauses sync. GitHub history, forks, caches, and retention can still preserve earlier encrypted versions, so historical erasure cannot be guaranteed.
@@ -161,7 +163,11 @@ The portion after `#` is handled inside the browser, so GitHub Pages does not ne
 
 ### Canvas refresh fails
 
-Many Canvas ICS servers block browser-origin requests. Download the `.ics` file from Canvas and use **Settings → Canvas calendar → Import ICS file**. MyHub does not bypass Canvas restrictions or proxy private feed URLs through an unknown service.
+Many Canvas ICS servers block browser-origin requests. Download the `.ics` file and use **Calendar → Import .ics files**, or unlock GitHub Sync and choose **Check private snapshot**. MyHub does not bypass Canvas restrictions or proxy private feed URLs through an unknown service.
+
+### The encrypted calendar snapshot will not load
+
+Confirm GitHub Sync is unlocked, active, and connected to the private `MyHub-Data` repository. Calendar files larger than 1 MB require GitHub's authenticated raw Contents representation; current MyHub requests that representation automatically and disables browser caching for the second request.[3] If the error persists, choose **Check private snapshot** again and read the inline status before changing any data.
 
 ### Data disappeared
 
@@ -188,5 +194,6 @@ The local runner normally avoids occupied ports automatically. If `PLAYWRIGHT_PO
 
 ## References
 
-[1]: https://vite.dev/guide/static-deploy.html 'Vite — Deploying a Static Site'
-[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs — Using Custom Workflows with GitHub Pages'
+[1]: https://vite.dev/guide/static-deploy.html 'Vite: Deploying a Static Site'
+[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs: Using custom workflows with GitHub Pages'
+[3]: https://docs.github.com/en/rest/repos/contents 'GitHub REST API endpoints for repository contents'

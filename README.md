@@ -14,7 +14,7 @@ The web application is the product-validation phase for a future native SwiftUI 
 
 ## Project Status
 
-Version **0.1.0** is a functional Phase 1 web prototype. The current development tree contains broader school, food, grocery, and encrypted-sync implementation. The companion food-hardening and calendar-hardening branches are not counted as final verification until they are merged and the integrated test matrix passes; `REQUIREMENTS_AUDIT.md` records that distinction.
+Version **0.1.0** is a complete Phase 1 web prototype. The school, calendar, food, pantry, grocery, search, backup, and encrypted-sync workflows are integrated and verified together. `REQUIREMENTS_AUDIT.md` records the final evidence and the boundaries reserved for native iPhone and iPad work.
 
 Working now:
 
@@ -116,7 +116,7 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS parsing/classification/deduplication, encrypted calendar snapshots, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block resizing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. No browser test requires a live token, private repository, private URL, calendar export, or personal data.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. The completed release passed 84 unit tests and 117 Playwright tests across desktop, tablet, and mobile. A separate 42-action exploratory walkthrough also completed without runtime or HTTP errors.
 
 ## GitHub Pages Deployment
 
@@ -134,7 +134,9 @@ Use **Settings → Data & privacy → Export data** to download a portable JSON 
 
 GitHub Sync keeps IndexedDB as the offline working store and uploads only a versioned encrypted snapshot to the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc` by default. It uses PBKDF2-SHA-256 with 310,000 iterations and AES-256-GCM. The encryption passphrase remains only in component/context memory.
 
-When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. A separate producer for that encrypted snapshot is not bundled with this static client.
+When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. Files larger than 1 MB use GitHub's authenticated raw media representation, as required by the Contents API.[3] A separate producer for that encrypted snapshot is not bundled with this static client.
+
+The configured private repository has been verified end to end in a fresh Chromium profile. It recovered 27 cookbook recipes, imported 3,365 events from the 2 encrypted calendar feeds, and wrote the combined `AppData` snapshot back as ciphertext. The remote envelope was fetched again and decrypted to the same counts; collection names were absent from the remote plaintext representation.
 
 Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
 
@@ -183,5 +185,6 @@ GitHub Pages is static hosting. MyHub therefore uses a user-supplied, repository
 
 ## References
 
-[1]: https://vite.dev/guide/static-deploy.html 'Vite — Deploying a Static Site'
-[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs — Using Custom Workflows with GitHub Pages'
+[1]: https://vite.dev/guide/static-deploy.html 'Vite: Deploying a Static Site'
+[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs: Using custom workflows with GitHub Pages'
+[3]: https://docs.github.com/en/rest/repos/contents 'GitHub REST API endpoints for repository contents'

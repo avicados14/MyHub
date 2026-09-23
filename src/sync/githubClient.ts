@@ -95,21 +95,32 @@ export class GitHubContentsClient {
   }
 
   async getFile(target: GitHubRepositoryTarget): Promise<GitHubRemoteFile | null> {
-    const response = await this.request(
-      `https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`,
-    )
+    const url = `https://api.github.com/repos/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.repo)}/contents/${encodePath(target.path)}`
+    const response = await this.request(url)
     if (response.status === 404) return null
     if (!response.ok) throw new GitHubApiError(await apiMessage(response), response.status)
-    const body = (await response.json()) as { type?: string; sha?: string; content?: string; encoding?: string }
-    if (
-      body.type !== 'file' ||
-      typeof body.sha !== 'string' ||
-      typeof body.content !== 'string' ||
-      body.encoding !== 'base64'
-    ) {
+    const body = (await response.json()) as {
+      type?: string
+      sha?: string
+      content?: string
+      encoding?: string
+      size?: number
+    }
+    if (body.type !== 'file' || typeof body.sha !== 'string') {
       throw new Error('The configured GitHub path is not a readable file.')
     }
-    return { sha: body.sha, content: decodeBase64Utf8(body.content) }
+    if (body.encoding === 'base64' && typeof body.content === 'string') {
+      return { sha: body.sha, content: decodeBase64Utf8(body.content) }
+    }
+    if (body.encoding === 'none' && typeof body.size === 'number' && body.size <= 100 * 1024 * 1024) {
+      const raw = await this.request(url, {
+        cache: 'no-store',
+        headers: { Accept: 'application/vnd.github.raw+json' },
+      })
+      if (!raw.ok) throw new GitHubApiError(await apiMessage(raw), raw.status)
+      return { sha: body.sha, content: await raw.text() }
+    }
+    throw new Error('The configured GitHub file is not readable through the Contents API.')
   }
 
   putFile(target: GitHubRepositoryTarget, content: string, sha?: string): Promise<string> {

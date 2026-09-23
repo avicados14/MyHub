@@ -817,6 +817,13 @@ kbd {
   object-fit: cover;
   transition: transform 220ms ease;
 }
+.meal-card__placeholder {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(220, 203, 255, 0.2), transparent 38%),
+    radial-gradient(circle at 82% 78%, rgba(174, 222, 208, 0.18), transparent 42%), var(--navy);
+}
 .meal-card:hover img {
   transform: scale(1.025);
 }

@@ -204,7 +204,7 @@ export default function DashboardPage() {
 
             return meal ? (
               <Link className="meal-card" key={slot} to={recipe ? `/food/recipes/${recipe.id}` : '/food?view=planner'}>
-                {recipe ? (
+                {recipe?.image ? (
                   <img src={assetUrl(recipe.image)} alt="" width="420" height="280" loading="lazy" />
                 ) : (
                   <div className="meal-card__placeholder" />

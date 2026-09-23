@@ -32,17 +32,25 @@ Added complete school-workflow controls for homework progress, status, priority,
 
 Added a narrow read-only encrypted private-calendar snapshot adapter at `myhub-data/v1/calendars.enc`. The calendar screen consumes provider capabilities rather than credentials, can check after Sync is unlocked, and reports unavailable, missing, or invalid snapshots without bundling a feed URL or calendar export.
 
+Added a reusable 42-action exploratory Playwright walkthrough for the rendered desktop and mobile application. It exercises route navigation, dialogs, calendar views, event and homework creation, study planning, recipe and meal creation, nutrition and packaged-food modes, pantry controls, grocery generation, settings, backup export, universal search, reload persistence, and narrow-screen overflow.
+
 ### Changed
 
 Made Playwright web-server startup collision-safe by allocating an available local loopback port while retaining deterministic port `4287` in CI. The Pages validation command runs the configured desktop, tablet, and mobile Chromium projects.
 
-Rewrote the requirements audit around the `0e094f3` combined baseline and this cross-cutting branch. The matrix now separates verified web work, companion food/calendar hardening that must not be credited before merge, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup claims now describe the same release and privacy model.
+Rewrote the requirements audit around the completed integrated release. The final evidence records 84 unit tests, 117 responsive browser tests, the 42-action exploratory walkthrough, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup now describe the same release and privacy model.
 
 Applied the current Web Interface Guidelines to the cross-cutting surface, including explicit Escape handling for universal search. No secrets, live private repository requests, private calendar URLs or contents, cookbook data, passphrases, or personal access tokens were added.
 
 Fresh installations and **Clear all data** now produce empty personal collections rather than demo records. Sample records are isolated to test fixtures. Data/privacy copy now distinguishes local IndexedDB, optional encrypted sync, and plaintext JSON exports.
 
-The food documentation and requirements audit now describe the completed web workflow and its explicit boundaries: all imports require review, external requests are direct browser requests with manual fallbacks, OCR stays in the browser for user-selected files, and the focused food acceptance suite passed on fresh desktop, tablet, and mobile execution. The broader all-domain responsive CI matrix remains a separate release-practice gap.
+Completed and merged the focused food and calendar hardening. Each 7-scenario suite passes across desktop, tablet, and mobile, and the complete integrated browser matrix passes all 117 tests.
+
+Updated GitHub Contents reads for encrypted files larger than 1 MB. The client now follows GitHub's raw-media requirement and bypasses browser cache for the second representation request. This fixed the real 3.7 MB encrypted calendar snapshot, which metadata represents with `encoding: "none"`.[2]
+
+Fixed image-less dashboard recipe cards so they render the intentional placeholder instead of requesting the application document as an image. Imported recipe previews and packaged-food images now reserve explicit dimensions.
+
+Verified the real private repository in a fresh Chromium profile. MyHub recovered 27 cookbook recipes, imported 3,365 events from 2 encrypted calendar feeds, wrote the combined state back as ciphertext, and decrypted the stored remote snapshot to the same counts.
 
 ### Security
 
@@ -67,3 +75,4 @@ The data layer introduces versioned IndexedDB persistence, removable demo data, 
 ## References
 
 [1]: https://keepachangelog.com/en/1.1.0/ 'Keep a Changelog'
+[2]: https://docs.github.com/en/rest/repos/contents 'GitHub REST API endpoints for repository contents'

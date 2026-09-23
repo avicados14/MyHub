@@ -440,7 +440,7 @@ function PackagesView({
           {data.packagedFoods.map((food) => (
             <Card className="package-card" as="article" key={food.id}>
               {resolveFoodImage(food.image) ? (
-                <img src={resolveFoodImage(food.image)} alt="" />
+                <img src={resolveFoodImage(food.image)} alt="" width="180" height="180" loading="lazy" />
               ) : (
                 <span className="package-card__icon">
                   <Box aria-hidden="true" />
