@@ -43,6 +43,64 @@ describe('local persistence', () => {
     expect((await loadAppData()).settings.name).toBe('Persistence Test')
   })
 
+  it('sanitizes stale prototype assignments when an existing browser reloads', async () => {
+    const data = createEmptyData(new Date(2026, 8, 22))
+    const timestamps = { createdAt: '2026-09-22T00:00:00.000Z', updatedAt: '2026-09-22T00:00:00.000Z' }
+    data.assignments = [
+      {
+        ...timestamps,
+        id: 'assignment-lab',
+        source: 'demo',
+        title: 'CEEN 482 Lab Report',
+        course: 'CE EN 482',
+        dueDate: '2026-09-23',
+        dueTime: '23:59',
+        priority: 'high',
+        estimatedMinutes: 120,
+        progress: 20,
+        status: 'in-progress',
+        notes: 'Sample',
+        subtasks: [],
+        sourceLabel: 'Sample data',
+      },
+      {
+        ...timestamps,
+        id: 'assignment-personal',
+        source: 'manual',
+        title: 'Keep this homework',
+        course: 'REAL 101',
+        dueDate: '2026-09-24',
+        dueTime: '17:00',
+        priority: 'medium',
+        estimatedMinutes: 45,
+        progress: 0,
+        status: 'not-started',
+        notes: '',
+        subtasks: [],
+        sourceLabel: 'Manual homework',
+      },
+    ]
+    data.events = [
+      {
+        ...timestamps,
+        id: 'event-generated-demo',
+        source: 'generated',
+        title: 'CEEN 482 Lab Report',
+        date: '2026-09-22',
+        startTime: '16:00',
+        endTime: '16:45',
+        kind: 'study',
+        assignmentId: 'assignment-lab',
+      },
+    ]
+
+    await saveAppData(data)
+    const reloaded = await loadAppData()
+
+    expect(reloaded.assignments.map((assignment) => assignment.title)).toEqual(['Keep this homework'])
+    expect(reloaded.events).toEqual([])
+  })
+
   it('round trips a valid backup and rejects unsupported data', () => {
     const backup = createBackup(createTestFixtureData(new Date(2026, 8, 22)))
     expect(parseBackup(JSON.stringify(backup)).data.recipes).toHaveLength(5)
