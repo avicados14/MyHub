@@ -219,7 +219,9 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
   expect(savedCredential?.tokenEnvelope).not.toContain(token)
 
   await phonePage.goto('/#/settings')
-  await phonePage.getByLabel('Your name').fill('Updated on phone')
+  const phoneName = phonePage.getByLabel('Your name')
+  await expect(phoneName).toHaveValue('Crosscut User')
+  await phoneName.fill('Updated on phone')
   await expect.poll(() => privateAccess.writes, { timeout: 30_000 }).toBe(1)
   await expect.poll(() => privateAccess.version, { timeout: 30_000 }).toBe(2)
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))

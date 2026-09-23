@@ -232,10 +232,10 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
           applyingRemoteRef.current = true
           dataRef.current = remoteResult.data
           replaceData(remoteResult.data, 'Local data replaced with the encrypted GitHub snapshot.')
-          await markSynced(remote.sha, remoteResult.digest)
           window.setTimeout(() => {
             applyingRemoteRef.current = false
           }, 0)
+          await markSynced(remote.sha, remoteResult.digest)
           return
         }
         if (decision === 'push-local') {
@@ -377,6 +377,9 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
         dataRef.current = remoteData
         applyingRemoteRef.current = true
         replaceData(remoteData, 'Supabase loaded the current encrypted MyHub data.')
+        window.setTimeout(() => {
+          applyingRemoteRef.current = false
+        }, 0)
         await persistCredential(next)
         const lastDigest = await digestData(remoteData)
         privateAccessRef.current = {
@@ -389,9 +392,6 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
         await savePrivateAccessCredential({ version: 1, id: access.id, key: access.key })
         setPrivateAccessActive(true)
         setLastSupabaseSyncedAt(access.updatedAt)
-        window.setTimeout(() => {
-          applyingRemoteRef.current = false
-        }, 0)
         await performSync()
       }),
     [performSync, persistCredential, replaceData, withSerializedOperation],
@@ -525,6 +525,9 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       dataRef.current = remoteData
       applyingRemoteRef.current = true
       replaceData(remoteData, 'Supabase loaded newer MyHub changes from another device.')
+      window.setTimeout(() => {
+        applyingRemoteRef.current = false
+      }, 0)
       privateAccessRef.current = {
         ...session,
         version: remote.version,
@@ -532,9 +535,6 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
         lastDigest: remoteDigest,
       }
       setLastSupabaseSyncedAt(remote.updatedAt)
-      window.setTimeout(() => {
-        applyingRemoteRef.current = false
-      }, 0)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Supabase could not refresh MyHub data.')
     }
