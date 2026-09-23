@@ -19,6 +19,7 @@ import {
   type GitHubRepositoryTarget,
 } from './githubClient'
 import { PRIVATE_CALENDAR_SNAPSHOT_PATH, type PrivateCalendarAccessProvider } from './calendarSnapshot'
+import type { DevicePairingMaterial } from './devicePairing'
 
 export type GitHubSyncStatus =
   'disconnected' | 'locked' | 'connecting' | 'syncing' | 'current' | 'offline' | 'conflict' | 'error'
@@ -46,6 +47,7 @@ interface GitHubSyncContextValue {
   syncNow: () => Promise<void>
   resolveUseDevice: () => Promise<void>
   resolveUseGitHub: () => Promise<void>
+  createDevicePairing: () => DevicePairingMaterial
   setPaused: (paused: boolean) => Promise<void>
   unlink: () => Promise<void>
   clearRemoteSnapshot: () => Promise<void>
@@ -304,6 +306,16 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
     [performSync, withSerializedOperation],
   )
 
+  const createDevicePairing = useCallback((): DevicePairingMaterial => {
+    const saved = credentialRef.current
+    const token = tokenRef.current
+    const passphrase = passphraseRef.current
+    if (!saved || !token || !passphrase || saved.paused || status !== 'current') {
+      throw new Error('Bring GitHub Sync to current before pairing another device.')
+    }
+    return { repository: saved.repository, token, passphrase }
+  }, [status])
+
   const setPaused = useCallback(
     async (paused: boolean) => {
       const saved = credentialRef.current
@@ -415,6 +427,7 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       syncNow,
       resolveUseDevice,
       resolveUseGitHub,
+      createDevicePairing,
       setPaused,
       unlink,
       clearRemoteSnapshot,
@@ -424,6 +437,7 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       calendarAccess,
       clearRemoteSnapshot,
       connect,
+      createDevicePairing,
       credential,
       errorMessage,
       resolveUseDevice,

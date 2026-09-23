@@ -130,6 +130,16 @@ Enter the fine-grained token and an encryption passphrase of at least 12 charact
 
 The existing private snapshot is already populated. On a new browser, choose **Connect and sync** and wait for the status to become **current**. MyHub pulls the encrypted snapshot before treating an empty device as authoritative. The verified snapshot contains 27 cookbook recipes and both calendar feeds. Its calendar setting is `America/Denver`, and the current encrypted state contains 3,328 reparsed events. Open **Calendar** after unlock to check or refresh the encrypted companion snapshot.
 
+For a new phone, avoid typing the token and repository settings manually:
+
+1. On a device where MyHub is already connected and unlocked, open **Settings → GitHub Sync**.
+2. Choose **Pair another device**.
+3. Scan the QR with the phone's camera. If scanning is unavailable, expand **Use an encrypted setup link instead** and transfer that link privately.
+4. Enter the separate 16-character pairing code shown beside the QR.
+5. Choose **Connect this device**. The phone verifies the private repository and pulls the existing encrypted snapshot before opening Home.
+
+The package expires after five minutes and is removed from the phone's address bar before the code is entered. The QR/link is encrypted and does not contain the pairing code. Keep both private because together they transfer the repository token and encryption passphrase to the new device. Manual connection remains available if no connected device is accessible.
+
 Use **Sync now** for an immediate check, **Pause** to stop remote writes while preserving local operation, and **Unlink** to remove this browser's encrypted credential record without deleting the remote snapshot. If both copies changed, choose **Use this device** or **Use GitHub**; MyHub does not silently discard either side.
 
 **Delete remote snapshot** removes the latest file and pauses sync. GitHub history, forks, caches, and retention can still preserve earlier encrypted versions, so historical erasure cannot be guaranteed.
@@ -175,7 +185,7 @@ Confirm GitHub Sync is unlocked, active, and connected to the private `MyHub-Dat
 
 ### Data disappeared
 
-Confirm you are using the same browser profile and the same address. Browser storage can be cleared by the user, private-browsing rules, or device storage management. Restore the latest JSON export and make regular backups. Feed URLs are stored only in that browser’s local MyHub data; do not paste a private feed URL into source, test fixtures, screenshots, issue reports, or a repository.
+Confirm you are using the same browser profile and the same address. Browser storage can be cleared by the user, private-browsing rules, or device storage management. A phone or second browser starts with empty IndexedDB until it is paired or connected; use **Pair another device** from an unlocked installation rather than treating the empty phone as a data-loss event. Restore the latest JSON export and make regular backups. Feed URLs are stored only in that browser’s local MyHub data; do not paste a private feed URL into source, test fixtures, screenshots, issue reports, or a repository.
 
 ### GitHub Sync is locked
 
