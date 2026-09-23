@@ -2,12 +2,15 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createEmptyData } from '../domain/defaults'
 import { createTestFixtureData } from '../test/fixtures'
 import {
+  clearPrivateAccessCredential,
   createBackup,
   loadAppData,
   loadGitHubCredential,
+  loadPrivateAccessCredential,
   parseBackup,
   saveAppData,
   saveGitHubCredential,
+  savePrivateAccessCredential,
 } from './database'
 
 beforeEach(async () => {
@@ -121,5 +124,18 @@ describe('local persistence', () => {
     expect(stored).toEqual(credential)
     expect(backupText).not.toContain('encrypted-token-only')
     expect(backupText).not.toContain('tokenEnvelope')
+  })
+
+  it('keeps the Supabase private-link capability outside AppData and supports local unlink', async () => {
+    const credential = {
+      version: 1 as const,
+      id: '11111111-1111-4111-8111-111111111111',
+      key: 'private-link-key-with-at-least-thirty-two-characters',
+    }
+    await savePrivateAccessCredential(credential)
+    expect(await loadPrivateAccessCredential()).toEqual(credential)
+    expect(JSON.stringify(createBackup(await loadAppData()))).not.toContain(credential.key)
+    await clearPrivateAccessCredential()
+    expect(await loadPrivateAccessCredential()).toBeNull()
   })
 })

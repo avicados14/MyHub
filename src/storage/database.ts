@@ -7,6 +7,7 @@ const APPLICATION_STORE = 'application'
 const CREDENTIAL_STORE = 'credentials'
 const STATE_KEY = 'state'
 const GITHUB_CREDENTIAL_KEY = 'github-sync'
+const PRIVATE_ACCESS_CREDENTIAL_KEY = 'private-access'
 const DB_VERSION = 2
 
 export interface StoredGitHubCredential {
@@ -17,6 +18,12 @@ export interface StoredGitHubCredential {
   currentSha?: string
   lastSyncedDigest?: string
   lastSyncedAt?: string
+}
+
+export interface StoredPrivateAccessCredential {
+  version: 1
+  id: string
+  key: string
 }
 
 const requestResult = <T>(request: IDBRequest<T>): Promise<T> =>
@@ -91,6 +98,32 @@ export const clearGitHubCredential = async (): Promise<void> => {
   database.close()
 }
 
+export const loadPrivateAccessCredential = async (): Promise<StoredPrivateAccessCredential | null> => {
+  const database = await openDatabase()
+  const transaction = database.transaction(CREDENTIAL_STORE, 'readonly')
+  const value: unknown = await requestResult(
+    transaction.objectStore(CREDENTIAL_STORE).get(PRIVATE_ACCESS_CREDENTIAL_KEY),
+  )
+  database.close()
+  return isStoredPrivateAccessCredential(value) ? value : null
+}
+
+export const savePrivateAccessCredential = async (credential: StoredPrivateAccessCredential): Promise<void> => {
+  const database = await openDatabase()
+  const transaction = database.transaction(CREDENTIAL_STORE, 'readwrite')
+  transaction.objectStore(CREDENTIAL_STORE).put(credential, PRIVATE_ACCESS_CREDENTIAL_KEY)
+  await transactionDone(transaction)
+  database.close()
+}
+
+export const clearPrivateAccessCredential = async (): Promise<void> => {
+  const database = await openDatabase()
+  const transaction = database.transaction(CREDENTIAL_STORE, 'readwrite')
+  transaction.objectStore(CREDENTIAL_STORE).delete(PRIVATE_ACCESS_CREDENTIAL_KEY)
+  await transactionDone(transaction)
+  database.close()
+}
+
 export const createBackup = (data: AppData): MyHubBackup => ({
   format: 'myhub-backup',
   formatVersion: 2,
@@ -127,5 +160,13 @@ const isStoredGitHubCredential = (value: unknown): value is StoredGitHubCredenti
     typeof value.paused === 'boolean'
   )
 }
+
+const isStoredPrivateAccessCredential = (value: unknown): value is StoredPrivateAccessCredential =>
+  isRecord(value) &&
+  value.version === 1 &&
+  typeof value.id === 'string' &&
+  value.id.length > 0 &&
+  typeof value.key === 'string' &&
+  value.key.length >= 32
 
 export { isCurrentAppData as isAppData }

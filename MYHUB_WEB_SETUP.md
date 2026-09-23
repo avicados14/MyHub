@@ -112,9 +112,9 @@ Open **Settings → Data & privacy**.
 
 Choose **Export data** to download a JSON backup. To restore it, choose **Import data**, select the file, review the timestamp, and confirm replacement. JSON exports are plaintext; keep them out of repositories and untrusted cloud folders.
 
-The deployed site and local development site do not share IndexedDB. Export/import or optional encrypted GitHub Sync can transfer data between them.
+The deployed site and local development site do not share IndexedDB. The private access link loads the same encrypted Supabase AppData into either origin; JSON export/import remains the manual recovery path.
 
-## 9. Configure Optional Encrypted GitHub Sync
+## 9. Configure Encrypted Supabase Sync and GitHub Backup
 
 Create or use a dedicated data repository and confirm it is **private**. Create a **fine-grained personal access token** restricted to only that repository with **Contents: read and write**. Do not create a classic PAT and do not grant Actions/workflow, administration, organization, or unrelated repository access.
 
@@ -126,21 +126,20 @@ Repository: MyHub-Data
 Path: myhub-data/v1/snapshot.enc
 ```
 
-Enter the fine-grained token and an encryption passphrase of at least 12 characters. MyHub encrypts the token into a separate IndexedDB credential record and encrypts `AppData` before upload. The passphrase is never saved and must be entered again after a page/browser restart. Losing it makes the remote snapshot and stored token unrecoverable through MyHub.
+Enter the fine-grained token and an encryption passphrase of at least 12 characters on the first trusted browser. MyHub encrypts the token into a separate IndexedDB credential record and encrypts `AppData` before any Supabase or GitHub upload.
 
 The existing private snapshot is already populated. On a new browser, choose **Connect and sync** and wait for the status to become **current**. MyHub pulls the encrypted snapshot before treating an empty device as authoritative. The verified snapshot contains 27 cookbook recipes and both calendar feeds. Its calendar setting is `America/Denver`, and the current encrypted state contains 3,328 reparsed events. Open **Calendar** after unlock to check or refresh the encrypted companion snapshot.
 
-For a new phone, avoid typing the token and repository settings manually:
+For a phone or another browser, avoid all manual setup:
 
-1. On a device where MyHub is already connected and unlocked, open **Settings → GitHub Sync**.
-2. Choose **Pair another device**.
-3. Scan the QR with the phone's camera. If scanning is unavailable, expand **Use an encrypted setup link instead** and transfer that link privately.
-4. Enter the separate 16-character pairing code shown beside the QR.
-5. Choose **Connect this device**. The phone verifies the private repository and pulls the existing encrypted snapshot before opening Home.
+1. On a device where MyHub is current, open **Settings → Supabase sync + GitHub backup**.
+2. Choose **Create private access link**.
+3. Copy the link into a password manager, encrypted message to yourself, or a private bookmark.
+4. Open that one link on the new device. MyHub loads the latest encrypted Supabase document, enables GitHub backup, removes the capability from the active address, and opens Home automatically.
 
-The package expires after five minutes and is removed from the phone's address bar before the code is entered. The QR/link is encrypted and does not contain the pairing code. Keep both private because together they transfer the repository token and encryption passphrase to the new device. Manual connection remains available if no connected device is accessible.
+The link contains a random Supabase record ID and a separate high-entropy decryption/write key in the URL fragment. It contains no readable recipe, calendar, school, or GitHub credential data, but it is still a password: anyone with it can open and change MyHub. Creating a replacement link revokes previous broker records. Manual connection remains available for recovery.
 
-Use **Sync now** for an immediate check, **Pause** to stop remote writes while preserving local operation, and **Unlink** to remove this browser's encrypted credential record without deleting the remote snapshot. If both copies changed, choose **Use this device** or **Use GitHub**; MyHub does not silently discard either side.
+Supabase saves the live encrypted document after local changes and checks for newer revisions when a linked browser regains focus. GitHub remains the encrypted backup and calendar source. Use **Sync now** for an immediate GitHub backup, **Pause** to pause GitHub writes, and **Unlink** to disconnect this browser from both cloud paths without deleting remote data.
 
 **Delete remote snapshot** removes the latest file and pauses sync. GitHub history, forks, caches, and retention can still preserve earlier encrypted versions, so historical erasure cannot be guaranteed.
 
@@ -185,7 +184,7 @@ Confirm GitHub Sync is unlocked, active, and connected to the private `MyHub-Dat
 
 ### Data disappeared
 
-Confirm you are using the same browser profile and the same address. Browser storage can be cleared by the user, private-browsing rules, or device storage management. A phone or second browser starts with empty IndexedDB until it is paired or connected; use **Pair another device** from an unlocked installation rather than treating the empty phone as a data-loss event. Restore the latest JSON export and make regular backups. Feed URLs are stored only in that browser’s local MyHub data; do not paste a private feed URL into source, test fixtures, screenshots, issue reports, or a repository.
+Confirm that you opened the private access link, not only the public root URL. A new browser intentionally has empty IndexedDB until the private link loads the encrypted Supabase document. If the link was revoked, create a replacement from a current trusted browser or use manual recovery. Do not paste private feed URLs or the private access link into source, tests, screenshots, issues, or a repository.
 
 ### GitHub Sync is locked
 
