@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createEmptyData } from './defaults'
 import { migrateAppData } from './migrations'
 
 const base = {
@@ -97,5 +98,61 @@ describe('AppData migration', () => {
     expect(migrated.packagedFoods).toEqual([])
     expect(migrated.leftovers).toEqual([])
     expect(migrated.settings.study.avoidTimes).toEqual([])
+  })
+
+  it('removes legacy sample data and linked generated records without touching personal imports', () => {
+    const current = createEmptyData(new Date('2026-09-23T00:00:00.000Z'))
+    const cleaned = migrateAppData({
+      ...current,
+      assignments: [
+        { id: 'assignment-lab', source: 'demo', sourceLabel: 'Sample data', title: 'CEEN 482 Lab Report' },
+        { id: 'assignment-personal', source: 'manual', sourceLabel: 'My class', title: 'Keep this assignment' },
+      ],
+      events: [
+        { id: 'event-fluid', source: 'demo', sourceLabel: 'Sample schedule', title: 'Fluid Mechanics' },
+        {
+          id: 'event-generated-demo',
+          source: 'generated',
+          assignmentId: 'assignment-lab',
+          title: 'CEEN 482 Lab Report',
+        },
+        { id: 'event-imported', source: 'imported', sourceLabel: 'Google Calendar', title: 'Keep this event' },
+      ],
+      recipes: [
+        { id: 'recipe-teriyaki', source: 'demo', sourceLabel: 'MyHub demo recipe', name: 'Teriyaki Steak Bowls' },
+        {
+          id: 'recipe-cookbook',
+          source: 'imported',
+          sourceLabel: "Avi's Personal Cookbook (uploaded PDF)",
+          name: 'Keep this recipe',
+        },
+      ],
+      meals: [
+        { id: 'meal-from-demo', source: 'generated', recipeId: 'recipe-teriyaki' },
+        { id: 'meal-personal', source: 'manual', recipeId: 'recipe-cookbook' },
+      ],
+      activeGroceryList: {
+        id: 'grocery-personal',
+        source: 'generated',
+        items: [
+          { id: 'item-demo', source: 'generated', sourceRecipeIds: ['recipe-teriyaki'] },
+          { id: 'item-personal', source: 'manual', sourceRecipeIds: [] },
+        ],
+      },
+      settings: {
+        ...current.settings,
+        groceryStaples: [
+          { id: 'staple-migrated-0', name: 'Milk', enabled: true },
+          { id: 'staple-personal', name: 'Rice', enabled: true },
+        ],
+      },
+    })
+
+    expect(cleaned.assignments.map((record) => record.id)).toEqual(['assignment-personal'])
+    expect(cleaned.events.map((record) => record.id)).toEqual(['event-imported'])
+    expect(cleaned.recipes.map((record) => record.id)).toEqual(['recipe-cookbook'])
+    expect(cleaned.meals.map((record) => record.id)).toEqual(['meal-personal'])
+    expect(cleaned.activeGroceryList?.items.map((record) => record.id)).toEqual(['item-personal'])
+    expect(cleaned.settings.groceryStaples.map((record) => record.name)).toEqual(['Rice'])
   })
 })

@@ -22,6 +22,99 @@ const isString = (value: unknown): value is string => typeof value === 'string'
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const recordArray = (value: unknown): UnknownRecord[] => (Array.isArray(value) ? value.filter(isRecord) : [])
 
+const LEGACY_SAMPLE_LABELS = new Set(['Sample data', 'Sample schedule', 'MyHub demo recipe'])
+const LEGACY_SAMPLE_STAPLES = new Set(['Milk', 'Eggs', 'Bread', 'Coffee', 'Fruit'])
+
+const hasLegacySampleLabel = (record: { sourceLabel?: string }): boolean =>
+  typeof record.sourceLabel === 'string' && LEGACY_SAMPLE_LABELS.has(record.sourceLabel)
+
+export const removeLegacySampleData = (data: AppData): AppData => {
+  const hadLegacySamples =
+    data.assignments.some(hasLegacySampleLabel) ||
+    data.events.some(hasLegacySampleLabel) ||
+    data.recipes.some(hasLegacySampleLabel)
+  if (!hadLegacySamples) return data
+
+  const isLegacySampleRecord = (record: { source?: string; sourceLabel?: string }): boolean =>
+    hasLegacySampleLabel(record) || record.source === 'demo'
+  const removedAssignmentIds = new Set(data.assignments.filter(isLegacySampleRecord).map((record) => record.id))
+  const removedRecipeIds = new Set(data.recipes.filter(isLegacySampleRecord).map((record) => record.id))
+  const removedMealIds = new Set(
+    data.meals
+      .filter(
+        (record) => isLegacySampleRecord(record) || (record.recipeId ? removedRecipeIds.has(record.recipeId) : false),
+      )
+      .map((record) => record.id),
+  )
+  const activeGroceryList = data.activeGroceryList
+    ? {
+        ...data.activeGroceryList,
+        items: data.activeGroceryList.items
+          .filter((item) => !isLegacySampleRecord(item))
+          .map((item) => ({
+            ...item,
+            sourceRecipeIds: item.sourceRecipeIds.filter((recipeId) => !removedRecipeIds.has(recipeId)),
+          }))
+          .filter((item) => item.sourceRecipeIds.length > 0 || item.source !== 'generated'),
+      }
+    : null
+  const activeGroceryListHadRemovedItems =
+    data.activeGroceryList !== null &&
+    activeGroceryList !== null &&
+    data.activeGroceryList.items.length > activeGroceryList.items.length
+
+  return {
+    ...data,
+    events: data.events.filter(
+      (record) =>
+        !isLegacySampleRecord(record) && !(record.assignmentId && removedAssignmentIds.has(record.assignmentId)),
+    ),
+    assignments: data.assignments.filter((record) => !removedAssignmentIds.has(record.id)),
+    recipes: data.recipes.filter((record) => !removedRecipeIds.has(record.id)),
+    packagedFoods: data.packagedFoods.filter((record) => !isLegacySampleRecord(record)),
+    meals: data.meals.filter((record) => !removedMealIds.has(record.id)),
+    leftovers: data.leftovers.filter(
+      (record) =>
+        !isLegacySampleRecord(record) &&
+        !removedMealIds.has(record.sourceMealId) &&
+        !(record.sourceSnapshot.sourceId && removedRecipeIds.has(record.sourceSnapshot.sourceId)),
+    ),
+    foodLog: data.foodLog.filter(
+      (record) =>
+        !isLegacySampleRecord(record) &&
+        !(record.sourceSnapshot.sourceId && removedRecipeIds.has(record.sourceSnapshot.sourceId)),
+    ),
+    pantry: data.pantry.filter((record) => !isLegacySampleRecord(record)),
+    activeGroceryList:
+      activeGroceryList &&
+      (isLegacySampleRecord(activeGroceryList) ||
+        (activeGroceryListHadRemovedItems && activeGroceryList.items.length === 0))
+        ? null
+        : activeGroceryList,
+    groceryHistory: data.groceryHistory
+      .filter((record) => !isLegacySampleRecord(record))
+      .map((record) => ({
+        ...record,
+        items: record.items
+          .filter((item) => !isLegacySampleRecord(item))
+          .map((item) => ({
+            ...item,
+            sourceRecipeIds: item.sourceRecipeIds.filter((recipeId) => !removedRecipeIds.has(recipeId)),
+          }))
+          .filter((item) => item.sourceRecipeIds.length > 0 || item.source !== 'generated'),
+      })),
+    settings: {
+      ...data.settings,
+      groceryStaples: hadLegacySamples
+        ? data.settings.groceryStaples.filter(
+            (staple) =>
+              !(staple.id.startsWith('staple-migrated-') && LEGACY_SAMPLE_STAPLES.has(staple.name) && staple.enabled),
+          )
+        : data.settings.groceryStaples,
+    },
+  }
+}
+
 const asNutrition = (value: unknown): Nutrition => {
   if (!isRecord(value)) return { ...ZERO_NUTRITION }
   return {
@@ -207,8 +300,8 @@ export const migrateV1ToV2 = (value: UnknownRecord): AppData => {
 
 export const migrateAppData = (value: unknown): AppData => {
   if (!isRecord(value)) throw new Error('MyHub data must be a JSON object.')
-  if (value.schemaVersion === 1) return migrateV1ToV2(value)
-  if (value.schemaVersion === CURRENT_SCHEMA_VERSION) return value as unknown as AppData
+  if (value.schemaVersion === 1) return removeLegacySampleData(migrateV1ToV2(value))
+  if (value.schemaVersion === CURRENT_SCHEMA_VERSION) return removeLegacySampleData(value as unknown as AppData)
   throw new Error(`Unsupported MyHub schema version: ${String(value.schemaVersion)}.`)
 }
 

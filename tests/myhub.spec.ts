@@ -132,6 +132,73 @@ test('fresh install opens with empty personal collections', async ({ page }) => 
   await expect(page.getByText('0 ingredients tracked at home')).toBeVisible()
 })
 
+test('existing browsers remove the old sample assignments and their generated study blocks', async ({ page }) => {
+  await page.goto('/#/school')
+  await page.evaluate(async () => {
+    const request = indexedDB.open('myhub-local', 2)
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const transaction = database.transaction('application', 'readwrite')
+    const store = transaction.objectStore('application')
+    const get = store.get('state')
+    const state = await new Promise<Record<string, unknown>>((resolve, reject) => {
+      get.onsuccess = () => resolve(get.result as Record<string, unknown>)
+      get.onerror = () => reject(get.error)
+    })
+    const timestamps = { createdAt: '2026-09-22T00:00:00.000Z', updatedAt: '2026-09-22T00:00:00.000Z' }
+    store.put(
+      {
+        ...state,
+        assignments: [
+          {
+            ...timestamps,
+            id: 'assignment-lab',
+            source: 'demo',
+            title: 'CEEN 482 Lab Report',
+            course: 'CE EN 482',
+            dueDate: '2026-09-23',
+            dueTime: '23:59',
+            priority: 'high',
+            estimatedMinutes: 120,
+            progress: 20,
+            status: 'in-progress',
+            notes: 'Finish figures, discussion, and final formatting.',
+            sourceLabel: 'Sample data',
+            subtasks: [],
+          },
+        ],
+        events: [
+          {
+            ...timestamps,
+            id: 'event-generated-demo',
+            source: 'generated',
+            title: 'CEEN 482 Lab Report',
+            date: '2026-09-22',
+            startTime: '16:00',
+            endTime: '16:45',
+            kind: 'study',
+            assignmentId: 'assignment-lab',
+          },
+        ],
+      },
+      'state',
+    )
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+    database.close()
+  })
+
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'CEEN 482 Lab Report' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Homework is clear' })).toBeVisible()
+  await waitForStoredCollectionSize(page, 'assignments', 0)
+  await waitForStoredCollectionSize(page, 'events', 0)
+})
+
 test('user adds homework and generates study sessions', async ({ page }) => {
   await page.goto('/#/school')
   await page.getByRole('button', { name: 'Add homework' }).click()
