@@ -292,6 +292,7 @@ export interface UserSettings {
   name: string
   measurementSystem: 'us' | 'metric'
   appearance: 'light' | 'dark' | 'system'
+  calendarTimeZone?: string
   nutritionTargets: Nutrition
   study: StudySettings
   mealPlanning: MealPlanningPreferences

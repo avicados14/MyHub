@@ -23,6 +23,23 @@ describe('private calendar snapshot adapter', () => {
     expect(parsed.feeds[0]).toMatchObject({ id: 'canvas-private', eventCount: 1, assignmentCount: 1 })
   })
 
+  it('converts private UTC events into the configured calendar time zone', () => {
+    const utcPayload = JSON.stringify({
+      format: 'myhub-calendar-snapshot',
+      version: 1,
+      calendars: [
+        {
+          id: 'google-private',
+          name: 'Google private snapshot',
+          type: 'google',
+          ics: 'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:utc-1\nDTSTART:20260923T010000Z\nDTEND:20260923T020000Z\nSUMMARY:Evening class\nEND:VEVENT\nEND:VCALENDAR',
+        },
+      ],
+    })
+    const parsed = parsePrivateCalendarSnapshot(utcPayload, '2026-09-22T12:00:00.000Z', 'America/Denver')
+    expect(parsed.events[0]).toMatchObject({ date: '2026-09-22', startTime: '19:00', endTime: '20:00' })
+  })
+
   it('uses only provider capabilities and fails clearly while locked', async () => {
     const locked = {
       available: false,

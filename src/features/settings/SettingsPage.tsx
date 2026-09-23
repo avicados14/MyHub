@@ -69,6 +69,17 @@ const SETTINGS_SECTIONS = [
   ['data', 'Data & privacy'],
 ] as const
 
+const CALENDAR_TIME_ZONES = [
+  ['America/Denver', 'Mountain Time — Denver'],
+  ['America/Los_Angeles', 'Pacific Time — Los Angeles'],
+  ['America/Phoenix', 'Mountain Standard Time — Phoenix'],
+  ['America/Chicago', 'Central Time — Chicago'],
+  ['America/New_York', 'Eastern Time — New York'],
+  ['America/Anchorage', 'Alaska Time — Anchorage'],
+  ['Pacific/Honolulu', 'Hawaii Time — Honolulu'],
+  ['UTC', 'Coordinated Universal Time'],
+] as const
+
 const MODE_OPTIONS: Array<{ value: MealPlanningMode; label: string; detail: string }> = [
   { value: 'balanced', label: 'Balanced', detail: 'Balance effort, nutrition, and variety.' },
   { value: 'variety', label: 'More variety', detail: 'Repeat fewer meals through the week.' },
@@ -235,6 +246,7 @@ export default function SettingsPage() {
         sourceFeedId: feed.id,
         sourceType: feed.kind,
         importedAt,
+        timeZone: data.settings.calendarTimeZone,
       })
       updateData(
         (previous) => ({
@@ -285,6 +297,7 @@ export default function SettingsPage() {
         sourceType: feed.kind,
         sourceUrl: url,
         importedAt,
+        timeZone: data.settings.calendarTimeZone,
       })
       updateData(
         (previous) => ({
@@ -862,6 +875,26 @@ export default function SettingsPage() {
               </button>
             </div>
             <div className="settings-fields">
+              <Field
+                label="Calendar time zone"
+                hint="UTC and source-zone timestamps are converted to this zone before dates and times are saved."
+              >
+                <select
+                  name="calendarTimeZone"
+                  value={data.settings.calendarTimeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}
+                  onChange={(event) => updateSettings({ calendarTimeZone: event.target.value })}
+                >
+                  {!CALENDAR_TIME_ZONES.some(([value]) => value === data.settings.calendarTimeZone) &&
+                  data.settings.calendarTimeZone ? (
+                    <option value={data.settings.calendarTimeZone}>{data.settings.calendarTimeZone}</option>
+                  ) : null}
+                  {CALENDAR_TIME_ZONES.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <input
                 ref={icsInput}
                 className="sr-only"

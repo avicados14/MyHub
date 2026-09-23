@@ -7,11 +7,15 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('populated dashboard renders current AppData in chronological and deadline order', async ({ page }) => {
+  const fixedTime = new Date()
+  fixedTime.setHours(10, 45, 0, 0)
+  await page.clock.setFixedTime(fixedTime)
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./ })).toBeVisible()
   await expect(page.getByText('2 calendar commitments')).toBeVisible()
-  await expect(page.locator('.timeline__title strong')).toHaveText(['Morning Studio', 'Afternoon Seminar'])
+  await expect(page.locator('.schedule-compact__title strong')).toHaveText(['Morning Studio', 'Afternoon Seminar'])
+  await expect(page.getByLabel(/Current time/)).toContainText('Now')
   await expect(page.locator('.study-plan-list strong')).toHaveText(['First Study Block', 'Second Study Block'])
   await expect(page.locator('.assignment-row strong')).toHaveText([
     'First Deadline',

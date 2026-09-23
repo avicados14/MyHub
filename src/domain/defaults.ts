@@ -58,6 +58,7 @@ export const createEmptyData = (now = new Date()): AppData => ({
     name: '',
     measurementSystem: 'us',
     appearance: 'system',
+    calendarTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     nutritionTargets: { ...DEFAULT_NUTRITION_TARGETS },
     study: {
       earliestTime: '08:00',
