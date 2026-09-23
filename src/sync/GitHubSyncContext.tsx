@@ -18,6 +18,7 @@ import {
   type GitHubRemoteFile,
   type GitHubRepositoryTarget,
 } from './githubClient'
+import { PRIVATE_CALENDAR_SNAPSHOT_PATH, type PrivateCalendarAccessProvider } from './calendarSnapshot'
 
 export type GitHubSyncStatus =
   | 'disconnected'
@@ -55,6 +56,7 @@ interface GitHubSyncContextValue {
   setPaused: (paused: boolean) => Promise<void>
   unlink: () => Promise<void>
   clearRemoteSnapshot: () => Promise<void>
+  calendarAccess: PrivateCalendarAccessProvider
 }
 
 const GitHubSyncContext = createContext<GitHubSyncContextValue | null>(null)
@@ -315,6 +317,31 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
     }
   }), [announce, persistCredential, withSerializedOperation])
 
+  const calendarAccessAvailable = Boolean(credential && tokenRef.current && passphraseRef.current && !credential.paused)
+  const calendarAccessReason = !credential
+      ? 'Connect GitHub Sync before importing the private calendar snapshot.'
+      : credential.paused
+        ? 'Resume GitHub Sync before importing the private calendar snapshot.'
+        : !tokenRef.current || !passphraseRef.current
+          ? 'Unlock GitHub Sync with the active passphrase before importing the private calendar snapshot.'
+          : undefined
+  const calendarAccess = useMemo<PrivateCalendarAccessProvider>(() => ({
+    available: calendarAccessAvailable,
+    reason: calendarAccessReason,
+    fetchEncryptedCalendarSnapshot: async () => {
+      const saved = credentialRef.current
+      const token = tokenRef.current
+      if (!saved || !token) throw new Error('Unlock GitHub Sync before importing the private calendar snapshot.')
+      const client = new GitHubContentsClient(token)
+      return client.getFile({ ...saved.repository, path: PRIVATE_CALENDAR_SNAPSHOT_PATH })
+    },
+    decryptCalendarSnapshot: async (encrypted: string) => {
+      const passphrase = passphraseRef.current
+      if (!passphrase) throw new Error('Unlock GitHub Sync before decrypting the private calendar snapshot.')
+      return decryptText(encrypted, passphrase)
+    },
+  }), [calendarAccessAvailable, calendarAccessReason])
+
   useEffect(() => {
     if (!ready || applyingRemoteRef.current || status !== 'current' || credential?.paused || !tokenRef.current) return
     const timeout = window.setTimeout(() => {
@@ -340,7 +367,8 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
     setPaused,
     unlink,
     clearRemoteSnapshot,
-  }), [clearRemoteSnapshot, connect, credential, errorMessage, resolveUseDevice, resolveUseGitHub, setPaused, status, syncNow, unlink, unlock])
+    calendarAccess,
+  }), [calendarAccess, clearRemoteSnapshot, connect, credential, errorMessage, resolveUseDevice, resolveUseGitHub, setPaused, status, syncNow, unlink, unlock])
 
   return <GitHubSyncContext.Provider value={value}>{children}</GitHubSyncContext.Provider>
 }

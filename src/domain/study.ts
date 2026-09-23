@@ -20,6 +20,24 @@ const overlaps = (start: number, end: number, event: CalendarEvent): boolean => 
   return start < eventEnd && end > eventStart
 }
 
+const MAX_PLANNING_DAYS = 366 * 5
+
+export interface StudyBlockValidation {
+  valid: boolean
+  warning?: string
+}
+
+export const validateStudyBlock = (
+  candidate: Pick<CalendarEvent, 'id' | 'date' | 'startTime' | 'endTime'>,
+  existingEvents: CalendarEvent[],
+): StudyBlockValidation => {
+  const start = minutesFromTime(candidate.startTime)
+  const end = minutesFromTime(candidate.endTime)
+  if (end <= start) return { valid: false, warning: 'End time must be after start time.' }
+  const conflict = existingEvents.find((event) => event.id !== candidate.id && event.date === candidate.date && overlaps(start, end, event))
+  return conflict ? { valid: true, warning: `This overlaps “${conflict.title}” from ${conflict.startTime} to ${conflict.endTime}.` } : { valid: true }
+}
+
 export interface StudyPlanResult {
   blocks: CalendarEvent[]
   unscheduledMinutes: number
@@ -45,12 +63,21 @@ export const generateStudyPlan = (
     remaining = Math.max(0, remaining - alreadyScheduled)
 
     const due = dateFromLocal(assignment.dueDate, assignment.dueTime)
-    for (let offset = 0; remaining > 0 && offset <= 14; offset += 1) {
+    const deadlineDays = Math.max(0, Math.ceil((due.getTime() - startDay.getTime()) / 86_400_000))
+    const finalOffset = Math.min(deadlineDays, MAX_PLANNING_DAYS)
+    for (let offset = 0; remaining > 0 && offset <= finalOffset; offset += 1) {
       const day = new Date(startDay)
       day.setDate(day.getDate() + offset)
       if (day.getTime() > due.getTime()) break
       const date = toLocalDate(day)
-      const dayEvents = [...existingEvents, ...blocks].filter((event) => event.date === date)
+      const avoided: CalendarEvent[] = settings.avoidTimes
+        .filter((range) => range.days.includes(day.getDay()))
+        .map((range) => ({
+          id: `avoid-${range.id}-${date}`,
+          createdAt: '', updatedAt: '', source: 'generated', kind: 'event',
+          title: range.label || 'Avoid time', date, startTime: range.startTime, endTime: range.endTime,
+        }))
+      const dayEvents = [...existingEvents, ...blocks, ...avoided].filter((event) => event.date === date)
       let cursor = minutesFromTime(settings.earliestTime)
       const limit = minutesFromTime(settings.latestTime)
 

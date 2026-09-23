@@ -35,6 +35,10 @@ The design system uses semantic CSS variables. Raw colors are mapped to roles su
 
 The school domain contains `CalendarEvent`, `HomeworkAssignment`, `HomeworkSubtask`, and `StudySettings`.
 
+Calendar imports are a local adapter boundary. A user may select one or more local `.ics` exports, choose a source type and date window, inspect a per-feed preview, and explicitly confirm before events, Canvas-style assignments, and feed status are written to `AppData`. Import identifiers are stable for a source feed and event UID, so re-importing updates imported records without duplicating them. Canvas assignment URLs are mapped to homework with source label, URL, feed ID, external UID, and import time; subsequent imports retain user-managed progress, status, and subtasks. The browser test suite creates its minimal calendar upload in memory rather than keeping a real export in the repository.
+
+Homework is an editable, persisted record with status, progress, priority, estimated time, source metadata, and subtask CRUD. Event and homework links are accepted for display only when they are `http` or `https`, and external links use `noopener noreferrer`. Events can be edited or deleted through forms. Generated study blocks also have direct week-column drag movement, form editing, and labeled keyboard-operable 15-minute resize controls; these are alternatives, not prerequisites, for modifying the schedule.
+
 The deterministic study planner performs these steps:
 
 1. Rank incomplete assignments by due date, then priority, then stable identifier.
@@ -46,7 +50,7 @@ The deterministic study planner performs these steps:
 7. Preserve the configured break after each planned block.
 8. Return both blocks and any minutes that could not fit.
 
-Completed, locked, or manually adjusted study blocks are preserved when the user regenerates a plan. The current web interface exposes explicit buttons and forms instead of making drag-and-drop the only input method.
+Completed, locked, or manually adjusted study blocks are preserved when the user regenerates a plan. The planner considers configured avoid-time ranges as synthetic conflicts and searches from today through an assignment deadline, subject to a five-year safety bound. The current web interface exposes explicit buttons and forms instead of making drag-and-drop the only input method.
 
 ### Food
 
@@ -97,6 +101,8 @@ The `credentials` object store is separate from the `application` store. Its Git
 
 This static Pages architecture uses a user-managed fine-grained token limited to the dedicated repository and Contents read/write. It never requests workflow or administration scopes and does not recommend classic PATs. Because browser JavaScript must use the unlocked token, this is an advanced personal-sync design rather than a server-mediated OAuth boundary. Remote deletion removes the latest path but cannot guarantee removal from Git history, forks, caches, or provider retention.
 
+The calendar feature has a deliberately narrow, read-only companion adapter for `myhub-data/v1/calendars.enc`. When Sync is unlocked and active, `GitHubSyncProvider` fetches that encrypted object and decrypts it in provider memory; the calendar screen receives only capability methods and parsed results, never the token or passphrase. It can check at open, on explicit request, and every 15 minutes while open. The static client does not create this companion snapshot, does not embed feed URLs or calendar data, and reports a locked, paused, missing, or malformed snapshot explicitly.
+
 ## Integration Boundaries
 
 GitHub Pages cannot hold secrets or provide a private proxy. External features therefore follow four rules:
@@ -106,7 +112,7 @@ GitHub Pages cannot hold secrets or provide a private proxy. External features t
 3. Failure must be explicit and actionable.
 4. Missing values must never be fabricated.
 
-Canvas supports a direct best-effort ICS URL request and a reliable local `.ics` file import. Recipe URL extraction, nutrition lookup, barcode lookup, OCR, image interpretation, and social-media intake remain future adapters rather than hard-coded dependencies.
+Canvas supports a direct best-effort ICS URL request and a reliable local `.ics` file import. The multi-file Calendar importer is the preferred reviewed path for Canvas, Google Calendar, and standard ICS exports; feed URLs, private exports, and user calendar content are never bundled as fixtures. Recipe URL extraction, nutrition lookup, barcode lookup, OCR, image interpretation, and social-media intake remain future adapters rather than hard-coded dependencies.
 
 ## Historical Snapshots
 
@@ -114,9 +120,9 @@ Meal entries, food logs, and grocery history store copies of the relevant facts 
 
 ## Testing Strategy
 
-Vitest validates pure domain functions and IndexedDB behavior. The suite currently covers recipe scaling, fraction formatting, nutrition sums, leftover limits, unit normalization, grocery aggregation, pantry subtraction, due ordering, conflict-aware study planning, ICS parsing, persistence, and backup validation.
+Vitest validates pure domain functions and IndexedDB behavior. The suite currently covers recipe scaling, fraction formatting, nutrition sums, leftover limits, unit normalization, grocery aggregation, pantry subtraction, due ordering, long-horizon conflict-aware study planning with avoid-time ranges, ICS parsing/classification/provenance/deduplication, encrypted calendar snapshot parsing, persistence, and backup validation.
 
-Playwright runs critical workflows in Chromium at desktop, tablet, and mobile sizes. Tests use semantic role and label locators. CI runs linting, strict type checking, unit tests, browser tests, and the production build before deployment.
+Playwright runs critical workflows in Chromium at desktop, tablet, and mobile sizes. Tests use semantic role and label locators. A focused school/calendar flow verifies homework editing and subtasks, safe provenance links, event CRUD, explicit preview/confirmation of a multi-file in-memory ICS upload, and keyboard-operable study resizing. CI runs linting, strict type checking, unit tests, browser tests, and the production build before deployment; a full responsive release matrix remains a separate release-evidence concern.
 
 ## Future Backend
 

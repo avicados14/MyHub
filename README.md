@@ -6,7 +6,7 @@ The web application is the product-validation phase for a future native SwiftUI 
 
 ## What MyHub Does
 
-**School planning** combines manual calendar events, imported iCalendar (`.ics`) events, homework deadlines, estimated work, and preferred study hours. The deterministic planner creates conflict-free study blocks and preserves blocks that the user locks, completes, or manually adjusts.
+**School planning** combines editable calendar events, multiple local iCalendar (`.ics`) sources, homework with subtasks and provenance, estimated work, preferred study hours, and configured avoid-time ranges. The deterministic planner works through each deadline and preserves blocks that the user locks, completes, moves, or resizes.
 
 **Food planning** combines a recipe library, cooking-friendly serving scaling, a weekly meal planner, prepared-versus-consumed servings, leftovers, immutable food-log snapshots, and daily nutrition progress.
 
@@ -20,10 +20,12 @@ Working now:
 
 - Responsive dashboard with connected school and food summaries
 - Day, week, and month calendar views
-- Manual events and local `.ics` imports
-- Homework creation, progress, completion, priority, and deletion
-- Deterministic conflict-aware study scheduling
-- Study-block locking, completion, removal, and calendar editing
+- Full manual-event creation, editing, and deletion with source-aware display
+- Previewed, confirmed multi-file `.ics` imports for Canvas, Google Calendar, and other exports
+- RFC line unfolding, common timezone/all-day handling, rich event metadata, stable deduplication, and Canvas assignment mapping
+- Full homework editing, progress/status, subtasks, source links, and imported provenance
+- Deterministic conflict-aware study scheduling through deadlines, including configured avoid-time ranges
+- Study-block locking, completion, removal, accessible form editing, direct week-column drag, and 15-minute resize buttons
 - Recipe library, details, favorites, creation, and yield scaling
 - Weekly meal planning with prepared, consumed, and leftover balances
 - Daily nutrition snapshots and editable targets
@@ -37,9 +39,9 @@ Working now:
 
 In development or intentionally limited:
 
-- Canvas URL refresh is best-effort because many feeds block direct browser requests. Local `.ics` import is the reliable fallback.
+- Local `.ics` file import is the reliable browser path. Encrypted private-repository calendar snapshots can be checked after GitHub Sync is unlocked; no private feed URL or calendar file is bundled with MyHub.
 - Recipe URL, social-media, image, video, OCR, barcode, and public nutrition database adapters are not connected to a server in this static prototype. Manual entry remains functional.
-- Drag-and-drop is not required for any task; accessible button and form controls provide the current editing path.
+- Study blocks can be dragged between week columns, but drag-and-drop is never required: the edit form and labeled keyboard-operable resize buttons remain available.
 - GitHub Sync is snapshot-based rather than a transactional database; simultaneous edits require an explicit choice of copy.
 
 Planned for native iOS and iPadOS after web review:
@@ -111,7 +113,7 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, unit normalization, grocery aggregation and pantry decisions, nutrition totals, leftover limits, scheduling conflicts, due-date prioritization, ICS parsing, IndexedDB persistence, and backup validation. Browser tests cover pantry CRUD, the full grocery review/edit/checkout flow, and other connected acceptance workflows at desktop, tablet, and mobile sizes.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization, grocery aggregation and pantry decisions, nutrition totals, leftover limits, long-horizon and avoid-time scheduling, ICS parsing/classification/deduplication, encrypted calendar snapshots, IndexedDB persistence, and backup validation. Focused browser tests cover pantry CRUD, grocery review/edit/checkout/history, homework editing/subtasks/provenance, calendar event CRUD, confirmed multi-file imports, study-block resizing, and connected workflows at desktop and mobile sizes.
 
 ## GitHub Pages Deployment
 
@@ -128,6 +130,8 @@ Use **Settings → Data & privacy → Export data** to download a portable JSON 
 ## Optional GitHub Sync
 
 GitHub Sync keeps IndexedDB as the offline working store and uploads only a versioned encrypted snapshot to the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc` by default. It uses PBKDF2-SHA-256 with 310,000 iterations and AES-256-GCM. The encryption passphrase remains only in component/context memory.
+
+When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. A separate producer for that encrypted snapshot is not bundled with this static client.
 
 Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
 

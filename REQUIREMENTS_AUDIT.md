@@ -70,11 +70,11 @@ A new requirement for **GitHub-backed user-data persistence** should not be met 
 | --- | --- | --- |
 | §18 Calendar | **Delivered** | Day/week/month views, persisted manual events, mixed normal/study display, week default, and the three named demo events are present. |
 | §19 Device calendar access | **Deferred native** | Apple Calendar/EventKit and configured device calendar access are correctly planned as native work. |
-| §20 Homework management | **Partial** | Add, complete, delete, priority, estimate, course, due date/time, and notes work. There is no subtask CRUD/UI or source/source-URL capture/display. |
-| §21 Canvas import | **Partial** | ICS/file/feed URL, status, refresh, CORS explanation, and file fallback work. Parser output remains calendar events; assignments/provenance/source URL are not mapped to homework. |
-| §22 Study planner | **Partial** | Deterministic scheduling respects incomplete work, priority, due date, conflicts, settings, breaks, locks, and duration bounds. An undocumented 14-day horizon omits later deadlines. |
-| §23 Study settings | **Partial** | Earliest/latest times, default/max durations, and breaks persist; schema v2 adds durable avoid-time ranges, but editing and planner enforcement remain future work. |
-| §24 Study editing | **Partial** | Date/time form move, lock/unlock, delete, complete, and regeneration preservation work. Direct drag/move and resize do not. |
+| §20 Homework management | **Delivered** | Persisted homework supports add/edit/delete, course, due date/time, priority, estimate, notes, status/progress, source label/URL, and subtask add/edit/toggle/delete controls. Imported records display provenance and preserve user progress/subtasks on re-import. |
+| §21 Canvas import | **Delivered for local exports; direct-feed refresh remains best effort** | Calendar accepts reviewed multi-file local Canvas, Google Calendar, and standard ICS exports with source type/date-window preview and explicit confirmation. The parser retains event metadata/provenance, maps Canvas-style assignment URLs to homework, and deduplicates by stable source identifiers. Direct Canvas URL refresh remains subject to browser CORS and has a file-import fallback. |
+| §22 Study planner | **Partial** | Deterministic scheduling respects incomplete work, priority, due date, conflicts, settings, breaks, locks, duration bounds, and persisted avoid-time ranges. It now searches through deadlines with a five-year safety bound rather than a hidden 14-day horizon. Avoid-time range editing remains absent from Settings. |
+| §23 Study settings | **Partial** | Earliest/latest times, default/max durations, and breaks persist. Avoid-time ranges are stored and enforced by the planner, but lack a dedicated configuration editor. |
+| §24 Study editing | **Delivered** | Study blocks can be form-edited, locked/unlocked, deleted, completed, regenerated with preservation of manual changes, dragged between week columns, and resized with labeled keyboard-operable 15-minute controls. |
 
 ### Recipes, measurements, nutrition, and non-AI behavior
 
@@ -113,7 +113,7 @@ A new requirement for **GitHub-backed user-data persistence** should not be met 
 
 | Requirement | Status | Completion assessment and traceable evidence |
 | --- | --- | --- |
-| §55 Test coverage | **Partial** | Domain/storage unit tests and browser/axe tests exist. Coverage omits import/export/reset, history, consumption, meal/nutrition linkage, study mutation, Canvas, list editing, and many failure paths. |
+| §55 Test coverage | **Partial** | Domain/storage unit tests and browser/axe tests exist. New focused coverage validates ICS classification/provenance/deduplication, encrypted calendar-snapshot parsing, long-horizon avoid-time planning, homework/subtasks/provenance, event CRUD, reviewed multi-file upload import, and keyboard resizing. Broader food, inventory, backup, and responsive-matrix coverage remains incomplete. |
 | §56 Accessible interaction quality | **Partial** | See §56 above; command-palette keyboard containment and return-focus remain blockers. |
 | §57 Phase completion record | **Partial** | Foundation/Home artifacts exist. README calls the product a functional Phase 1 web prototype; later web scope should not be implied complete. |
 | §58 Full acceptance sequence | **Partial** | Workflows are present in pieces but lack one full, stable cross-viewport acceptance test. |
@@ -128,7 +128,7 @@ A new requirement for **GitHub-backed user-data persistence** should not be met 
 | Web delivery | Pages workflow with lint, type check, unit test, desktop browser test, build, artifact upload, and deploy | A standalone clone/run/deploy project exists rather than a mockup. |
 | Application shell | Responsive routes, desktop sidebar, tablet drawer, mobile bottom nav, keyboard search, original visual system | The app is usable at the target layouts and contains real destinations. |
 | Dashboard | Greeting, sorted schedule/homework, planned meals, nutrition progress, week-ahead links | Core command-center baseline is operational. |
-| Calendar and school | Day/week/month views, manual events, homework basics, conflict-aware deterministic study generation, locks, moves, completion, regeneration | The scheduling core is functional and persistent. |
+| Calendar and school | Day/week/month views; event CRUD; explicit multi-file ICS preview/confirmation; Canvas-style homework provenance/deduplication; homework subtask CRUD; avoid-time-aware planning; study drag/form movement and keyboard resize | The scoped school workflow is persisted, source-aware, and covered by unit plus focused Chromium acceptance tests. |
 | Recipes | Manual entry, library/search/favorite, servings scaling, recipe meal selection, basic nutrition arithmetic | A useful manual recipe baseline exists. |
 | Pantry and groceries | Pantry add/remove, generated grocery list, pantry decisions, category/checkoff experience, immutable completed trip history | Grocery planning has a usable local baseline. |
 | Privacy baseline | No discovered tracked secret, analytics/tracker package, account, ad, or backend proxy | Current local-only architecture limits collection and third-party disclosure. |
@@ -140,9 +140,9 @@ A new requirement for **GitHub-backed user-data persistence** should not be met 
 | --- | --- | --- |
 | Browser release evidence | Isolated device projects have passed; desktop CI executes browser tests | Full multi-project run has failed in supplied audits because the server disappeared; CI does not protect tablet/mobile. |
 | Dialog accessibility | Many semantic controls and axe checks are strong | Search dialog needs focus trap, focus return, Escape/Tab regression tests, and an open-dialog axe run. |
-| Settings/configuration | Study, Canvas, nutrition, data controls persist | Meal preferences, modes, leftovers/minimize-waste options, editable staples/categories, and avoid-time ranges are missing. |
-| Homework/Canvas | Manual homework and event ICS import work | No subtask/provenance UI; no Canvas assignment-to-homework mapping, dedupe, URLs, or tests. |
-| Study planning | Conflict-aware planner and form-based editing work | It has a hidden 14-day limit, no avoid times, no direct drag/resize, and inadequate mutation tests. |
+| Settings/configuration | Study, Canvas, nutrition, data controls persist; avoid-time ranges are stored and used by planning | Meal preferences, modes, leftovers/minimize-waste options, editable staples/categories, and an avoid-time editor are missing. |
+| School source lifecycle | Manual and imported homework/events retain source links, provenance, stable IDs, and user-managed homework progress/subtasks across re-import | Direct Canvas feed refresh remains CORS-dependent; private snapshot production and live remote calendar acceptance are intentionally outside the static client. |
+| Study planning | Conflict-aware, avoid-time-aware scheduling searches through deadlines; generated blocks support form editing, drag movement, and keyboard resize | A user-facing avoid-time editor and broader mutation/responsive coverage remain incomplete. |
 | Recipe authoring | Basic manual creation and scaling work | No structured editor, notes, ingredient override, persistent current yield, provenance, review queue, or robust metadata authoring. |
 | Measurements/nutrition | US/metric setting and six metrics exist | Preference does not alter output; catalog/conversions/temperatures, source/provenance, estimated states, and lookup are absent. |
 | Meal lifecycle | Recipe slots and remaining-serving arithmetic exist | Consumption cannot be entered; leftovers have no inventory or reuse workflow; planned meals do not affect nutrition. |
@@ -159,8 +159,7 @@ A new requirement for **GitHub-backed user-data persistence** should not be met 
 | Recipe editor and notes | Full metadata and ingredient CRUD/override editor, notes, tags/image/source fields, desired/current yield, nutrition and provenance editing. |
 | Grocery staples | Editable recurring staples/categories, surfaced before finalization, explicit per-item add/confirm, and tests proving staples never silently add. |
 | Meal-planning modes | Persisted user configuration for Balanced, More Variety, Meal Prep, Favor Leftovers, Minimize Grocery Waste, and Minimize Unique Ingredients. |
-| Homework subtasks/provenance | Subtask CRUD and source/source URL capture/display, including Canvas provenance. |
-| Avoid-time ranges | Persistent settings, planner constraints, and conflict/deadline tests. |
+| Avoid-time range editor | User-facing creation, modification, and deletion of the already persisted/enforced avoid-time ranges. |
 | Formatting gate | Prettier or equivalent plus repository configuration and a CI-enforced `format:check` script. |
 | Stable all-viewport browser gate | Reproducible desktop/tablet/mobile startup/isolation and a complete acceptance suite in CI. |
 | GitHub-backed persistence beyond snapshot sync | Record-level merge/tombstones and a server-mediated GitHub App remain future hardening; the approved static Pages encrypted snapshot foundation is implemented. |
@@ -191,7 +190,7 @@ The present local-only application has a favorable initial privacy posture. Repo
 | Canvas data | Direct request and CORS/file fallback are disclosed | Treat Canvas feed URLs and exported settings as sensitive. Do not log them, include them in public test fixtures, or transmit them through a future relay without explicit consent. |
 | Accessibility/security boundary | Native dialogs and most semantic controls exist | Search overlay’s incomplete keyboard containment is an accessibility defect. Future sign-in/consent dialogs must use a tested focus-managed dialog primitive. |
 | Dependencies and supply chain | Existing CI runs lint/type/tests/build | Add automated dependency vulnerability monitoring, lockfile review, and a documented update cadence; the supplied audits did not establish these controls. |
-| Remote persistence | No current remote user-data path | Introducing GitHub synchronization changes the privacy, credential, deletion, sharing, conflict, and incident-response model. It must be opt-in and separately threat-modeled. |
+| Remote persistence | Opt-in encrypted GitHub snapshot sync and a read-only encrypted private-calendar snapshot adapter are implemented | The browser holds unlocked credentials/passphrase in memory for this advanced static-client design; record-level merge, live remote acceptance, producer tooling for calendar snapshots, and a server-mediated authorization model remain future hardening. |
 | Public repository exposure | Existing source repo is public Pages deployment | Never place plaintext user data, backups, token material, or per-user identifiers in this repository, Pages artifacts, workflow logs, screenshots, or test reports. |
 
 ## New requirement: safe GitHub-backed user-data persistence
@@ -252,9 +251,9 @@ The order below reduces architectural rework and protects the current local-firs
 | P0 | Fix search-dialog accessibility | Replace or enhance the custom overlay with a tested focus-managed modal: initial focus, Tab/Shift+Tab containment, Escape, focus return, accessible label, and open-dialog axe/keyboard tests. |
 | P1 | Establish missing core data model and snapshot rules | **Foundation delivered:** AppData v2, packaged food/leftover records, meal/log snapshots, provenance, migration, and stable identifiers. Consumption workflow and its product rule still need completion. |
 | P1 | Complete meal consumption, leftovers, packaged food, and logging | Let users edit consumed servings, create/reuse leftovers, log recipe/custom/packaged/label/leftover food, and see all six total/goal/remaining values. Build manual packaged-food first; place lookup/OCR behind reviewable adapters. |
-| P1 | Complete user configuration and grocery lifecycle | Add meal modes/preferences, editable staples/categories, avoid times, Pantry Check Enter Amount, pantry/list edit controls, explicit item/quantity handoff, and robust canonical/unit review. |
+| P1 | Complete user configuration and grocery lifecycle | Add meal modes/preferences, editable staples/categories, an avoid-time editor, Pantry Check Enter Amount, pantry/list edit controls, explicit item/quantity handoff, and robust canonical/unit review. |
 | P2 | Complete recipes and imports safely | Build structured editor/notes/overrides/current yield; then JSON-LD URL and pasted-text drafts; then controlled image/OCR/social intake with source provenance, visible Needs Review, and manual fallback. |
-| P2 | Complete homework/Canvas/study interactions | Add subtask/provenance UI, assignment mapping/deduplication, avoid-time scheduling, configurable/no 14-day horizon, and accessible direct drag/resize while retaining keyboard/form alternatives. |
+| P2 | Complete remaining school integration hardening | Add avoid-time editing, a configurable planning safety bound if product requirements exceed five years, and mocked/live remote calendar-snapshot acceptance. Preserve the delivered local file import, provenance, drag, form, and keyboard alternatives. |
 | P2 | Expand dashboard and search | Add distinct Today’s Study Plan, snack state, sodium progress, and navigable search results for meal plans/grocery history/packaged foods only after their models exist. |
 | P3 | Deliver GitHub-backed persistence behind the go/no-go gates | **Static Pages foundation delivered:** private-repo enforcement, encrypted snapshots, memory-only passphrase, separate encrypted token record, SHA conflicts, visible states/actions, and tests. Record-level merge and server-mediated authorization remain optional future hardening. |
 | P4 | Evaluate AI only after deterministic workflows are trusted | AI must produce reviewable drafts/proposals, not authority over arithmetic, nutrition, history, or scheduling constraints. Do not expose a nonfunctional AI control. |
@@ -269,11 +268,11 @@ The checklist combines the requested end-to-end web path with the missing regres
 | [x] | Open deployed app and dashboard | Home opens with greeting and today’s events; desktop/tablet/mobile navigation reaches all primary areas. |
 | [x] | Reload local state | Existing manual events, homework, plans, pantry, and other aggregate records survive a reload. |
 | [x] | Add homework | Title, course, due date/time, priority, estimate, and notes create a persisted assignment. |
-| [~] | Manage homework subtasks/provenance | Add/toggle/delete subtasks and save/display source/source URL. Currently missing UI. |
+| [x] | Manage homework subtasks/provenance | Add/edit/toggle/delete subtasks; save/display safe source/source URLs; preserve imported provenance and user progress/subtasks on re-import. |
 | [x] | Generate study plan | Incomplete work creates bounded conflict-aware sessions according to configured baseline settings. |
-| [~] | Move/edit/lock/delete/complete/regenerate study block | Form-based move/lock/delete/complete works; direct drag/resize and full E2E preservation coverage are absent. |
-| [ ] | Enforce time-to-avoid and long-horizon deadlines | Generated sessions avoid configured ranges and support deadlines beyond 14 days. |
-| [~] | Refresh/import Canvas | Successful ICS events plus clear CORS/file fallback work; assignment mapping/provenance/dedupe does not. |
+| [x] | Move/edit/lock/delete/complete/regenerate study block | Form edit, direct week-column drag, locking, deletion, completion, regeneration preservation, and labeled keyboard 15-minute resize controls work. |
+| [x] | Enforce time-to-avoid and long-horizon deadlines | Generated sessions avoid persisted ranges and support deadlines beyond 14 days, bounded at five years. |
+| [x] | Import reviewed local calendars | Multi-file Canvas/Google/ICS upload requires preview and confirmation, creates events plus Canvas-style homework with provenance, and retains user assignment progress/subtasks on re-import. Direct feed refresh remains a CORS-limited convenience path. |
 | [x] | Browse and manually add recipe | Recipe appears in library with basic ingredients/steps and persists. |
 | [~] | Edit recipe and scale servings | Scaling works; full metadata/ingredient override/current-yield editing does not. |
 | [ ] | Import recipe safely | URL/pasted/image/social intake creates a provenance-marked, reviewable draft with a manual failure fallback. |
@@ -295,7 +294,7 @@ The checklist combines the requested end-to-end web path with the missing regres
 
 The audit evidence identifies `AppContext.tsx`, `storage/database.ts`, domain types/selectors/functions, feature pages, `pages.yml`, `README.md`, `ARCHITECTURE.md`, `MYHUB_WEB_SETUP.md`, and `MYHUB_IOS_PLAN.md` as primary implementation sources. The observed clean baseline was commit `6d56981`; creating this report is a documentation change requested after that observation. The report takes the conservative position where audit runs disagree: a release gate is **partial** unless it is reproducibly demonstrated in the configured command and CI matrix.
 
-The GitHub persistence recommendation is design guidance, not an assertion that the current repository has a backend, encryption, a GitHub App, or synchronization. GitHub documents both the OAuth flow’s server-side secret requirement and its recommended CSRF/PKCE safeguards, and it documents conditional contents updates/conflicts and least-privilege GitHub App permissions.[1] [2] [3]
+The GitHub persistence recommendation describes future hardening beyond the current static-client implementation. The repository does implement encrypted snapshot synchronization and a narrow read-only encrypted calendar-snapshot adapter, but it does not implement a backend, GitHub App, server-side OAuth exchange, record-level merge, or a private-calendar snapshot producer. GitHub documents both the OAuth flow’s server-side secret requirement and its recommended CSRF/PKCE safeguards, and it documents conditional contents updates/conflicts and least-privilege GitHub App permissions.[1] [2] [3]
 
 ## References
 

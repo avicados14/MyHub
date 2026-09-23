@@ -29,8 +29,17 @@ export interface CalendarEvent extends EntityBase {
   date: string
   startTime: string
   endTime: string
+  endDate?: string
+  allDay?: boolean
   kind: CalendarKind
   course?: string
+  description?: string
+  location?: string
+  categories?: string[]
+  sourceUrl?: string
+  uid?: string
+  sourceFeedId?: string
+  importedAt?: string
   assignmentId?: string
   locked?: boolean
   userAdjusted?: boolean
@@ -41,11 +50,14 @@ export interface CalendarEvent extends EntityBase {
 export interface CalendarFeed {
   id: string
   name: string
-  kind: 'canvas' | 'ics'
-  url: string
+  kind: 'canvas' | 'google' | 'ics'
+  importMode?: 'file' | 'url' | 'private-snapshot'
+  url?: string
   enabled: boolean
   status: 'not-configured' | 'connected' | 'error'
   lastRefresh?: string
+  lastImportCount?: number
+  lastAssignmentCount?: number
 }
 
 export interface HomeworkSubtask {
@@ -67,6 +79,9 @@ export interface HomeworkAssignment extends EntityBase {
   subtasks: HomeworkSubtask[]
   sourceLabel?: string
   sourceUrl?: string
+  sourceFeedId?: string
+  externalId?: string
+  importedAt?: string
 }
 
 export interface Nutrition {

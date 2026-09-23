@@ -14,6 +14,12 @@ Added optional encrypted GitHub-backed synchronization for the dedicated private
 
 Added a GitHub Sync provider and accessible Settings controls for connect/unlock, manual sync, status, pause/resume, unlink, conflict choice, and latest-snapshot deletion. The fine-grained token is encrypted in a separate IndexedDB credential record, is excluded from AppData and backups, and requires only repository-scoped Contents read/write access.
 
+Added a reviewed multi-file local calendar import workflow for Canvas, Google Calendar, and standard ICS exports. Users select a source type and date window, inspect an event/homework preview, and explicitly confirm before anything is persisted. The parser retains rich event provenance, handles folded lines, all-day values, common timezone cases, stable re-import IDs, and maps Canvas-style assignment URLs to editable homework while preserving user progress and subtasks on re-import.
+
+Added complete school-workflow controls for homework progress, status, priority, source links, and subtask CRUD; editable/deletable calendar events; and direct study-block movement with keyboard-operable 15-minute resize controls. Planning now supports persisted avoid-time ranges and deadlines beyond the prior short horizon while preserving completed, locked, and manually adjusted blocks.
+
+Added a narrow read-only encrypted private-calendar snapshot adapter at `myhub-data/v1/calendars.enc`. The calendar screen consumes provider capabilities rather than credentials, can check after Sync is unlocked, and reports unavailable, missing, or invalid snapshots without bundling a feed URL or calendar export.
+
 ### Changed
 
 Fresh installations and **Clear all data** now produce empty personal collections rather than demo records. Sample records are isolated to test fixtures. Data/privacy copy now distinguishes local IndexedDB, optional encrypted sync, and plaintext JSON exports.
@@ -21,6 +27,8 @@ Fresh installations and **Clear all data** now produce empty personal collection
 ### Security
 
 Documented that encryption passphrases remain memory-only, classic or broadly scoped PATs must not be used, and GitHub history or retention means deleting the latest encrypted snapshot cannot guarantee historical erasure.
+
+Documented that local ICS exports, feed URLs, and private calendar contents must not be committed. The focused calendar browser test uses in-memory minimal upload fixtures only.
 
 ## 0.1.0 — 2026-09-22
 
