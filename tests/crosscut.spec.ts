@@ -132,18 +132,18 @@ test('Settings rejects invalid backups and imports valid data only after confirm
   await expect(page.getByLabel('Your name')).toHaveValue('Crosscut User')
 
   const imported = createNamedFixtureData('Imported User', 'Imported Recovery Recipe')
-  page.once('dialog', async (dialog) => {
-    expect(dialog.message()).toContain('Replace current local data with the backup')
-    await dialog.dismiss()
-  })
+  const rejectedDialogPromise = page.waitForEvent('dialog')
   await input.setInputFiles(createBackupFile(imported))
+  const rejectedDialog = await rejectedDialogPromise
+  expect(rejectedDialog.message()).toContain('Replace current local data with the backup')
+  await rejectedDialog.dismiss()
   await expect(page.getByLabel('Your name')).toHaveValue('Crosscut User')
 
-  page.once('dialog', async (dialog) => {
-    expect(dialog.message()).toContain('Export first if you need a copy.')
-    await dialog.accept()
-  })
+  const acceptedDialogPromise = page.waitForEvent('dialog')
   await input.setInputFiles(createBackupFile(imported, '2026-09-22T12:01:00.000Z'))
+  const acceptedDialog = await acceptedDialogPromise
+  expect(acceptedDialog.message()).toContain('Export first if you need a copy.')
+  await acceptedDialog.accept()
   await expect(page.getByRole('status')).toContainText('Data imported successfully.')
   await expect(page.getByLabel('Your name')).toHaveValue('Imported User')
   await page.reload()

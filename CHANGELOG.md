@@ -16,9 +16,9 @@ Added explicit `AppData` schema version 2 with loss-preserving migration from ve
 
 Completed the food-planning workflow with structured recipe creation and editing, source metadata, notes, image input, tags, current yield, per-ingredient overrides, measurement-system conversion, nutrition provenance, and a visible **Needs Review** state. Recipe imports accept public Recipe JSON-LD, pasted JSON-LD/HTML/text, local image OCR, and user-supplied social captions, screenshots, or video frames; imports retain provenance, require review, and expose manual fallbacks when browser access or OCR fails.
 
-Added packaged-food entry and editing with UPC/EAN fields, serving details, images, notes, six nutrition metrics, read-only Open Food Facts lookup, and browser-local Nutrition Facts OCR. Imported or OCR values remain estimated and cannot be saved until the user confirms review. Packaged foods can be planned or logged through immutable source and nutrition snapshots.
+Added packaged-food entry and editing with UPC/EAN fields, serving details, images, notes, eight nutrition metrics, read-only Open Food Facts lookup, and browser-local Nutrition Facts OCR. Imported or OCR values remain estimated and cannot be saved until the user confirms review. Packaged foods can be planned or logged through immutable source and nutrition snapshots.
 
-Completed meal and nutrition lifecycle controls: recipe, packaged, custom, and leftover meal sources; prepared versus consumed serving entry; non-negative reusable leftovers; accessible move/copy controls; multi-source food logging; and six-metric daily totals, targets, and remaining values. Planned meals stay out of daily nutrition until consumption is recorded. Deterministic local Smart suggestions can be accepted, replaced, or locked and use saved recipes, pantry coverage, leftovers, favorites, yields, and the persisted planning mode without claiming generative AI.
+Completed meal and nutrition lifecycle controls: recipe, packaged, custom, and leftover meal sources; prepared versus consumed serving entry; non-negative reusable leftovers; accessible move/copy controls; multi-source food logging; and daily totals, targets/limits, and remaining values for calories, protein, carbohydrates, fat, sugar, saturated fat, fiber, and sodium. Planned meals stay out of daily nutrition until consumption is recorded. Deterministic local Smart suggestions can be accepted, replaced, or locked and use saved recipes, pantry coverage, leftovers, favorites, yields, and the persisted planning mode without claiming generative AI.
 
 Added unit and browser coverage for recipe imports, label parsing, Open Food Facts fallback, measurement conversion, meal consumption/leftovers, and deterministic suggestions. Added the focused cross-viewport `tests/food-v2.spec.ts` workflow, which validates recipe authoring/review/import and the planned-versus-consumed nutrition rule.
 
@@ -36,15 +36,27 @@ Added a reusable 42-action exploratory Playwright walkthrough for the rendered d
 
 ### Changed
 
+Corrected meal-plan semantics so adding a recipe records planned and prepared servings but never records consumption. Daily nutrition and leftover depletion now change only after an explicit consumed-serving action.
+
+Scoped grocery generation to the remaining current planner week, excluded historical persisted meals, used the greater of planned and prepared servings, applied saved yield-specific ingredient overrides, and stored the source date window and meal IDs on active and historical lists.
+
+Added direct Open Food Facts text search to food logging, retained Schema.org sugar and saturated-fat values during Recipe JSON-LD import, and added regression coverage for both paths. Settings section links now use shareable router query URLs instead of click-only scrolling.
+
+Enabled the encrypted personalized late-day nutrition preference. Meal suggestions favor lighter breakfast and lunch choices and concentrate most target calories and protein in dinner and snack while retaining all four preferred meal slots.
+
+Personalized the encrypted private snapshot with the 27 uploaded cookbook recipes as the only recipes, zero homework assignments, the approved study and meal-planning defaults, and all eight supplied or recommended nutrition targets. The replacement Google feed, Canvas feed, and calendar encryption passphrase are installed as masked Actions secrets; a real scheduled-workflow dispatch completed successfully.
+
+Fixed Settings section navigation so it scrolls within the HashRouter route instead of returning to Home. Smart meal suggestions now fall back to review-marked recipes when an imported cookbook has no reviewed recipes yet, while keeping the review warning visible.
+
 Made Playwright web-server startup collision-safe by allocating an available local loopback port while retaining deterministic port `4287` in CI. The Pages validation command runs the configured desktop, tablet, and mobile Chromium projects.
 
-Rewrote the requirements audit around the completed integrated release. The final evidence records 84 unit tests, 117 responsive browser tests, the 42-action exploratory walkthrough, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup now describe the same release and privacy model.
+Rewrote the requirements audit around the completed integrated release. The final evidence records 90 unit tests, 123 responsive browser tests, the 42-action exploratory walkthrough, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup now describe the same release and privacy model.
 
 Applied the current Web Interface Guidelines to the cross-cutting surface, including explicit Escape handling for universal search. No secrets, live private repository requests, private calendar URLs or contents, cookbook data, passphrases, or personal access tokens were added.
 
 Fresh installations and **Clear all data** now produce empty personal collections rather than demo records. Sample records are isolated to test fixtures. Data/privacy copy now distinguishes local IndexedDB, optional encrypted sync, and plaintext JSON exports.
 
-Completed and merged the focused food and calendar hardening. Each 7-scenario suite passes across desktop, tablet, and mobile, and the complete integrated browser matrix passes all 117 tests.
+Completed and merged the focused food and calendar hardening. Each 7-scenario suite passes across desktop, tablet, and mobile, and the complete integrated browser matrix passes all 123 tests.
 
 Updated GitHub Contents reads for encrypted files larger than 1 MB. The client now follows GitHub's raw-media requirement and bypasses browser cache for the second representation request. This fixed the real 3.7 MB encrypted calendar snapshot, which metadata represents with `encoding: "none"`.[2]
 

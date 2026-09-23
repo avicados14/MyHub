@@ -16,13 +16,16 @@ const nutritionMetrics: Array<{
   label: string
   unit: 'kcal' | 'g' | 'mg'
   tone: 'blue' | 'mint' | 'yellow' | 'pink'
+  limit?: boolean
 }> = [
   { key: 'calories', label: 'Calories', unit: 'kcal', tone: 'pink' },
   { key: 'protein', label: 'Protein', unit: 'g', tone: 'blue' },
   { key: 'carbs', label: 'Carbs', unit: 'g', tone: 'yellow' },
   { key: 'fat', label: 'Fat', unit: 'g', tone: 'mint' },
+  { key: 'sugar', label: 'Sugar', unit: 'g', tone: 'pink', limit: true },
+  { key: 'saturatedFat', label: 'Saturated fat', unit: 'g', tone: 'yellow', limit: true },
   { key: 'fiber', label: 'Fiber', unit: 'g', tone: 'mint' },
-  { key: 'sodium', label: 'Sodium', unit: 'mg', tone: 'blue' },
+  { key: 'sodium', label: 'Sodium', unit: 'mg', tone: 'blue', limit: true },
 ]
 
 export default function DashboardPage() {
@@ -239,14 +242,14 @@ export default function DashboardPage() {
           <div className="section-heading">
             <div>
               <h2>Daily nutrition</h2>
-              <p>Consumed, goal, and remaining from foods logged today</p>
+              <p>Consumed, daily target or limit, and remaining from foods logged today</p>
             </div>
             <Link to="/food?view=nutrition">View details</Link>
           </div>
           <div className="nutrition-dashboard-grid">
             {nutritionMetrics.map((metric) => {
-              const consumed = Math.round(nutrition[metric.key])
-              const goal = Math.round(data.settings.nutritionTargets[metric.key])
+              const consumed = Math.round(nutrition[metric.key] ?? 0)
+              const goal = Math.round(data.settings.nutritionTargets[metric.key] ?? 0)
               const remaining = Math.max(0, goal - consumed)
               return (
                 <div className="nutrition-dashboard-metric" key={metric.key}>
@@ -259,7 +262,7 @@ export default function DashboardPage() {
                   <ProgressBar
                     value={consumed}
                     max={goal}
-                    label={`${metric.label}: ${consumed} consumed of ${goal}, ${remaining} remaining`}
+                    label={`${metric.label}: ${consumed} consumed of ${goal} ${metric.limit ? 'limit' : 'target'}, ${remaining} remaining`}
                     tone={metric.tone}
                   />
                   <dl>
@@ -270,13 +273,13 @@ export default function DashboardPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt>Goal</dt>
+                      <dt>{metric.limit ? 'Limit' : 'Goal'}</dt>
                       <dd>
                         {goal.toLocaleString()} {metric.unit}
                       </dd>
                     </div>
                     <div>
-                      <dt>Remaining</dt>
+                      <dt>{metric.limit ? 'Before limit' : 'Remaining'}</dt>
                       <dd>
                         {remaining.toLocaleString()} {metric.unit}
                       </dd>

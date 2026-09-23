@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from 'react'
 import { Field, Modal, StatusBadge } from '../../components/ui'
 import { createUnknownNutritionProvenance } from '../../domain/defaults'
 import { splitQuantityAndUnit } from '../../domain/measurements'
+import { createZeroNutrition, NUTRITION_FIELDS } from '../../domain/nutrition'
 import {
   defaultIngredientMappings,
   estimateRecipeNutrition,
@@ -37,7 +38,7 @@ const CATEGORIES: GroceryCategory[] = [
   'Household',
   'Other',
 ]
-const EMPTY_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
+const EMPTY_NUTRITION: Nutrition = createZeroNutrition()
 
 interface RecipeEditorProps {
   open: boolean
@@ -759,16 +760,13 @@ export default function RecipeEditor({ open, recipe, packagedFoods = [], onClose
             </div>
           ) : null}
           <div className="nutrition-editor-grid">
-            {(['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium'] as const).map((key) => (
-              <Field
-                key={key}
-                label={`${key[0]?.toUpperCase()}${key.slice(1)} ${key === 'calories' ? '(kcal)' : key === 'sodium' ? '(mg)' : '(g)'}`}
-              >
+            {NUTRITION_FIELDS.map(({ key, label, unit }) => (
+              <Field key={key} label={`${label} (${unit})`}>
                 <input
                   type="number"
                   min="0"
                   step="any"
-                  value={draft.nutritionPerServing[key]}
+                  value={draft.nutritionPerServing[key] ?? 0}
                   onChange={(event) => updateNutrition(key, event.target.value)}
                 />
               </Field>

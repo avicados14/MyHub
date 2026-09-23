@@ -10,7 +10,16 @@ const sourceFood = (name: string, servingQuantity = 1, servingUnit = 'cup'): Pac
   source: 'imported',
   name,
   servingSize: { quantity: servingQuantity, unit: servingUnit },
-  nutritionPerServing: { calories: 100, protein: 5, carbs: 12, fat: 3, fiber: 2, sodium: 40 },
+  nutritionPerServing: {
+    calories: 100,
+    protein: 5,
+    carbs: 12,
+    fat: 3,
+    sugar: 2,
+    saturatedFat: 1,
+    fiber: 2,
+    sodium: 40,
+  },
   nutritionProvenance: {
     kind: 'database',
     capturedAt: '2026-09-22T00:00:00.000Z',
@@ -29,7 +38,16 @@ describe('recipe nutrition estimation', () => {
       [{ ingredientId: 'i-cb-2', sourceFoodId: rice.id, sourceServings: 2 }],
     )
 
-    expect(estimate.perRecipe).toEqual({ calories: 200, protein: 10, carbs: 24, fat: 6, fiber: 4, sodium: 80 })
+    expect(estimate.perRecipe).toEqual({
+      calories: 200,
+      protein: 10,
+      carbs: 24,
+      fat: 6,
+      sugar: 4,
+      saturatedFat: 2,
+      fiber: 4,
+      sodium: 80,
+    })
     expect(estimate.perServing.calories).toBe(50)
     expect(estimate.unresolvedIngredientIds).toEqual(['i-cb-1', 'i-cb-3', 'i-cb-4'])
     expect(estimate.ingredients.find((item) => item.ingredient.id === 'i-cb-4')?.reason).toBe('Quantity is unresolved.')

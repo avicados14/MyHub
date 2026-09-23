@@ -19,9 +19,11 @@ import {
   Upload,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, Field, PageHeader, StatusBadge } from '../../components/ui'
 import { parseIcsResult, replaceImportedFeedAssignments, replaceImportedFeedEvents } from '../../domain/ics'
+import { NUTRITION_FIELDS } from '../../domain/nutrition'
 import type {
   AvoidTimeRange,
   CalendarFeed,
@@ -49,6 +51,23 @@ const WEEKDAYS = [
 ]
 
 const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack']
+const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snack: 'Snack / coffee / treat',
+}
+
+const SETTINGS_SECTIONS = [
+  ['general', 'General'],
+  ['study', 'Study planner'],
+  ['meals', 'Meal planning'],
+  ['grocery-settings', 'Grocery'],
+  ['calendars', 'Calendars'],
+  ['nutrition', 'Nutrition'],
+  ['github-sync', 'GitHub Sync'],
+  ['data', 'Data & privacy'],
+] as const
 
 const MODE_OPTIONS: Array<{ value: MealPlanningMode; label: string; detail: string }> = [
   { value: 'balanced', label: 'Balanced', detail: 'Balance effort, nutrition, and variety.' },
@@ -79,6 +98,8 @@ const syncTone = (status: GitHubSyncStatus): 'neutral' | 'danger' | 'attention' 
 export default function SettingsPage() {
   const { data, updateData, replaceData, clearAllData, announce } = useApp()
   const github = useGitHubSync()
+  const [searchParams] = useSearchParams()
+  const selectedSection = searchParams.get('section')
   const importInput = useRef<HTMLInputElement>(null)
   const icsInput = useRef<HTMLInputElement>(null)
   const [icsTargetId, setIcsTargetId] = useState<string | null>(null)
@@ -354,6 +375,14 @@ export default function SettingsPage() {
   const needsUnlock = isConfigured && (github.status === 'locked' || github.status === 'error')
   const orderedCategories = data.settings.groceryCategories.toSorted((a, b) => a.sortOrder - b.sortOrder)
 
+  useEffect(() => {
+    if (!selectedSection || !SETTINGS_SECTIONS.some(([sectionId]) => sectionId === selectedSection)) return
+    const frame = requestAnimationFrame(() =>
+      document.getElementById(selectedSection)?.scrollIntoView({ block: 'start' }),
+    )
+    return () => cancelAnimationFrame(frame)
+  }, [selectedSection])
+
   return (
     <>
       <PageHeader
@@ -362,14 +391,11 @@ export default function SettingsPage() {
       />
       <div className="settings-layout settings-layout--v2">
         <nav className="settings-nav" aria-label="Settings sections">
-          <a href="#general">General</a>
-          <a href="#study">Study planner</a>
-          <a href="#meals">Meal planning</a>
-          <a href="#grocery-settings">Grocery</a>
-          <a href="#calendars">Calendars</a>
-          <a href="#nutrition">Nutrition</a>
-          <a href="#github-sync">GitHub Sync</a>
-          <a href="#data">Data & privacy</a>
+          {SETTINGS_SECTIONS.map(([sectionId, label]) => (
+            <Link key={sectionId} to={`/settings?section=${sectionId}`}>
+              {label}
+            </Link>
+          ))}
         </nav>
         <div className="settings-content">
           <Card className="settings-card" as="section">
@@ -585,7 +611,7 @@ export default function SettingsPage() {
                         })
                       }
                     />
-                    <span>{slot}</span>
+                    <span>{MEAL_SLOT_LABELS[slot]}</span>
                   </label>
                 ))}
               </fieldset>
@@ -623,6 +649,26 @@ export default function SettingsPage() {
                   <span>
                     <strong>Favor available pantry items</strong>
                     <small>Prefer ingredients already tracked at home.</small>
+                  </span>
+                </label>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={data.settings.mealPlanning.lateDayNutritionBias === true}
+                    onChange={(event) =>
+                      updateSettings({
+                        mealPlanning: {
+                          ...data.settings.mealPlanning,
+                          lateDayNutritionBias: event.target.checked,
+                        },
+                      })
+                    }
+                  />
+                  <span>
+                    <strong>Concentrate nutrition later in the day</strong>
+                    <small>
+                      Favor lighter breakfast and lunch options, then more calories and protein at dinner and snack.
+                    </small>
                   </span>
                 </label>
               </div>
@@ -955,16 +1001,16 @@ export default function SettingsPage() {
           <Card className="settings-card" as="section">
             <div className="settings-card__header" id="nutrition">
               <h2>Nutrition targets</h2>
-              <p>All six targets power dashboard and food progress indicators.</p>
+              <p>Daily targets and limits power dashboard and food progress indicators.</p>
             </div>
             <div className="settings-fields settings-fields--grid">
-              {(['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium'] as const).map((key) => (
-                <Field key={key} label={`${key[0]?.toUpperCase()}${key.slice(1)}`}>
+              {NUTRITION_FIELDS.map(({ key, label, kind }) => (
+                <Field key={key} label={`${label}${kind === 'limit' ? ' limit' : ''}`}>
                   <input
                     name={key}
                     type="number"
                     min="0"
-                    value={data.settings.nutritionTargets[key]}
+                    value={data.settings.nutritionTargets[key] ?? 0}
                     onChange={(event) => updateNutrition({ [key]: Number(event.target.value) })}
                   />
                 </Field>

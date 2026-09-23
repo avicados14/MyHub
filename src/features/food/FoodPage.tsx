@@ -42,8 +42,10 @@ const nutritionMetrics = [
   { key: 'protein' as const, label: 'Protein', unit: 'g', tone: 'blue' as const },
   { key: 'carbs' as const, label: 'Carbs', unit: 'g', tone: 'yellow' as const },
   { key: 'fat' as const, label: 'Fat', unit: 'g', tone: 'mint' as const },
+  { key: 'sugar' as const, label: 'Sugar', unit: 'g', tone: 'pink' as const, limit: true },
+  { key: 'saturatedFat' as const, label: 'Saturated fat', unit: 'g', tone: 'yellow' as const, limit: true },
   { key: 'fiber' as const, label: 'Fiber', unit: 'g', tone: 'mint' as const },
-  { key: 'sodium' as const, label: 'Sodium', unit: 'mg', tone: 'blue' as const },
+  { key: 'sodium' as const, label: 'Sodium', unit: 'mg', tone: 'blue' as const, limit: true },
 ]
 
 export default function FoodPage() {
@@ -904,33 +906,34 @@ function NutritionView({ data, onLog }: { data: AppData; onLog: () => void }) {
         </div>
         <div className="nutrition-metrics">
           {nutritionMetrics.map((metric) => {
-            const goal = data.settings.nutritionTargets[metric.key]
-            const remaining = Math.max(0, goal - total[metric.key])
+            const goal = data.settings.nutritionTargets[metric.key] ?? 0
+            const consumed = total[metric.key] ?? 0
+            const remaining = Math.max(0, goal - consumed)
             return (
               <div key={metric.key} className="nutrition-metric">
                 <div>
                   <span>{metric.label}</span>
                   <strong>
-                    {Math.round(total[metric.key])} <small>{metric.unit}</small>
+                    {Math.round(consumed)} <small>{metric.unit}</small>
                   </strong>
                 </div>
                 <ProgressBar
-                  value={total[metric.key]}
+                  value={consumed}
                   max={goal}
-                  label={`${metric.label} progress`}
+                  label={`${metric.label} ${metric.limit ? 'limit' : 'target'} progress`}
                   tone={metric.tone}
                 />
                 <dl>
                   <div>
                     <dt>Consumed</dt>
-                    <dd>{Math.round(total[metric.key])}</dd>
+                    <dd>{Math.round(consumed)}</dd>
                   </div>
                   <div>
-                    <dt>Goal</dt>
+                    <dt>{metric.limit ? 'Limit' : 'Goal'}</dt>
                     <dd>{goal}</dd>
                   </div>
                   <div>
-                    <dt>Remaining</dt>
+                    <dt>{metric.limit ? 'Before limit' : 'Remaining'}</dt>
                     <dd>{Math.round(remaining)}</dd>
                   </div>
                 </dl>

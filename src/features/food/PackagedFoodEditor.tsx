@@ -1,6 +1,7 @@
 import { AlertTriangle, Barcode, CheckCircle2, ImagePlus, ScanText, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Field, Modal, SegmentedControl, StatusBadge } from '../../components/ui'
+import { createZeroNutrition, NUTRITION_FIELDS } from '../../domain/nutrition'
 import type { Nutrition, NutritionProvenance, PackagedFood } from '../../domain/types'
 import { makeId } from '../../utilities/date'
 import { formatFileSize, IMAGE_LIMIT_BYTES, readFileAsDataUrl, validateImageFile } from './fileImages'
@@ -21,7 +22,7 @@ interface PackagedFoodEditorProps {
 }
 
 type PackageMode = 'manual' | 'search' | 'barcode' | 'label'
-const ZERO_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
+const ZERO_NUTRITION: Nutrition = createZeroNutrition()
 
 const blankFood = (): PackagedFood => {
   const timestamp = new Date().toISOString()
@@ -340,7 +341,7 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
             <label className="file-drop" htmlFor={labelImageId}>
               <ImagePlus aria-hidden="true" />
               <strong>Choose a nutrition label image</strong>
-              <small>Review serving size and all six metrics below before save.</small>
+              <small>Review serving size and all eight metrics below before save.</small>
             </label>
             <input
               id={labelImageId}
@@ -460,16 +461,13 @@ export default function PackagedFoodEditor({ open, food, onClose, onSave }: Pack
             </StatusBadge>
           </div>
           <div className="nutrition-editor-grid">
-            {(['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium'] as const).map((key) => (
-              <Field
-                key={key}
-                label={`${key[0]?.toUpperCase()}${key.slice(1)} ${key === 'calories' ? '(kcal)' : key === 'sodium' ? '(mg)' : '(g)'}`}
-              >
+            {NUTRITION_FIELDS.map(({ key, label, unit }) => (
+              <Field key={key} label={`${label} (${unit})`}>
                 <input
                   type="number"
                   min="0"
                   step="any"
-                  value={draft.nutritionPerServing[key]}
+                  value={draft.nutritionPerServing[key] ?? 0}
                   onChange={(event) => updateNutrition(key, event.target.value)}
                 />
               </Field>

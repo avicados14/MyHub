@@ -8,9 +8,9 @@ The web application is the product-validation phase for a future native SwiftUI 
 
 **School planning** combines editable calendar events, multiple local iCalendar (`.ics`) sources, homework with subtasks and provenance, estimated work, preferred study hours, and configured avoid-time ranges. The deterministic planner works through each deadline and preserves blocks that the user locks, completes, moves, or resizes.
 
-**Food planning** combines structured recipes and reviewable imports, cooking-friendly serving scaling and conversions, a weekly meal planner, prepared-versus-consumed servings, reusable leftovers, packaged foods, immutable food-log snapshots, and daily nutrition progress.
+**Food planning** combines structured recipes and reviewable imports, cooking-friendly serving scaling and conversions, a weekly meal planner, prepared-versus-consumed servings, reusable leftovers, packaged foods, Open Food Facts barcode/text search, immutable food-log snapshots, and daily nutrition progress.
 
-**Pantry and groceries** aggregate compatible recipe ingredients, compare those requirements with saved inventory, require an explicit Pantry Check decision for every requirement and added staple, generate a mobile-friendly editable shopping list, preserve completed trips as historical snapshots, and add only confirmed purchases back to the pantry.
+**Pantry and groceries** aggregate compatible recipe ingredients for the remaining current planner week, use prepared quantities and saved yield overrides, compare those requirements with saved inventory, and persist the generation window and source meals. Pantry Check requires an explicit decision for every requirement and added staple. Completed trips become immutable history, and only confirmed purchases return to the pantry.
 
 ## Project Status
 
@@ -28,14 +28,14 @@ Working now:
 - Study-block locking, completion, removal, accessible form editing, direct week-column drag, and 15-minute resize buttons
 - Structured recipe creation/editing, source metadata, notes, ingredient overrides, persistent current yield, and US/metric display conversion
 - Reviewable recipe drafts from permitted URL JSON-LD, pasted content, local image OCR, or user-supplied social caption/screenshot/video frame
-- Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with prepared, consumed, and leftover balances
-- Packaged-food entry, read-only Open Food Facts lookup, local Nutrition Facts OCR with confirmation, and immutable six-metric nutrition snapshots
-- Daily nutrition snapshots, editable targets, and totals that exclude planned meals until consumption is recorded
+- Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with explicit planned, prepared, consumed, and leftover balances; planning never records consumption automatically
+- Packaged-food entry and food-log search by barcode or text through read-only Open Food Facts, local Nutrition Facts OCR with confirmation, and immutable eight-metric nutrition snapshots
+- Daily calories, protein, carbohydrates, fat, sugar, saturated fat, fiber, and sodium progress; editable targets/limits; and totals that exclude planned meals until consumption is recorded
 - Pantry inventory across pantry, refrigerator, and freezer
-- Grocery aggregation across compatible mass, volume, and count units; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history
+- Current-week grocery aggregation across compatible mass, volume, and count units using prepared servings and recipe overrides; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history with source-window provenance
 - Universal search across recipes, homework, pantry items, packaged foods, grocery history, and meal plans
 - Empty first run, IndexedDB persistence, versioned migration, JSON export/import, and confirmed clear-all
-- Optional encrypted GitHub Sync to a dedicated private data repository
+- Optional encrypted GitHub Sync to a dedicated private data repository, with shareable query-backed Settings section URLs
 - Light, dark, desktop, tablet, and mobile layouts
 - GitHub Pages deployment workflow
 
@@ -116,7 +116,7 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. The completed release passed 84 unit tests and 117 Playwright tests across desktop, tablet, and mobile. A separate 42-action exploratory walkthrough also completed without runtime or HTTP errors.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. The completed release passed 90 unit tests and 123 Playwright tests across desktop, tablet, and mobile. A separate 42-action exploratory walkthrough also completed without runtime or HTTP errors.
 
 ## GitHub Pages Deployment
 
@@ -136,7 +136,7 @@ GitHub Sync keeps IndexedDB as the offline working store and uploads only a vers
 
 When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. Files larger than 1 MB use GitHub's authenticated raw media representation, as required by the Contents API.[3] A separate producer for that encrypted snapshot is not bundled with this static client.
 
-The configured private repository has been verified end to end in a fresh Chromium profile. It recovered 27 cookbook recipes, imported 3,365 events from the 2 encrypted calendar feeds, and wrote the combined `AppData` snapshot back as ciphertext. The remote envelope was fetched again and decrypted to the same counts; collection names were absent from the remote plaintext representation.
+The configured private repository has been verified end to end in a fresh Chromium profile. It recovered the 27 uploaded cookbook recipes as the only recipe records, imported 3,365 events from the 2 encrypted calendar feeds, retained zero homework assignments, and wrote the combined `AppData` snapshot back as ciphertext. The personalized snapshot includes the approved study, meal, grocery, appearance, and eight nutrition target/limit settings. It also favors lighter breakfast/lunch choices and concentrates most suggested calories and protein in dinner and snack. The private calendar workflow has all three required Actions secrets configured and completed a real refresh successfully.
 
 Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
 

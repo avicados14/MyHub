@@ -5,6 +5,7 @@ import {
   convertGroceryQuantity,
   copyHistoryEntryToList,
   groceryItemFromStaple,
+  groceryMealsForWindow,
   groceryUnitFamily,
   normalizeGroceryUnit,
   purchaseQuantity,
@@ -129,6 +130,23 @@ describe('grocery canonical names', () => {
 })
 
 describe('grocery aggregation', () => {
+  it('selects only meals inside the requested planning window', () => {
+    const meals = [
+      { ...meal('past', 'r1'), date: '2026-09-20' },
+      { ...meal('current', 'r1'), date: '2026-09-23' },
+      { ...meal('future', 'r1'), date: '2026-09-27' },
+    ]
+    expect(groceryMealsForWindow(meals, '2026-09-22', '2026-09-26').map((entry) => entry.id)).toEqual(['current'])
+  })
+
+  it('uses prepared servings and saved ingredient overrides for shopping quantities', () => {
+    const overridden = ingredient('i1', 'rice', 1, 'cup')
+    overridden.scaledOverride = { yield: 4, quantity: 3, unit: 'cup' }
+    const planned = { ...meal('m1', 'r1'), servings: 1, preparedServings: 8 }
+    const items = aggregateGroceryItems([planned], [recipe('r1', [overridden])], [], NOW, 'us')
+    expect(items[0]).toMatchObject({ canonicalName: 'rice', quantity: 6, unit: 'cup' })
+  })
+
   it('combines compatible oz and lb using deliberate US display units', () => {
     const items = aggregateGroceryItems(
       [meal('m1', 'r1'), meal('m2', 'r2')],

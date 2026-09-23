@@ -1,5 +1,6 @@
 import { createUnknownNutritionProvenance } from '../../domain/defaults'
 import { splitQuantityAndUnit } from '../../domain/measurements'
+import { createZeroNutrition } from '../../domain/nutrition'
 import type { GroceryCategory, Nutrition, Recipe, RecipeIngredient, RecipeStep } from '../../domain/types'
 
 export type RecipeImportKind = 'url' | 'json-ld' | 'html' | 'text' | 'caption' | 'image-ocr' | 'video-ocr' | 'social'
@@ -23,7 +24,7 @@ export interface RecipeDraft {
   rawText?: string
 }
 
-const ZERO_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
+const ZERO_NUTRITION: Nutrition = createZeroNutrition()
 const JSON_LD_PATTERN = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
 const HEADING_PATTERN = /^(ingredients?|instructions?|directions?|method|steps?)\s*:?$/i
 
@@ -114,6 +115,8 @@ const nutritionFromNode = (value: unknown): Nutrition => {
     protein: numericText(data.proteinContent) ?? 0,
     carbs: numericText(data.carbohydrateContent) ?? 0,
     fat: numericText(data.fatContent) ?? 0,
+    sugar: numericText(data.sugarContent) ?? 0,
+    saturatedFat: numericText(data.saturatedFatContent) ?? 0,
     fiber: numericText(data.fiberContent) ?? 0,
     sodium: numericText(data.sodiumContent) ?? 0,
   }

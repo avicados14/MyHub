@@ -26,10 +26,12 @@ export const extractNutritionLabel = (rawText: string): NutritionLabelDraft => {
     /(?:total\s+)?carbohydrate[^\d]*(\d+(?:\.\d+)?)\s*g/i,
     /carbs?[^\d]*(\d+(?:\.\d+)?)\s*g/i,
   ])
-  const fat = valueFor(text, [/(?:total\s+)?fat[^\d]*(\d+(?:\.\d+)?)\s*g/i])
+  const fat = valueFor(text, [/(?:^|\n)\s*(?:total\s+)?fat[^\d]*(\d+(?:\.\d+)?)\s*g/im])
+  const sugar = valueFor(text, [/(?:total\s+)?sugars?[^\d]*(\d+(?:\.\d+)?)\s*g/i])
+  const saturatedFat = valueFor(text, [/saturated\s+fat[^\d]*(\d+(?:\.\d+)?)\s*g/i])
   const fiber = valueFor(text, [/(?:dietary\s+)?fiber[^\d]*(\d+(?:\.\d+)?)\s*g/i])
   const sodium = valueFor(text, [/sodium[^\d]*(\d+(?:\.\d+)?)\s*mg/i])
-  const values = { calories, protein, carbs, fat, fiber, sodium }
+  const values = { calories, protein, carbs, fat, sugar, saturatedFat, fiber, sodium }
   const detected = (Object.keys(values) as Array<keyof Nutrition>).filter((key) => values[key] !== null)
   if (serving) detected.push('servingSize')
   const warnings: string[] = ['OCR values are estimates. Compare every field with the physical label before saving.']
@@ -42,6 +44,8 @@ export const extractNutritionLabel = (rawText: string): NutritionLabelDraft => {
       protein: protein ?? 0,
       carbs: carbs ?? 0,
       fat: fat ?? 0,
+      sugar: sugar ?? 0,
+      saturatedFat: saturatedFat ?? 0,
       fiber: fiber ?? 0,
       sodium: sodium ?? 0,
     },

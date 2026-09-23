@@ -14,7 +14,13 @@ const jsonLd = {
     { '@type': 'HowToStep', text: 'Boil the pasta.' },
     { '@type': 'HowToStep', text: 'Toss with lemon.' },
   ],
-  nutrition: { calories: '410 calories', proteinContent: '14 g', sodiumContent: '600 mg' },
+  nutrition: {
+    calories: '410 calories',
+    proteinContent: '14 g',
+    sugarContent: '9 g',
+    saturatedFatContent: '3 g',
+    sodiumContent: '600 mg',
+  },
 }
 
 afterEach(() => vi.restoreAllMocks())
@@ -27,6 +33,7 @@ describe('recipe imports', () => {
     expect(draft.prepMinutes).toBe(10)
     expect(draft.ingredients[0]).toEqual(expect.objectContaining({ quantity: 8, unit: 'oz', name: 'spaghetti' }))
     expect(draft.ingredients[1]).toEqual(expect.objectContaining({ quantity: null, name: 'salt to taste' }))
+    expect(draft.nutritionPerServing).toEqual(expect.objectContaining({ sugar: 9, saturatedFat: 3 }))
     expect(draft.warnings.join(' ')).toContain('not present')
   })
 

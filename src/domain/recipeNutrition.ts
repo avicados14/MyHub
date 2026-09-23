@@ -1,7 +1,8 @@
 import { multiplyNutrition, sumNutrition } from './recipe'
+import { createZeroNutrition, nutritionValue } from './nutrition'
 import type { Nutrition, PackagedFood, Recipe, RecipeIngredient } from './types'
 
-const EMPTY_NUTRITION: Nutrition = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 }
+const EMPTY_NUTRITION: Nutrition = createZeroNutrition()
 
 export interface IngredientNutritionMapping {
   ingredientId: string
@@ -33,6 +34,8 @@ const divideNutrition = (nutrition: Nutrition, divisor: number): Nutrition =>
         protein: nutrition.protein / divisor,
         carbs: nutrition.carbs / divisor,
         fat: nutrition.fat / divisor,
+        sugar: nutritionValue(nutrition, 'sugar') / divisor,
+        saturatedFat: nutritionValue(nutrition, 'saturatedFat') / divisor,
         fiber: nutrition.fiber / divisor,
         sodium: nutrition.sodium / divisor,
       }
