@@ -1,0 +1,558 @@
+/* Cross-cutting schema-v2 refinements. Feature-domain layouts remain in global.css. */
+
+.dashboard-page--v2 .dashboard-lead {
+  align-items: stretch;
+}
+
+.focus-card__empty {
+  margin: 24px 0;
+  color: #cbd5e3;
+  font-size: 12px;
+}
+
+.study-plan-card {
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.study-plan-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.study-plan-list li {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 72px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.study-plan-list li:last-child {
+  border-bottom: 0;
+}
+
+.study-plan-list time {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-plan-list strong,
+.study-plan-list small {
+  display: block;
+}
+
+.study-plan-list strong {
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+.study-plan-list small {
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.meal-strip--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.meal-card--empty {
+  display: grid;
+  min-height: 210px;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  border: 1px dashed color-mix(in srgb, var(--line), var(--ink-soft) 18%);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+  box-shadow: none;
+}
+
+.meal-card--empty::after {
+  display: none;
+}
+
+.meal-card--empty > svg {
+  width: 23px;
+  margin-bottom: 8px;
+  color: var(--mint-strong);
+}
+
+.meal-card--empty > span {
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.meal-card--empty > strong {
+  font-size: 14px;
+}
+
+.meal-card--empty > small {
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.dashboard-lower--v2 {
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.45fr);
+}
+
+.nutrition-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.nutrition-dashboard-metric {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.nutrition-dashboard-metric__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+.nutrition-dashboard-metric__heading > span {
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.nutrition-dashboard-metric__heading strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrition-dashboard-metric__heading small {
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.nutrition-dashboard-metric dl {
+  display: grid;
+  gap: 5px;
+  margin: 12px 0 0;
+}
+
+.nutrition-dashboard-metric dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 8px;
+}
+
+.nutrition-dashboard-metric dt {
+  color: var(--ink-soft);
+}
+
+.nutrition-dashboard-metric dd {
+  margin: 0;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-card--compact .readiness-list {
+  margin-top: 14px;
+}
+
+.command-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 12vh 16px 16px;
+  overflow: visible;
+  overscroll-behavior: contain;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.command-dialog::backdrop {
+  background: rgba(9, 17, 32, 0.62);
+  backdrop-filter: blur(4px);
+}
+
+.command-dialog .command-palette {
+  margin: 0 auto;
+}
+
+.command-palette__results a:focus-visible {
+  background: var(--surface-soft);
+}
+
+.settings-fields--nested {
+  margin: 0;
+  padding: 0;
+}
+
+.settings-subsection-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.settings-subsection-heading--bordered {
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.settings-subsection-heading h3 {
+  margin-bottom: 3px;
+  font-size: 14px;
+}
+
+.settings-subsection-heading p,
+.settings-empty-copy,
+.calendar-feed-empty p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.settings-record-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-record {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.settings-record__grid {
+  display: grid;
+  align-items: end;
+  gap: 12px;
+}
+
+.settings-record__grid--avoid {
+  grid-template-columns: minmax(150px, 1fr) 120px 120px 44px;
+}
+
+.settings-record__grid--feeds {
+  grid-template-columns: minmax(160px, 0.8fr) minmax(150px, 0.5fr) minmax(260px, 1.7fr);
+}
+
+.settings-record__delete {
+  align-self: end;
+}
+
+.day-picker,
+.settings-check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.day-picker legend,
+.settings-check-group legend {
+  width: 100%;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.day-picker label,
+.settings-check-group label {
+  position: relative;
+  cursor: pointer;
+}
+
+.day-picker input,
+.settings-check-group input {
+  position: absolute;
+  opacity: 0;
+}
+
+.day-picker span,
+.settings-check-group span {
+  display: grid;
+  min-height: 38px;
+  place-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.day-picker input:checked + span,
+.settings-check-group input:checked + span {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.day-picker input:focus-visible + span,
+.settings-check-group input:focus-visible + span {
+  box-shadow: var(--focus);
+}
+
+.settings-toggle {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.settings-toggle--compact {
+  min-height: 44px;
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+}
+
+.settings-toggle input {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  accent-color: var(--blue);
+}
+
+.settings-toggle strong,
+.settings-toggle small {
+  display: block;
+}
+
+.settings-toggle strong {
+  font-size: 11px;
+}
+
+.settings-toggle small {
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.staple-add-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 110px 110px minmax(150px, 0.7fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.staple-record {
+  grid-template-columns: 40px minmax(150px, 1fr) 100px 100px minmax(140px, 0.7fr) 44px;
+  align-items: end;
+}
+
+.category-settings-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  list-style: none;
+}
+
+.category-settings-list li {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.category-settings-list li:last-child {
+  border-bottom: 0;
+}
+
+.category-settings-list__actions {
+  display: flex;
+  gap: 2px;
+}
+
+.category-settings-list__actions .icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.calendar-feed-record {
+  gap: 16px;
+}
+
+.calendar-feed-record.is-disabled {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface-soft) 78%, var(--line));
+}
+
+.calendar-feed-record.is-disabled .settings-record__grid,
+.calendar-feed-record.is-disabled .calendar-feed-record__footer {
+  opacity: 0.72;
+}
+
+.calendar-feed-record__disabled-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--yellow);
+  color: var(--yellow-strong);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.calendar-feed-record__heading,
+.calendar-feed-record__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.calendar-feed-record__footer > small {
+  color: var(--ink-soft);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.calendar-feed-empty {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  min-height: 160px;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  text-align: center;
+}
+
+@media (max-width: 1199px) {
+  .meal-strip--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-lower--v2 {
+    grid-template-columns: 1fr;
+  }
+
+  .staple-add-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staple-add-row__button {
+    justify-self: start;
+  }
+
+  .staple-record {
+    grid-template-columns: 40px repeat(2, minmax(0, 1fr)) 44px;
+  }
+
+  .staple-record .field:nth-of-type(3),
+  .staple-record .field:nth-of-type(4) {
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .nutrition-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-record__grid--feeds {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .settings-record__grid--feeds .field:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .study-plan-list li {
+    grid-template-columns: 1fr auto;
+    gap: 7px 12px;
+  }
+
+  .study-plan-list time {
+    grid-column: 1 / -1;
+  }
+
+  .meal-strip--four,
+  .nutrition-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-card--empty {
+    min-height: 160px;
+  }
+
+  .command-dialog {
+    padding: 0;
+  }
+
+  .command-dialog .command-palette {
+    position: absolute;
+    inset: auto 0 0;
+    width: 100%;
+    max-height: calc(100dvh - 12px);
+    border-radius: 22px 22px 0 0;
+  }
+
+  .settings-subsection-heading,
+  .calendar-feed-record__heading,
+  .calendar-feed-record__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-record__grid--avoid,
+  .settings-record__grid--feeds,
+  .staple-add-row,
+  .staple-record {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-record__grid--feeds .field:last-child,
+  .staple-record .field:nth-of-type(3),
+  .staple-record .field:nth-of-type(4) {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .staple-record > .settings-toggle,
+  .settings-record__delete {
+    justify-self: start;
+  }
+
+  .calendar-feed-record__footer > small {
+    white-space: normal;
+  }
+}

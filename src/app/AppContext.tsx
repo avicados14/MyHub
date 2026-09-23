@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createEmptyData } from '../domain/defaults'
 import type { AppData } from '../domain/types'
-import { createDemoData } from '../domain/seed'
 import { loadAppData, saveAppData } from '../storage/database'
 
 type DataUpdater = AppData | ((previous: AppData) => AppData)
@@ -11,7 +11,7 @@ interface AppContextValue {
   ready: boolean
   updateData: (updater: DataUpdater, message?: string) => void
   replaceData: (data: AppData, message?: string) => void
-  resetDemoData: () => void
+  clearAllData: () => void
   announce: (message: string) => void
   announcement: string
 }
@@ -19,7 +19,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>(() => createDemoData())
+  const [data, setData] = useState<AppData>(() => createEmptyData())
   const [ready, setReady] = useState(false)
   const [announcement, setAnnouncement] = useState('')
 
@@ -30,7 +30,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (active) setData(saved)
       })
       .catch(() => {
-        if (active) setAnnouncement('Local data could not be opened. MyHub is using temporary demo data.')
+        if (active) setAnnouncement('Local data could not be opened. MyHub is using temporary empty data.')
       })
       .finally(() => {
         if (active) setReady(true)
@@ -42,13 +42,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return
-    void saveAppData(data).catch(() => setAnnouncement('Changes could not be saved. Export your data before closing this tab.'))
+    void saveAppData(data).catch(() =>
+      setAnnouncement('Changes could not be saved. Export your data before closing this tab.'),
+    )
   }, [data, ready])
 
   useEffect(() => {
-    const mode = data.settings.appearance === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      : data.settings.appearance
+    const mode =
+      data.settings.appearance === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : data.settings.appearance
     document.documentElement.dataset.theme = mode
     document.documentElement.style.colorScheme = mode
   }, [data.settings.appearance])
@@ -74,14 +79,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [announce],
   )
 
-  const resetDemoData = useCallback(() => {
-    setData(createDemoData())
-    announce('Demo data restored.')
+  const clearAllData = useCallback(() => {
+    setData(createEmptyData())
+    announce('All MyHub data on this device was cleared. GitHub Sync settings were kept.')
   }, [announce])
 
   const value = useMemo(
-    () => ({ data, ready, updateData, replaceData, resetDemoData, announce, announcement }),
-    [data, ready, updateData, replaceData, resetDemoData, announce, announcement],
+    () => ({ data, ready, updateData, replaceData, clearAllData, announce, announcement }),
+    [data, ready, updateData, replaceData, clearAllData, announce, announcement],
   )
 
   return (

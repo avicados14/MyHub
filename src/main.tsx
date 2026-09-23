@@ -6,12 +6,15 @@ import '@fontsource-variable/newsreader'
 import './styles/global.css'
 import App from './app/App'
 import { AppProvider } from './app/AppContext'
+import { GitHubSyncProvider } from './sync/GitHubSyncContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
       <AppProvider>
-        <App />
+        <GitHubSyncProvider>
+          <App />
+        </GitHubSyncProvider>
       </AppProvider>
     </HashRouter>
   </StrictMode>,

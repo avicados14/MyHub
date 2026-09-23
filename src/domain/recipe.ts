@@ -31,7 +31,12 @@ export const scaleIngredient = (ingredient: RecipeIngredient, factor: number): R
 
 export const scaledIngredients = (recipe: Recipe, servings: number): RecipeIngredient[] => {
   const factor = servings / recipe.originalYield
-  return recipe.ingredients.map((item) => scaleIngredient(item, factor))
+  return recipe.ingredients.map((item) => {
+    if (item.scaledOverride && Math.abs(item.scaledOverride.yield - servings) < 0.0001) {
+      return { ...item, quantity: item.scaledOverride.quantity, unit: item.scaledOverride.unit }
+    }
+    return scaleIngredient(item, factor)
+  })
 }
 
 export const multiplyNutrition = (nutrition: Nutrition, servings: number): Nutrition => ({

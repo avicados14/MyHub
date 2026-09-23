@@ -1,4 +1,5 @@
 import type { CalendarEvent, HomeworkAssignment, StudySettings } from './types'
+import { eventTimesOnDate } from './calendar'
 import { dateFromLocal, makeId, minutesFromTime, timeFromMinutes, toLocalDate } from '../utilities/date'
 
 const priorityScore = { high: 0, medium: 1, low: 2 }
@@ -14,10 +15,38 @@ export const rankAssignments = (assignments: HomeworkAssignment[]): HomeworkAssi
       return a.id.localeCompare(b.id)
     })
 
-const overlaps = (start: number, end: number, event: CalendarEvent): boolean => {
-  const eventStart = minutesFromTime(event.startTime)
-  const eventEnd = minutesFromTime(event.endTime)
+const overlaps = (start: number, end: number, event: CalendarEvent, date = event.date): boolean => {
+  const times = eventTimesOnDate(event, date)
+  if (!times) return false
+  const eventStart = minutesFromTime(times.startTime)
+  const eventEnd = minutesFromTime(times.endTime)
   return start < eventEnd && end > eventStart
+}
+
+const MAX_PLANNING_DAYS = 366 * 5
+
+export interface StudyBlockValidation {
+  valid: boolean
+  warning?: string
+}
+
+export const validateStudyBlock = (
+  candidate: Pick<CalendarEvent, 'id' | 'date' | 'startTime' | 'endTime'>,
+  existingEvents: CalendarEvent[],
+): StudyBlockValidation => {
+  const start = minutesFromTime(candidate.startTime)
+  const end = minutesFromTime(candidate.endTime)
+  if (end <= start) return { valid: false, warning: 'End time must be after start time.' }
+  const conflict = existingEvents.find(
+    (event) => event.id !== candidate.id && overlaps(start, end, event, candidate.date),
+  )
+  const conflictTimes = conflict ? eventTimesOnDate(conflict, candidate.date) : null
+  return conflict
+    ? {
+        valid: true,
+        warning: `This overlaps “${conflict.title}” from ${conflictTimes?.startTime ?? conflict.startTime} to ${conflictTimes?.endTime ?? conflict.endTime}.`,
+      }
+    : { valid: true }
 }
 
 export interface StudyPlanResult {
@@ -45,21 +74,37 @@ export const generateStudyPlan = (
     remaining = Math.max(0, remaining - alreadyScheduled)
 
     const due = dateFromLocal(assignment.dueDate, assignment.dueTime)
-    for (let offset = 0; remaining > 0 && offset <= 14; offset += 1) {
+    const deadlineDays = Math.max(0, Math.ceil((due.getTime() - startDay.getTime()) / 86_400_000))
+    const finalOffset = Math.min(deadlineDays, MAX_PLANNING_DAYS)
+    for (let offset = 0; remaining > 0 && offset <= finalOffset; offset += 1) {
       const day = new Date(startDay)
       day.setDate(day.getDate() + offset)
       if (day.getTime() > due.getTime()) break
       const date = toLocalDate(day)
-      const dayEvents = [...existingEvents, ...blocks].filter((event) => event.date === date)
+      const avoided: CalendarEvent[] = settings.avoidTimes
+        .filter((range) => range.days.includes(day.getDay()))
+        .map((range) => ({
+          id: `avoid-${range.id}-${date}`,
+          createdAt: '',
+          updatedAt: '',
+          source: 'generated',
+          kind: 'event',
+          title: range.label || 'Avoid time',
+          date,
+          startTime: range.startTime,
+          endTime: range.endTime,
+        }))
+      const dayEvents = [...existingEvents, ...blocks, ...avoided].filter((event) => eventTimesOnDate(event, date))
       let cursor = minutesFromTime(settings.earliestTime)
       const limit = minutesFromTime(settings.latestTime)
 
       while (remaining > 0 && cursor < limit) {
         const duration = Math.min(settings.defaultBlockMinutes, settings.maxBlockMinutes, remaining)
         const end = cursor + duration
-        const conflict = dayEvents.find((event) => overlaps(cursor, end, event))
+        const conflict = dayEvents.find((event) => overlaps(cursor, end, event, date))
         if (conflict) {
-          cursor = minutesFromTime(conflict.endTime) + settings.breakMinutes
+          const conflictEnd = eventTimesOnDate(conflict, date)?.endTime ?? conflict.endTime
+          cursor = minutesFromTime(conflictEnd) + settings.breakMinutes
           continue
         }
         if (end > limit || dateFromLocal(date, timeFromMinutes(end)).getTime() > due.getTime()) break

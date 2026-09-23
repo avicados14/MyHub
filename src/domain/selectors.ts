@@ -1,12 +1,15 @@
 import type { AppData, CalendarEvent, HomeworkAssignment, MealEntry, Nutrition } from './types'
+import { eventCoversDate, visibleAssignments, visibleCalendarEvents } from './calendar'
 import { sumNutrition } from './recipe'
 import { dateFromLocal, toLocalDate } from '../utilities/date'
 
 export const eventsForDate = (data: AppData, date = toLocalDate(new Date())): CalendarEvent[] =>
-  data.events.filter((event) => event.date === date).toSorted((a, b) => a.startTime.localeCompare(b.startTime))
+  visibleCalendarEvents(data)
+    .filter((event) => eventCoversDate(event, date))
+    .toSorted((a, b) => a.startTime.localeCompare(b.startTime))
 
 export const dueAssignments = (data: AppData): HomeworkAssignment[] =>
-  data.assignments
+  visibleAssignments(data)
     .filter((assignment) => assignment.status !== 'complete')
     .toSorted((a, b) => dateFromLocal(a.dueDate, a.dueTime).getTime() - dateFromLocal(b.dueDate, b.dueTime).getTime())
 

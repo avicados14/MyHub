@@ -6,40 +6,46 @@ The web application is the product-validation phase for a future native SwiftUI 
 
 ## What MyHub Does
 
-**School planning** combines manual calendar events, imported iCalendar (`.ics`) events, homework deadlines, estimated work, and preferred study hours. The deterministic planner creates conflict-free study blocks and preserves blocks that the user locks, completes, or manually adjusts.
+**School planning** combines editable calendar events, multiple local iCalendar (`.ics`) sources, homework with subtasks and provenance, estimated work, preferred study hours, and configured avoid-time ranges. The deterministic planner works through each deadline and preserves blocks that the user locks, completes, moves, or resizes.
 
-**Food planning** combines a recipe library, cooking-friendly serving scaling, a weekly meal planner, prepared-versus-consumed servings, leftovers, immutable food-log snapshots, and daily nutrition progress.
+**Food planning** combines structured recipes and reviewable imports, cooking-friendly serving scaling and conversions, a weekly meal planner, prepared-versus-consumed servings, reusable leftovers, packaged foods, immutable food-log snapshots, and daily nutrition progress.
 
-**Pantry and groceries** aggregate compatible recipe ingredients, compare those requirements with saved inventory, generate a mobile-friendly shopping list, preserve completed trips as historical snapshots, and optionally add purchases back to the pantry.
+**Pantry and groceries** aggregate compatible recipe ingredients, compare those requirements with saved inventory, require an explicit Pantry Check decision for every requirement and added staple, generate a mobile-friendly editable shopping list, preserve completed trips as historical snapshots, and add only confirmed purchases back to the pantry.
 
 ## Project Status
 
-Version **0.1.0** is a functional Phase 1 web prototype.
+Version **0.1.0** is a complete Phase 1 web prototype. The school, calendar, food, pantry, grocery, search, backup, and encrypted-sync workflows are integrated and verified together. `REQUIREMENTS_AUDIT.md` records the final evidence and the boundaries reserved for native iPhone and iPad work.
 
 Working now:
 
 - Responsive dashboard with connected school and food summaries
 - Day, week, and month calendar views
-- Manual events and local `.ics` imports
-- Homework creation, progress, completion, priority, and deletion
-- Deterministic conflict-aware study scheduling
-- Study-block locking, completion, removal, and calendar editing
-- Recipe library, details, favorites, creation, and yield scaling
-- Weekly meal planning with prepared, consumed, and leftover balances
-- Daily nutrition snapshots and editable targets
+- Full manual-event creation, editing, and deletion with source-aware display
+- Previewed, confirmed multi-file `.ics` imports for Canvas, Google Calendar, and other exports
+- RFC line unfolding, common timezone/all-day handling, rich event metadata, stable deduplication, and Canvas assignment mapping
+- Full homework editing, progress/status, subtasks, source links, and imported provenance
+- Deterministic conflict-aware study scheduling through deadlines, including configured avoid-time ranges
+- Study-block locking, completion, removal, accessible form editing, direct week-column drag, and 15-minute resize buttons
+- Structured recipe creation/editing, source metadata, notes, ingredient overrides, persistent current yield, and US/metric display conversion
+- Reviewable recipe drafts from permitted URL JSON-LD, pasted content, local image OCR, or user-supplied social caption/screenshot/video frame
+- Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with prepared, consumed, and leftover balances
+- Packaged-food entry, read-only Open Food Facts lookup, local Nutrition Facts OCR with confirmation, and immutable six-metric nutrition snapshots
+- Daily nutrition snapshots, editable targets, and totals that exclude planned meals until consumption is recorded
 - Pantry inventory across pantry, refrigerator, and freezer
-- Grocery aggregation, Pantry Check, shopping, completion, pantry handoff, and immutable history
-- Universal search across recipes, homework, and pantry items
-- IndexedDB persistence, JSON export/import, and demo reset
+- Grocery aggregation across compatible mass, volume, and count units; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history
+- Universal search across recipes, homework, pantry items, packaged foods, grocery history, and meal plans
+- Empty first run, IndexedDB persistence, versioned migration, JSON export/import, and confirmed clear-all
+- Optional encrypted GitHub Sync to a dedicated private data repository
 - Light, dark, desktop, tablet, and mobile layouts
 - GitHub Pages deployment workflow
 
 In development or intentionally limited:
 
-- Canvas URL refresh is best-effort because many feeds block direct browser requests. Local `.ics` import is the reliable fallback.
-- Recipe URL, social-media, image, video, OCR, barcode, and public nutrition database adapters are not connected to a server in this static prototype. Manual entry remains functional.
-- Drag-and-drop is not required for any task; accessible button and form controls provide the current editing path.
-- Local data does not synchronize between devices.
+- Local `.ics` file import is the reliable browser path. Encrypted private-repository calendar snapshots can be checked after GitHub Sync is unlocked; no private feed URL or calendar file is bundled with MyHub.
+- Recipe URL and Open Food Facts requests are direct browser requests and can fail because of CORS, network access, or incomplete public records. The interface preserves provenance, requires review for imported/OCR values, and offers pasted/manual entry fallbacks; CI uses mocked lookup/parser tests and does not require remote data.
+- Image/video OCR runs locally in the browser after the user selects a file. Social intake accepts only user-supplied captions, screenshots, or local video frames; MyHub does not log in, scrape, or bypass platform restrictions.
+- Study blocks can be dragged between week columns, but drag-and-drop is never required: the edit form and labeled keyboard-operable resize buttons remain available.
+- GitHub Sync is snapshot-based rather than a transactional database; simultaneous edits require an explicit choice of copy.
 
 Planned for native iOS and iPadOS after web review:
 
@@ -110,23 +116,35 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, unit normalization, grocery aggregation, nutrition totals, leftover limits, scheduling conflicts, due-date prioritization, ICS parsing, IndexedDB persistence, and backup validation. Browser tests cover the connected acceptance flows.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. The completed release passed 84 unit tests and 117 Playwright tests across desktop, tablet, and mobile. A separate 42-action exploratory walkthrough also completed without runtime or HTTP errors.
 
 ## GitHub Pages Deployment
 
-The workflow at `.github/workflows/pages.yml` runs on pushes to `main` and can also be started manually. It installs dependencies, runs linting, strict type checking, unit tests, Chromium browser tests, and a production build. It then uses the current GitHub Pages artifact workflow with least-privilege `pages: write` and `id-token: write` permissions.[2]
+The workflow at `.github/workflows/pages.yml` runs on pushes to `main` and can also be started manually. It installs dependencies, checks formatting, runs linting, strict type checking, unit tests, the complete Playwright Chromium matrix, and a production build. That matrix contains desktop, tablet, and mobile projects. The workflow then uses the current GitHub Pages artifact workflow with least-privilege `pages: write` and `id-token: write` permissions.[2]
 
 In the repository, choose **Settings → Pages → Build and deployment → GitHub Actions** if it is not already selected.
 
 ## Data Storage
 
-Structured data is stored in IndexedDB under the current browser profile and origin. Data survives ordinary reloads and browser restarts, but it is not a cloud backup and does not automatically appear on another device.
+Structured data is stored immediately in IndexedDB under the current browser profile and origin. A fresh installation starts with empty events, assignments, recipes, packaged foods, meals, leftovers, food logs, pantry, and grocery records. Version 1 local data and JSON backups migrate to the version 2 schema without dropping records.
 
-Use **Settings → Data & privacy → Export data** to download a portable JSON backup. Import validates the MyHub backup envelope before replacing local data.
+Use **Settings → Data & privacy → Export data** to download a portable JSON backup. Import validates and migrates the MyHub backup envelope before replacing local data. **JSON exports are plaintext** and may contain private academic and food records.
 
-## Resetting Demo Data
+## Optional GitHub Sync
 
-Open **Settings → Data & privacy**, export anything you want to keep, and choose **Reset demo data**. MyHub asks for explicit confirmation before replacing current local data.
+GitHub Sync keeps IndexedDB as the offline working store and uploads only a versioned encrypted snapshot to the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc` by default. It uses PBKDF2-SHA-256 with 310,000 iterations and AES-256-GCM. The encryption passphrase remains only in component/context memory.
+
+When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. Files larger than 1 MB use GitHub's authenticated raw media representation, as required by the Contents API.[3] A separate producer for that encrypted snapshot is not bundled with this static client.
+
+The configured private repository has been verified end to end in a fresh Chromium profile. It recovered 27 cookbook recipes, imported 3,365 events from the 2 encrypted calendar feeds, and wrote the combined `AppData` snapshot back as ciphertext. The remote envelope was fetched again and decrypted to the same counts; collection names were absent from the remote plaintext representation.
+
+Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
+
+The target repository must be private. Conditional writes use the current blob SHA, writes are serialized, and conflicts require choosing **Use this device** or **Use GitHub**. Browser integration tests intercept the provider requests, verify private-repository enforcement, and confirm that committed request bodies contain encrypted envelopes rather than recipe names or other AppData plaintext. Deleting the latest remote snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
+
+## Clearing Data
+
+Open **Settings → Data & privacy**, export anything you want to keep, and choose **Clear all data**. MyHub asks for explicit confirmation and restores empty personal collections while retaining reasonable non-personal defaults. The GitHub connection is not deleted; pause/unlink it separately, and use the explicit remote-delete control if needed.
 
 ## Repository Structure
 
@@ -149,13 +167,13 @@ The future Apple application will reimplement the proven workflows using SwiftUI
 
 ## Privacy
 
-MyHub has no advertising, behavioral analytics, trackers, accounts, or marketing software. Core data and calculations stay in the browser. A user-initiated Canvas feed request goes directly from the browser to the provided URL; if the request is blocked, MyHub does not route it through another service.
+MyHub has no advertising, behavioral analytics, trackers, accounts, or marketing software. Core data and calculations stay in the browser unless the user enables optional client-side encrypted GitHub Sync. A user-initiated Canvas feed request goes directly from the browser to the provided URL; if the request is blocked, MyHub does not route it through another service.
 
 Exported JSON backups can contain private academic and food records. Store them accordingly. Do not commit personal backup files or private feed URLs.
 
 ## Known Limitations
 
-GitHub Pages is static hosting. It cannot safely hold private API keys or act as a cross-origin proxy. Some automatic imports therefore require a future backend or native adapter. IndexedDB can also be cleared by browser or device storage management, so regular exports are recommended.
+GitHub Pages is static hosting. MyHub therefore uses a user-supplied, repository-scoped fine-grained token instead of embedding a client secret. The browser necessarily holds the unlocked token and passphrase in memory while sync is active, so a compromised page/runtime can access them; unlinking clears the durable encrypted credential, not GitHub history. Some automatic imports still require a future backend or native adapter. IndexedDB can be cleared by browser or device storage management, so regular backups or encrypted sync are recommended.
 
 ## Roadmap
 
@@ -167,5 +185,6 @@ GitHub Pages is static hosting. It cannot safely hold private API keys or act as
 
 ## References
 
-[1]: https://vite.dev/guide/static-deploy.html "Vite — Deploying a Static Site"
-[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages "GitHub Docs — Using Custom Workflows with GitHub Pages"
+[1]: https://vite.dev/guide/static-deploy.html 'Vite: Deploying a Static Site'
+[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs: Using custom workflows with GitHub Pages'
+[3]: https://docs.github.com/en/rest/repos/contents 'GitHub REST API endpoints for repository contents'

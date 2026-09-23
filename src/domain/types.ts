@@ -4,16 +4,10 @@ export type AssignmentStatus = 'not-started' | 'in-progress' | 'complete'
 export type CalendarKind = 'event' | 'study' | 'meal-prep'
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type StorageLocation = 'Pantry' | 'Refrigerator' | 'Freezer'
-export type GroceryCategory =
-  | 'Produce'
-  | 'Meat & Seafood'
-  | 'Dairy'
-  | 'Bakery'
-  | 'Frozen'
-  | 'Pantry'
-  | 'Snacks'
-  | 'Household'
-  | 'Other'
+export type BuiltInGroceryCategory =
+  'Produce' | 'Meat & Seafood' | 'Dairy' | 'Bakery' | 'Frozen' | 'Pantry' | 'Snacks' | 'Household' | 'Other'
+
+export type GroceryCategory = BuiltInGroceryCategory | (string & {})
 
 export interface EntityBase {
   id: string
@@ -27,13 +21,36 @@ export interface CalendarEvent extends EntityBase {
   date: string
   startTime: string
   endTime: string
+  endDate?: string
+  allDay?: boolean
   kind: CalendarKind
   course?: string
+  description?: string
+  location?: string
+  categories?: string[]
+  sourceUrl?: string
+  uid?: string
+  sourceFeedId?: string
+  sourceType?: CalendarFeed['kind']
+  importedAt?: string
   assignmentId?: string
   locked?: boolean
   userAdjusted?: boolean
   completed?: boolean
   sourceLabel?: string
+}
+
+export interface CalendarFeed {
+  id: string
+  name: string
+  kind: 'canvas' | 'google' | 'ics'
+  importMode?: 'file' | 'url' | 'private-snapshot'
+  url?: string
+  enabled: boolean
+  status: 'not-configured' | 'connected' | 'error'
+  lastRefresh?: string
+  lastImportCount?: number
+  lastAssignmentCount?: number
 }
 
 export interface HomeworkSubtask {
@@ -55,6 +72,10 @@ export interface HomeworkAssignment extends EntityBase {
   subtasks: HomeworkSubtask[]
   sourceLabel?: string
   sourceUrl?: string
+  sourceFeedId?: string
+  sourceType?: CalendarFeed['kind']
+  externalId?: string
+  importedAt?: string
 }
 
 export interface Nutrition {
@@ -66,6 +87,14 @@ export interface Nutrition {
   sodium: number
 }
 
+export interface NutritionProvenance {
+  kind: 'manual' | 'nutrition-label' | 'database' | 'recipe-calculation' | 'estimated' | 'unknown'
+  capturedAt: string
+  estimated: boolean
+  sourceLabel?: string
+  sourceUrl?: string
+}
+
 export interface RecipeIngredient {
   id: string
   name: string
@@ -74,6 +103,11 @@ export interface RecipeIngredient {
   unit: string
   category: GroceryCategory
   note?: string
+  scaledOverride?: {
+    yield: number
+    quantity: number | null
+    unit: string
+  }
 }
 
 export interface RecipeStep {
@@ -84,29 +118,71 @@ export interface RecipeStep {
 export interface Recipe extends EntityBase {
   name: string
   description: string
+  notes?: string
   image: string
   category: string
   tags: string[]
   favorite: boolean
   originalYield: number
+  currentYield?: number
   prepMinutes: number
   cookMinutes: number
   ingredients: RecipeIngredient[]
   steps: RecipeStep[]
   nutritionPerServing: Nutrition
+  nutritionProvenance: NutritionProvenance
   sourceLabel: string
   sourceUrl?: string
   needsReview?: boolean
+  reviewedAt?: string
+  reviewNotes?: string
+}
+
+export interface PackagedFood extends EntityBase {
+  name: string
+  brand?: string
+  barcode?: string
+  servingSize: { quantity: number; unit: string }
+  servingsPerContainer?: number
+  nutritionPerServing: Nutrition
+  nutritionProvenance: NutritionProvenance
+  image?: string
+  notes?: string
+  needsReview?: boolean
+  reviewedAt?: string
+}
+
+export interface MealSourceSnapshot {
+  sourceType: 'recipe' | 'packaged' | 'custom' | 'leftover'
+  sourceId?: string
+  name: string
+  image?: string
+  nutritionPerServing: Nutrition
+  nutritionProvenance: NutritionProvenance
+  capturedAt: string
 }
 
 export interface MealEntry extends EntityBase {
   date: string
   slot: MealSlot
   recipeId?: string
+  packagedFoodId?: string
+  leftoverId?: string
   customName?: string
   servings: number
   preparedServings: number
   consumedServings: number
+  sourceSnapshot: MealSourceSnapshot
+}
+
+export interface Leftover extends EntityBase {
+  sourceMealId: string
+  sourceSnapshot: MealSourceSnapshot
+  preparedOn: string
+  servingsRemaining: number
+  storageLocation: Extract<StorageLocation, 'Refrigerator' | 'Freezer'>
+  useByDate?: string
+  notes?: string
 }
 
 export interface FoodLogEntry extends EntityBase {
@@ -114,6 +190,8 @@ export interface FoodLogEntry extends EntityBase {
   name: string
   servings: number
   nutritionSnapshot: Nutrition
+  provenanceSnapshot: NutritionProvenance
+  sourceSnapshot: MealSourceSnapshot
   origin: 'recipe' | 'packaged' | 'custom' | 'leftover'
 }
 
@@ -139,6 +217,9 @@ export interface GroceryItem extends EntityBase {
   sourceRecipeIds: string[]
   pantryQuantity: number
   pantryDecision: 'unreviewed' | 'none' | 'saved' | 'enough' | 'custom'
+  pantryCustomQuantity?: number
+  needsReview?: boolean
+  reviewReason?: string
 }
 
 export interface GroceryList extends EntityBase {
@@ -154,12 +235,48 @@ export interface GroceryHistoryEntry extends EntityBase {
   items: GroceryItem[]
 }
 
+export interface AvoidTimeRange {
+  id: string
+  label: string
+  days: number[]
+  startTime: string
+  endTime: string
+}
+
 export interface StudySettings {
   earliestTime: string
   latestTime: string
   defaultBlockMinutes: number
   breakMinutes: number
   maxBlockMinutes: number
+  avoidTimes: AvoidTimeRange[]
+}
+
+export type MealPlanningMode =
+  'balanced' | 'variety' | 'meal-prep' | 'favor-leftovers' | 'minimize-waste' | 'minimize-unique-ingredients'
+
+export interface MealPlanningPreferences {
+  mode: MealPlanningMode
+  preferredSlots: MealSlot[]
+  targetPrepServings: number
+  favorAvailablePantry: boolean
+}
+
+export interface GroceryCategorySetting {
+  id: string
+  name: GroceryCategory
+  sortOrder: number
+  enabled: boolean
+}
+
+export interface GroceryStaple {
+  id: string
+  name: string
+  canonicalName: string
+  quantity: number
+  unit: string
+  category: GroceryCategory
+  enabled: boolean
 }
 
 export interface UserSettings {
@@ -168,21 +285,21 @@ export interface UserSettings {
   appearance: 'light' | 'dark' | 'system'
   nutritionTargets: Nutrition
   study: StudySettings
-  groceryStaples: string[]
-  canvas: {
-    feedUrl: string
-    status: 'not-configured' | 'connected' | 'error'
-    lastRefresh?: string
-  }
+  mealPlanning: MealPlanningPreferences
+  groceryCategories: GroceryCategorySetting[]
+  groceryStaples: GroceryStaple[]
+  calendarFeeds: CalendarFeed[]
 }
 
 export interface AppData {
-  schemaVersion: 1
-  seededAt: string
+  schemaVersion: 2
+  initializedAt: string
   events: CalendarEvent[]
   assignments: HomeworkAssignment[]
   recipes: Recipe[]
+  packagedFoods: PackagedFood[]
   meals: MealEntry[]
+  leftovers: Leftover[]
   foodLog: FoodLogEntry[]
   pantry: PantryItem[]
   activeGroceryList: GroceryList | null
@@ -192,8 +309,16 @@ export interface AppData {
 
 export interface MyHubBackup {
   format: 'myhub-backup'
-  formatVersion: 1
+  formatVersion: 2
   appVersion: string
   exportedAt: string
   data: AppData
+}
+
+export interface MyHubBackupV1 {
+  format: 'myhub-backup'
+  formatVersion: 1
+  appVersion: string
+  exportedAt: string
+  data: unknown
 }

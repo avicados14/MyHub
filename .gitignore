@@ -5,6 +5,8 @@ playwright-report/
 test-results/
 artifacts/
 *.local
+*.ics
+*.ical
 .env
 .env.*
 !.env.example

@@ -29,6 +29,8 @@ jobs:
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Check formatting
+        run: npm run format:check
       - name: Lint
         run: npm run lint
       - name: Type check
@@ -36,7 +38,7 @@ jobs:
       - name: Run unit tests
         run: npm run test
       - name: Run browser tests
-        run: npm run test:e2e -- --project=desktop
+        run: npm run test:e2e
       - name: Build production site
         run: npm run build
       - name: Configure GitHub Pages
