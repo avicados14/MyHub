@@ -4,6 +4,7 @@ import {
   ArrowUp,
   Cloud,
   CloudOff,
+  Copy,
   Database,
   Download,
   Github,
@@ -13,15 +14,17 @@ import {
   Pause,
   Play,
   Plus,
+  QrCode,
   RefreshCw,
   ShieldCheck,
+  Smartphone,
   Trash2,
   Upload,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
-import { Card, Field, PageHeader, StatusBadge } from '../../components/ui'
+import { Card, Field, Modal, PageHeader, StatusBadge } from '../../components/ui'
 import { parseIcsResult, replaceImportedFeedAssignments, replaceImportedFeedEvents } from '../../domain/ics'
 import { NUTRITION_FIELDS } from '../../domain/nutrition'
 import type {
@@ -37,6 +40,7 @@ import type {
 } from '../../domain/types'
 import '../../styles/crosscut-v2.css'
 import { createBackup, parseBackup } from '../../storage/database'
+import { createDevicePairingLink, type DevicePairingLink } from '../../sync/devicePairing'
 import { useGitHubSync, type GitHubSyncStatus } from '../../sync/GitHubSyncContext'
 import { makeId } from '../../utilities/date'
 
@@ -127,6 +131,10 @@ export default function SettingsPage() {
   const [token, setToken] = useState('')
   const [passphrase, setPassphrase] = useState('')
   const [syncBusy, setSyncBusy] = useState(false)
+  const [pairingOpen, setPairingOpen] = useState(false)
+  const [pairingBusy, setPairingBusy] = useState(false)
+  const [pairingError, setPairingError] = useState('')
+  const [pairing, setPairing] = useState<(DevicePairingLink & { qrDataUrl: string }) | null>(null)
 
   useEffect(() => {
     const preferred =
@@ -381,6 +389,43 @@ export default function SettingsPage() {
       // The provider exposes a safe error message.
     } finally {
       setSyncBusy(false)
+    }
+  }
+
+  const closePairing = () => {
+    setPairingOpen(false)
+    setPairing(null)
+    setPairingError('')
+  }
+
+  const startPairing = async () => {
+    setPairingOpen(true)
+    setPairingBusy(true)
+    setPairing(null)
+    setPairingError('')
+    try {
+      const link = await createDevicePairingLink(github.createDevicePairing(), window.location.href)
+      const { toDataURL } = await import('qrcode')
+      const qrDataUrl = await toDataURL(link.url, {
+        width: 320,
+        margin: 2,
+        color: { dark: '#13213f', light: '#ffffff' },
+        errorCorrectionLevel: 'M',
+      })
+      setPairing({ ...link, qrDataUrl })
+    } catch (error) {
+      setPairingError(error instanceof Error ? error.message : 'A pairing code could not be created.')
+    } finally {
+      setPairingBusy(false)
+    }
+  }
+
+  const copyPairingValue = async (value: string, message: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      announce(message)
+    } catch {
+      announce('Clipboard access was blocked. Keep this dialog open and type the value instead.')
     }
   }
 
@@ -1073,60 +1118,72 @@ export default function SettingsPage() {
                 </div>
               </div>
               {!needsUnlock && !isConfigured ? (
-                <div className="settings-fields settings-fields--grid sync-grid">
-                  <Field label="Repository owner">
-                    <input
-                      name="githubOwner"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      value={owner}
-                      onChange={(event) => setOwner(event.target.value)}
-                    />
-                  </Field>
-                  <Field label="Repository name">
-                    <input
-                      name="githubRepo"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      value={repo}
-                      onChange={(event) => setRepo(event.target.value)}
-                    />
-                  </Field>
-                  <Field label="Snapshot path">
-                    <input
-                      name="githubPath"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      value={path}
-                      onChange={(event) => setPath(event.target.value)}
-                    />
-                  </Field>
-                  <Field
-                    label="Fine-grained token"
-                    hint="Limit it to MyHub-Data with Contents read/write only. Do not grant workflows, administration, or a classic PAT."
-                  >
-                    <input
-                      name="githubToken"
-                      type="password"
-                      autoComplete="off"
-                      spellCheck={false}
-                      value={token}
-                      onChange={(event) => setToken(event.target.value)}
-                    />
-                  </Field>
-                  <Field
-                    label="Encryption passphrase"
-                    hint="At least 12 characters. It stays only in memory and cannot be recovered by MyHub."
-                  >
-                    <input
-                      name="githubPassphrase"
-                      type="password"
-                      autoComplete="off"
-                      value={passphrase}
-                      onChange={(event) => setPassphrase(event.target.value)}
-                    />
-                  </Field>
-                </div>
+                <>
+                  <div className="phone-sync-guide">
+                    <Smartphone aria-hidden="true" />
+                    <div>
+                      <strong>Opening MyHub on a new phone?</strong>
+                      <p>
+                        On a device that is already connected, open GitHub Sync and choose “Pair another device.” Scan
+                        its QR here instead of re-entering repository credentials.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="settings-fields settings-fields--grid sync-grid">
+                    <Field label="Repository owner">
+                      <input
+                        name="githubOwner"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        value={owner}
+                        onChange={(event) => setOwner(event.target.value)}
+                      />
+                    </Field>
+                    <Field label="Repository name">
+                      <input
+                        name="githubRepo"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        value={repo}
+                        onChange={(event) => setRepo(event.target.value)}
+                      />
+                    </Field>
+                    <Field label="Snapshot path">
+                      <input
+                        name="githubPath"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        value={path}
+                        onChange={(event) => setPath(event.target.value)}
+                      />
+                    </Field>
+                    <Field
+                      label="Fine-grained token"
+                      hint="Limit it to MyHub-Data with Contents read/write only. Do not grant workflows, administration, or a classic PAT."
+                    >
+                      <input
+                        name="githubToken"
+                        type="password"
+                        autoComplete="off"
+                        spellCheck={false}
+                        value={token}
+                        onChange={(event) => setToken(event.target.value)}
+                      />
+                    </Field>
+                    <Field
+                      label="Encryption passphrase"
+                      hint="At least 12 characters. It stays only in memory and cannot be recovered by MyHub."
+                    >
+                      <input
+                        name="githubPassphrase"
+                        type="password"
+                        autoComplete="off"
+                        value={passphrase}
+                        onChange={(event) => setPassphrase(event.target.value)}
+                      />
+                    </Field>
+                  </div>
+                </>
               ) : null}
               {needsUnlock ? (
                 <div className="unlock-panel">
@@ -1223,6 +1280,14 @@ export default function SettingsPage() {
                     onClick={() => void runSyncAction(github.syncNow)}
                   >
                     <RefreshCw aria-hidden="true" /> Sync now
+                  </button>
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={syncBusy || github.paused || github.status !== 'current'}
+                    onClick={() => void startPairing()}
+                  >
+                    <Smartphone aria-hidden="true" /> Pair another device
                   </button>
                   <button
                     className="button button--quiet"
@@ -1347,6 +1412,80 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+      <Modal
+        open={pairingOpen}
+        title="Pair another device"
+        description="Scan the encrypted QR with your phone, then enter the separate 16-character code."
+        onClose={closePairing}
+      >
+        <div className="pairing-dialog" aria-live="polite">
+          {pairingBusy ? <p className="settings-empty-copy">Creating an encrypted setup package…</p> : null}
+          {pairingError ? (
+            <div className="inline-alert" role="alert">
+              <AlertTriangle aria-hidden="true" />
+              <span>
+                <strong>A pairing code could not be created.</strong>
+                {pairingError}
+              </span>
+            </div>
+          ) : null}
+          {pairing ? (
+            <>
+              <div className="pairing-dialog__qr">
+                <img src={pairing.qrDataUrl} width="320" height="320" alt="Encrypted MyHub setup QR code" />
+              </div>
+              <div className="pairing-dialog__code">
+                <span>Pairing code</span>
+                <strong translate="no">{pairing.pairingCode}</strong>
+                <small>
+                  Use both before{' '}
+                  {new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date(pairing.expiresAt))}.
+                </small>
+              </div>
+              <div className="pairing-dialog__security">
+                <ShieldCheck aria-hidden="true" />
+                <p>
+                  The QR contains an encrypted setup package, not readable credentials. It does not contain the pairing
+                  code. Anyone who gets both can connect while your GitHub token remains valid, so keep them private.
+                </p>
+              </div>
+              <details className="pairing-dialog__fallback">
+                <summary>Use an encrypted setup link instead</summary>
+                <Field label="Encrypted phone setup link" hint="This link still requires the separate pairing code.">
+                  <textarea
+                    name="deviceSetupLink"
+                    rows={3}
+                    readOnly
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={pairing.url}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </Field>
+              </details>
+              <div className="button-row">
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() => void copyPairingValue(pairing.url, 'Encrypted phone setup link copied.')}
+                >
+                  <QrCode aria-hidden="true" /> Copy setup link
+                </button>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() => void copyPairingValue(pairing.pairingCode, 'Pairing code copied.')}
+                >
+                  <Copy aria-hidden="true" /> Copy pairing code
+                </button>
+                <button className="button button--primary" type="button" onClick={closePairing}>
+                  Done
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </Modal>
     </>
   )
 }

@@ -77,13 +77,15 @@ const installGitHubMock = async (page: Page, state: RemoteState) => {
 }
 
 const connect = async (page: Page, passphrase: string) => {
+  const token = `test-token-${createTestKeyMaterial()}`
   await page.goto('/#/settings')
   await page.getByLabel('Repository owner').fill(target.owner)
   await page.getByLabel('Repository name').fill(target.repo)
   await page.getByLabel('Snapshot path').fill(target.path)
-  await page.getByLabel('Fine-grained token').fill(`test-token-${createTestKeyMaterial()}`)
+  await page.getByLabel('Fine-grained token').fill(token)
   await page.getByLabel('Encryption passphrase').fill(passphrase)
   await page.getByRole('button', { name: 'Connect and sync' }).click()
+  return { token }
 }
 
 const freshRemoteState = (): RemoteState => ({
@@ -131,6 +133,46 @@ test('connect verifies a private repository and pushes only an encrypted snapsho
   )
   expect(JSON.stringify(envelope)).not.toContain('Teriyaki Steak Bowls')
   expect(JSON.stringify(envelope)).not.toContain('Crosscut User')
+})
+
+test('an unlocked device pairs a fresh phone that pulls encrypted GitHub data without exposing credentials', async ({
+  browser,
+  page,
+}) => {
+  const state = freshRemoteState()
+  await installGitHubMock(page, state)
+  const passphrase = createTestKeyMaterial()
+  const { token } = await connect(page, passphrase)
+  await expect(page.locator('#github-sync').getByText('current')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pair another device' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Pair another device' })
+  await expect(dialog.getByAltText('Encrypted MyHub setup QR code')).toBeVisible()
+  const pairingCode = await dialog.getByText(/^[A-Z2-9]{4}(?:-[A-Z2-9]{4}){3}$/u).innerText()
+  await dialog.getByText('Use an encrypted setup link instead').click()
+  const setupLink = await dialog.getByLabel('Encrypted phone setup link').inputValue()
+
+  expect(setupLink).not.toContain(token)
+  expect(setupLink).not.toContain(passphrase)
+  expect(setupLink).not.toContain(pairingCode)
+
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  const phonePage = await phone.newPage()
+  await installGitHubMock(phonePage, state)
+  await phonePage.goto(setupLink)
+  await expect(phonePage.getByRole('heading', { name: 'Set up this device' })).toBeVisible()
+  await expect.poll(() => phonePage.url()).not.toContain('pair=')
+  await phonePage.getByLabel('16-character pairing code').fill(pairingCode)
+  await phonePage.getByRole('button', { name: 'Connect this device' }).click()
+
+  await expect(
+    phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
+  ).toBeVisible()
+  expect(state.writes).toHaveLength(1)
+  const savedCredential = (await readSyncCredential(phonePage)) as { tokenEnvelope?: string } | null
+  expect(savedCredential?.tokenEnvelope).toBeTruthy()
+  expect(savedCredential?.tokenEnvelope).not.toContain(token)
+  await phone.close()
 })
 
 test('connect rejects a public repository before reading or writing snapshot data', async ({ page }) => {
