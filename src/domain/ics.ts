@@ -1,5 +1,6 @@
+import { RRule } from 'rrule'
 import type { CalendarEvent, HomeworkAssignment } from './types'
-import { addDays, timeFromMinutes, toLocalDate } from '../utilities/date'
+import { addDays, dateFromLocal, timeFromMinutes, toLocalDate } from '../utilities/date'
 
 export type IcsSourceType = 'canvas' | 'google' | 'ics'
 
@@ -7,7 +8,10 @@ export interface IcsImportOptions {
   sourceLabel?: string
   sourceFeedId?: string
   sourceType?: IcsSourceType
+  sourceUrl?: string
   importedAt?: string
+  windowStart?: string
+  windowEnd?: string
 }
 
 export interface IcsParseResult {
@@ -28,6 +32,21 @@ interface ParsedDateTime {
   time: string
   allDay: boolean
 }
+
+interface ParsedComponent {
+  group: ContentLine[]
+  index: number
+  summary: string
+  start: ParsedDateTime
+  startProperty: ContentLine
+  end?: ParsedDateTime
+  uid: string
+  recurrenceKey: string
+}
+
+const MAX_OCCURRENCES_PER_EVENT = 1_000
+const DEFAULT_RECURRENCE_PAST_DAYS = 366
+const DEFAULT_RECURRENCE_FUTURE_DAYS = 366 * 2
 
 const unfoldLines = (text: string): string[] => text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/)
 
@@ -202,17 +221,160 @@ const assignmentFromEvent = (event: CalendarEvent, course: string, importedAt: s
   sourceLabel: event.sourceLabel,
   sourceUrl: event.sourceUrl,
   sourceFeedId: event.sourceFeedId,
+  sourceType: event.sourceType,
   externalId: event.uid,
   importedAt,
 })
 
+const recurrenceKeyOf = (value: ParsedDateTime): string =>
+  value.allDay ? value.date : `${value.date}T${value.time.replace(':', '')}`
+
+const pseudoUtcDate = (value: ParsedDateTime): Date => {
+  const [year = 1970, month = 1, day = 1] = value.date.split('-').map(Number)
+  const [hour = 0, minute = 0] = value.time.split(':').map(Number)
+  return new Date(Date.UTC(year, month - 1, day, hour, minute))
+}
+
+const parsedFromPseudoUtc = (date: Date, allDay: boolean): ParsedDateTime => ({
+  date: `${String(date.getUTCFullYear()).padStart(4, '0')}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`,
+  time: allDay
+    ? '00:00'
+    : `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`,
+  allDay,
+})
+
+const recurrenceBounds = (options: IcsImportOptions): { start: Date; end: Date } => {
+  const imported = new Date(options.importedAt ?? Date.now())
+  const base = Number.isNaN(imported.getTime()) ? new Date() : imported
+  const defaultStart = addDays(base, -DEFAULT_RECURRENCE_PAST_DAYS)
+  const defaultEnd = addDays(base, DEFAULT_RECURRENCE_FUTURE_DAYS)
+  const start = options.windowStart ? dateFromLocal(options.windowStart) : defaultStart
+  const end = options.windowEnd ? dateFromLocal(options.windowEnd, '23:59') : defaultEnd
+  return {
+    start: new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0)),
+    end: new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59)),
+  }
+}
+
+const explicitWindowContains = (event: CalendarEvent, options: IcsImportOptions): boolean =>
+  (!options.windowStart || (event.endDate ?? event.date) >= options.windowStart) &&
+  (!options.windowEnd || event.date <= options.windowEnd)
+
+const exdateKeys = (group: ContentLine[]): Set<string> => {
+  const keys = new Set<string>()
+  for (const property of group.filter((line) => line.name === 'EXDATE')) {
+    for (const value of property.value.split(',')) {
+      const parsed = parseDateTime({ ...property, value })
+      if (parsed) keys.add(recurrenceKeyOf(parsed))
+    }
+  }
+  return keys
+}
+
+const recurrenceStarts = (
+  component: ParsedComponent,
+  options: IcsImportOptions,
+  skippedKeys: Set<string>,
+): Array<{ start: ParsedDateTime; key: string }> => {
+  const property = firstProperty(component.group, 'RRULE')
+  if (!property) return [{ start: component.start, key: '' }]
+  try {
+    const parsed = RRule.parseString(property.value)
+    // Sub-hourly feeds can explode even inside a finite date window and are not normal school-calendar forms.
+    if (parsed.freq === RRule.HOURLY || parsed.freq === RRule.MINUTELY || parsed.freq === RRule.SECONDLY) {
+      return [{ start: component.start, key: recurrenceKeyOf(component.start) }]
+    }
+    const rule = new RRule({ ...parsed, dtstart: pseudoUtcDate(component.start) })
+    const bounds = recurrenceBounds(options)
+    const starts = rule.between(bounds.start, bounds.end, true).slice(0, MAX_OCCURRENCES_PER_EVENT)
+    return starts.flatMap((date) => {
+      const start = parsedFromPseudoUtc(date, component.start.allDay)
+      const key = recurrenceKeyOf(start)
+      return skippedKeys.has(key) ? [] : [{ start, key }]
+    })
+  } catch {
+    return [{ start: component.start, key: recurrenceKeyOf(component.start) }]
+  }
+}
+
+const shiftedEnd = (component: ParsedComponent, occurrenceStart: ParsedDateTime): ParsedDateTime | undefined => {
+  if (!component.end) return undefined
+  const sourceStart = pseudoUtcDate(component.start)
+  const sourceEnd = pseudoUtcDate(component.end)
+  const duration = Math.max(0, sourceEnd.getTime() - sourceStart.getTime())
+  return parsedFromPseudoUtc(new Date(pseudoUtcDate(occurrenceStart).getTime() + duration), component.end.allDay)
+}
+
+const buildEvent = (
+  component: ParsedComponent,
+  occurrenceStart: ParsedDateTime,
+  occurrenceKey: string,
+  options: Required<Pick<IcsImportOptions, 'sourceLabel' | 'sourceFeedId' | 'sourceType' | 'importedAt'>> &
+    Pick<IcsImportOptions, 'sourceUrl'>,
+): CalendarEvent => {
+  const { group, index, summary, uid } = component
+  const categories = categoriesOf(group)
+  const { title, course } = courseAndTitle(summary, categories)
+  const occurrenceEnd = shiftedEnd(component, occurrenceStart)
+  const allDay = occurrenceStart.allDay
+  const allDayEnd = occurrenceEnd?.allDay
+    ? toLocalDate(addDays(new Date(`${occurrenceEnd.date}T12:00:00`), -1))
+    : occurrenceStart.date
+  const defaultEnd = allDay
+    ? '23:59'
+    : timeFromMinutes(
+        Math.min(
+          23 * 60 + 59,
+          Number(occurrenceStart.time.slice(0, 2)) * 60 + Number(occurrenceStart.time.slice(3, 5)) + 60,
+        ),
+      )
+  const fallback = `${index}|${summary}|${component.startProperty.value}|${firstProperty(group, 'DTEND')?.value ?? ''}`
+  const itemUrl = firstProperty(group, 'URL')?.value
+  return {
+    id: stableEventId(options.sourceFeedId, uid, occurrenceKey, fallback),
+    createdAt: options.importedAt,
+    updatedAt: options.importedAt,
+    source: 'imported',
+    title,
+    date: occurrenceStart.date,
+    startTime: allDay ? '00:00' : occurrenceStart.time,
+    endTime: allDay ? '23:59' : (occurrenceEnd?.time ?? defaultEnd),
+    ...(occurrenceEnd?.date !== occurrenceStart.date || (allDay && allDayEnd !== occurrenceStart.date)
+      ? { endDate: allDay ? allDayEnd : occurrenceEnd?.date }
+      : {}),
+    allDay,
+    kind: 'event',
+    ...(course ? { course } : {}),
+    ...(firstProperty(group, 'DESCRIPTION')
+      ? { description: unescapeText(firstProperty(group, 'DESCRIPTION')?.value ?? '') }
+      : {}),
+    ...(firstProperty(group, 'LOCATION')
+      ? { location: unescapeText(firstProperty(group, 'LOCATION')?.value ?? '') }
+      : {}),
+    ...(categories.length ? { categories } : {}),
+    ...(itemUrl || options.sourceUrl ? { sourceUrl: unescapeText(itemUrl ?? options.sourceUrl ?? '') } : {}),
+    ...(uid ? { uid } : {}),
+    sourceFeedId: options.sourceFeedId,
+    sourceType: options.sourceType,
+    importedAt: options.importedAt,
+    sourceLabel: options.sourceLabel,
+  }
+}
+
+const dedupeById = <T extends { id: string }>(items: T[]): T[] => [
+  ...new Map(items.map((item) => [item.id, item])).values(),
+]
+
 export const parseIcsResult = (text: string, options: IcsImportOptions = {}): IcsParseResult => {
   if (!/(?:^|\r?\n)BEGIN:VCALENDAR(?:\r?\n|$)/.test(text))
     throw new Error('This file does not contain a valid iCalendar calendar.')
-  const sourceLabel = options.sourceLabel?.trim() || 'Imported ICS'
-  const sourceFeedId = options.sourceFeedId?.trim() || `feed-${stableHash(sourceLabel)}`
-  const sourceType = options.sourceType ?? 'ics'
-  const importedAt = options.importedAt ?? new Date().toISOString()
+  const normalizedOptions = {
+    sourceLabel: options.sourceLabel?.trim() || 'Imported ICS',
+    sourceFeedId: options.sourceFeedId?.trim() || `feed-${stableHash(options.sourceLabel?.trim() || 'Imported ICS')}`,
+    sourceType: options.sourceType ?? 'ics',
+    importedAt: options.importedAt ?? new Date().toISOString(),
+    ...(options.sourceUrl ? { sourceUrl: options.sourceUrl } : {}),
+  }
   const rawLines = unfoldLines(text)
   const calendarLines = rawLines.map(parseContentLine).filter((line): line is ContentLine => line !== null)
   const calendarName = firstProperty(calendarLines, 'X-WR-CALNAME')?.value
@@ -230,65 +392,83 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
   }
 
   let skippedEvents = 0
-  const assignments: HomeworkAssignment[] = []
-  const events = groups.flatMap((group, index) => {
+  const components = groups.flatMap((group, index): ParsedComponent[] => {
     const rawSummary = firstProperty(group, 'SUMMARY')?.value
     const startProperty = firstProperty(group, 'DTSTART')
-    if (!rawSummary || !startProperty) {
+    const recurrenceProperty = firstProperty(group, 'RECURRENCE-ID')
+    const recurrence = recurrenceProperty ? parseDateTime(recurrenceProperty) : null
+    const cancelled = firstProperty(group, 'STATUS')?.value.toUpperCase() === 'CANCELLED'
+    if ((!rawSummary && !cancelled) || (!startProperty && !recurrence)) {
       skippedEvents += 1
       return []
     }
-    const start = parseDateTime(startProperty)
+    const effectiveStartProperty = startProperty ?? recurrenceProperty!
+    const start = parseDateTime(effectiveStartProperty)
     if (!start) {
       skippedEvents += 1
       return []
     }
-    const endProperty = firstProperty(group, 'DTEND')
-    const parsedEnd = endProperty ? parseDateTime(endProperty) : null
-    const summary = unescapeText(rawSummary).trim()
-    const categories = categoriesOf(group)
-    const { title, course } = courseAndTitle(summary, categories)
-    const uid = unescapeText(firstProperty(group, 'UID')?.value ?? '')
-    const recurrence = firstProperty(group, 'RECURRENCE-ID')?.value ?? ''
-    const fallback = `${index}|${summary}|${startProperty.value}|${endProperty?.value ?? ''}`
-    const allDay = start.allDay
-    const allDayEnd = parsedEnd?.allDay ? toLocalDate(addDays(new Date(`${parsedEnd.date}T12:00:00`), -1)) : start.date
-    const defaultEnd = allDay
-      ? '23:59'
-      : timeFromMinutes(
-          Math.min(23 * 60 + 59, Number(start.time.slice(0, 2)) * 60 + Number(start.time.slice(3, 5)) + 60),
-        )
-    const event: CalendarEvent = {
-      id: stableEventId(sourceFeedId, uid, recurrence, fallback),
-      createdAt: importedAt,
-      updatedAt: importedAt,
-      source: 'imported',
-      title,
-      date: start.date,
-      startTime: allDay ? '00:00' : start.time,
-      endTime: allDay ? '23:59' : (parsedEnd?.time ?? defaultEnd),
-      ...(parsedEnd?.date !== start.date || (allDay && allDayEnd !== start.date)
-        ? { endDate: allDay ? allDayEnd : parsedEnd?.date }
-        : {}),
-      allDay,
-      kind: 'event',
-      ...(course ? { course } : {}),
-      ...(firstProperty(group, 'DESCRIPTION')
-        ? { description: unescapeText(firstProperty(group, 'DESCRIPTION')?.value ?? '') }
-        : {}),
-      ...(firstProperty(group, 'LOCATION')
-        ? { location: unescapeText(firstProperty(group, 'LOCATION')?.value ?? '') }
-        : {}),
-      ...(categories.length ? { categories } : {}),
-      ...(firstProperty(group, 'URL') ? { sourceUrl: unescapeText(firstProperty(group, 'URL')?.value ?? '') } : {}),
-      ...(uid ? { uid } : {}),
-      sourceFeedId,
-      importedAt,
-      sourceLabel,
-    }
-    if (isCanvasAssignment(group, sourceType, summary)) assignments.push(assignmentFromEvent(event, course, importedAt))
-    return [event]
+    return [
+      {
+        group,
+        index,
+        summary: unescapeText(rawSummary ?? 'Cancelled occurrence').trim(),
+        start,
+        startProperty: effectiveStartProperty,
+        end: firstProperty(group, 'DTEND') ? (parseDateTime(firstProperty(group, 'DTEND')!) ?? undefined) : undefined,
+        uid: unescapeText(firstProperty(group, 'UID')?.value ?? ''),
+        recurrenceKey: recurrence ? recurrenceKeyOf(recurrence) : '',
+      },
+    ]
   })
+
+  const bySeries = new Map<string, ParsedComponent[]>()
+  for (const component of components) {
+    const key = component.uid || `__component-${component.index}`
+    bySeries.set(key, [...(bySeries.get(key) ?? []), component])
+  }
+
+  const events: CalendarEvent[] = []
+  const assignments: HomeworkAssignment[] = []
+  for (const series of bySeries.values()) {
+    const overrides = series.filter((component) => component.recurrenceKey)
+    const overrideKeys = new Set(overrides.map((component) => component.recurrenceKey))
+    const masters = series.filter((component) => !component.recurrenceKey)
+
+    for (const master of masters) {
+      const excluded = new Set([...exdateKeys(master.group), ...overrideKeys])
+      for (const occurrence of recurrenceStarts(master, options, excluded)) {
+        const event = buildEvent(master, occurrence.start, occurrence.key, normalizedOptions)
+        if (!explicitWindowContains(event, options)) continue
+        events.push(event)
+        if (isCanvasAssignment(master.group, normalizedOptions.sourceType, master.summary)) {
+          assignments.push(
+            assignmentFromEvent(
+              event,
+              courseAndTitle(master.summary, categoriesOf(master.group)).course,
+              normalizedOptions.importedAt,
+            ),
+          )
+        }
+      }
+    }
+
+    for (const override of overrides) {
+      if (firstProperty(override.group, 'STATUS')?.value.toUpperCase() === 'CANCELLED') continue
+      const event = buildEvent(override, override.start, override.recurrenceKey, normalizedOptions)
+      if (!explicitWindowContains(event, options)) continue
+      events.push(event)
+      if (isCanvasAssignment(override.group, normalizedOptions.sourceType, override.summary)) {
+        assignments.push(
+          assignmentFromEvent(
+            event,
+            courseAndTitle(override.summary, categoriesOf(override.group)).course,
+            normalizedOptions.importedAt,
+          ),
+        )
+      }
+    }
+  }
 
   return {
     events: dedupeById(events),
@@ -297,10 +477,6 @@ export const parseIcsResult = (text: string, options: IcsImportOptions = {}): Ic
     skippedEvents,
   }
 }
-
-const dedupeById = <T extends { id: string }>(items: T[]): T[] => [
-  ...new Map(items.map((item) => [item.id, item])).values(),
-]
 
 export const mergeImportedEvents = (existing: CalendarEvent[], imported: CalendarEvent[]): CalendarEvent[] => {
   const byId = new Map(existing.map((event) => [event.id, event]))
@@ -330,6 +506,28 @@ export const mergeImportedAssignments = (
     }
   }
   return [...byId.values()]
+}
+
+export const replaceImportedFeedEvents = (
+  existing: CalendarEvent[],
+  sourceFeedId: string,
+  imported: CalendarEvent[],
+): CalendarEvent[] => {
+  const importedIds = new Set(imported.map((event) => event.id))
+  return mergeImportedEvents(existing, imported).filter(
+    (event) => event.sourceFeedId !== sourceFeedId || importedIds.has(event.id),
+  )
+}
+
+export const replaceImportedFeedAssignments = (
+  existing: HomeworkAssignment[],
+  sourceFeedId: string,
+  imported: HomeworkAssignment[],
+): HomeworkAssignment[] => {
+  const importedIds = new Set(imported.map((assignment) => assignment.id))
+  return mergeImportedAssignments(existing, imported).filter(
+    (assignment) => assignment.sourceFeedId !== sourceFeedId || importedIds.has(assignment.id),
+  )
 }
 
 export const parseIcs = (text: string, sourceLabel = 'Imported ICS'): CalendarEvent[] =>

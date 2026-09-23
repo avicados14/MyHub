@@ -21,7 +21,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../../app/AppContext'
 import { Card, Field, PageHeader, StatusBadge } from '../../components/ui'
-import { parseIcs } from '../../domain/ics'
+import { parseIcsResult, replaceImportedFeedAssignments, replaceImportedFeedEvents } from '../../domain/ics'
 import type {
   AvoidTimeRange,
   CalendarFeed,
@@ -202,21 +202,41 @@ export default function SettingsPage() {
   const importIcs = async (file?: File) => {
     if (!file) return
     const feed = data.settings.calendarFeeds.find((item) => item.id === icsTargetId)
+    if (!feed) {
+      announce('Choose a saved calendar feed before importing a file.')
+      return
+    }
     try {
-      const sourceLabel = feed?.name.trim() || file.name
-      const events = parseIcs(await file.text(), sourceLabel)
+      const importedAt = new Date().toISOString()
+      const sourceLabel = feed.name.trim() || file.name
+      const parsed = parseIcsResult(await file.text(), {
+        sourceLabel,
+        sourceFeedId: feed.id,
+        sourceType: feed.kind,
+        importedAt,
+      })
       updateData(
         (previous) => ({
           ...previous,
-          events: [...previous.events.filter((item) => !events.some((incoming) => incoming.id === item.id)), ...events],
+          events: replaceImportedFeedEvents(previous.events, feed.id, parsed.events),
+          assignments: replaceImportedFeedAssignments(previous.assignments, feed.id, parsed.assignments),
           settings: {
             ...previous.settings,
             calendarFeeds: previous.settings.calendarFeeds.map((item) =>
-              item.id === icsTargetId ? { ...item, status: 'connected', lastRefresh: new Date().toISOString() } : item,
+              item.id === feed.id
+                ? {
+                    ...item,
+                    importMode: 'file',
+                    status: 'connected',
+                    lastRefresh: importedAt,
+                    lastImportCount: parsed.events.length,
+                    lastAssignmentCount: parsed.assignments.length,
+                  }
+                : item,
             ),
           },
         }),
-        `Imported ${events.length} calendar events from ${file.name}.`,
+        `Imported ${parsed.events.length} calendar events and ${parsed.assignments.length} homework assignments from ${file.name}.`,
       )
     } catch (error) {
       announce(error instanceof Error ? error.message : 'The calendar file could not be imported.')
@@ -236,20 +256,37 @@ export default function SettingsPage() {
     try {
       const response = await fetch(url)
       if (!response.ok) throw new Error(`Calendar feed returned ${response.status}.`)
+      const importedAt = new Date().toISOString()
       const sourceLabel = feed.name.trim() || 'Calendar feed'
-      const events = parseIcs(await response.text(), sourceLabel)
+      const parsed = parseIcsResult(await response.text(), {
+        sourceLabel,
+        sourceFeedId: feed.id,
+        sourceType: feed.kind,
+        sourceUrl: url,
+        importedAt,
+      })
       updateData(
         (previous) => ({
           ...previous,
-          events: [...previous.events.filter((item) => item.sourceLabel !== sourceLabel), ...events],
+          events: replaceImportedFeedEvents(previous.events, feed.id, parsed.events),
+          assignments: replaceImportedFeedAssignments(previous.assignments, feed.id, parsed.assignments),
           settings: {
             ...previous.settings,
             calendarFeeds: previous.settings.calendarFeeds.map((item) =>
-              item.id === feed.id ? { ...item, status: 'connected', lastRefresh: new Date().toISOString() } : item,
+              item.id === feed.id
+                ? {
+                    ...item,
+                    importMode: 'url',
+                    status: 'connected',
+                    lastRefresh: importedAt,
+                    lastImportCount: parsed.events.length,
+                    lastAssignmentCount: parsed.assignments.length,
+                  }
+                : item,
             ),
           },
         }),
-        `${sourceLabel} refreshed with ${events.length} events.`,
+        `${sourceLabel} refreshed with ${parsed.events.length} events and ${parsed.assignments.length} homework assignments.`,
       )
     } catch {
       updateCalendarFeed(feed.id, { status: 'error' })
@@ -789,7 +826,10 @@ export default function SettingsPage() {
               />
               <div className="settings-record-list calendar-feed-list">
                 {data.settings.calendarFeeds.map((feed) => (
-                  <article className="settings-record calendar-feed-record" key={feed.id}>
+                  <article
+                    className={`settings-record calendar-feed-record${feed.enabled ? '' : ' is-disabled'}`}
+                    key={feed.id}
+                  >
                     <div className="calendar-feed-record__heading">
                       <label className="settings-toggle settings-toggle--compact">
                         <input
@@ -879,8 +919,16 @@ export default function SettingsPage() {
                               timeStyle: 'short',
                             }).format(new Date(feed.lastRefresh))
                           : 'Never'}
+                        {' · '}
+                        {feed.lastImportCount ?? 0} events · {feed.lastAssignmentCount ?? 0} homework
                       </small>
                     </div>
+                    {!feed.enabled ? (
+                      <p className="calendar-feed-record__disabled-note" role="status">
+                        Disabled records stay safely stored but are hidden from Calendar, Home, School, search, and
+                        study-plan conflicts. Re-enable this feed to restore them instantly.
+                      </p>
+                    ) : null}
                     {feed.status === 'error' ? (
                       <div className="inline-alert">
                         <CloudOff aria-hidden="true" />

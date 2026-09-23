@@ -95,6 +95,78 @@ describe('ICS import', () => {
     expect(mergeImportedEvents(result.events, result.events)).toHaveLength(1)
   })
 
+  it('expands common recurrence rules inside explicit bounds with stable occurrence IDs', () => {
+    const text = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:weekly-class\nDTSTART:20260901T090000\nDTEND:20260901T100000\nRRULE:FREQ=WEEKLY;BYDAY=TU,TH;COUNT=8\nSUMMARY:Structures\nEND:VEVENT\nEND:VCALENDAR`
+    const options = {
+      sourceLabel: 'Google classes',
+      sourceFeedId: 'google-classes',
+      sourceType: 'google' as const,
+      sourceUrl: 'https://calendar.example/private.ics',
+      importedAt: '2026-09-01T00:00:00.000Z',
+      windowStart: '2026-09-07',
+      windowEnd: '2026-09-18',
+    }
+    const result = parseIcsResult(text, options)
+    expect(result.events.map((event) => event.date)).toEqual(['2026-09-08', '2026-09-10', '2026-09-15', '2026-09-17'])
+    expect(result.events[0]).toMatchObject({
+      sourceFeedId: 'google-classes',
+      sourceType: 'google',
+      importedAt: '2026-09-01T00:00:00.000Z',
+      sourceUrl: 'https://calendar.example/private.ics',
+    })
+    expect(parseIcsResult(text, options).events.map((event) => event.id)).toEqual(
+      result.events.map((event) => event.id),
+    )
+  })
+
+  it('applies EXDATE and RECURRENCE-ID overrides without duplicating original instances', () => {
+    const result = parseIcsResult(
+      `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:office-hours
+DTSTART:20260901T090000
+DTEND:20260901T100000
+RRULE:FREQ=WEEKLY;COUNT=4
+EXDATE:20260908T090000
+SUMMARY:Office hours
+END:VEVENT
+BEGIN:VEVENT
+UID:office-hours
+RECURRENCE-ID:20260915T090000
+DTSTART:20260915T130000
+DTEND:20260915T140000
+SUMMARY:Moved office hours
+END:VEVENT
+BEGIN:VEVENT
+UID:office-hours
+RECURRENCE-ID:20260922T090000
+STATUS:CANCELLED
+END:VEVENT
+END:VCALENDAR`,
+      {
+        sourceFeedId: 'course-feed',
+        importedAt: '2026-09-01T00:00:00.000Z',
+        windowStart: '2026-09-01',
+        windowEnd: '2026-09-30',
+      },
+    )
+    expect(result.events.map((event) => `${event.date} ${event.startTime} ${event.title}`)).toEqual([
+      '2026-09-01 09:00 Office hours',
+      '2026-09-15 13:00 Moved office hours',
+    ])
+    expect(new Set(result.events.map((event) => event.id)).size).toBe(result.events.length)
+  })
+
+  it('uses a conservative default window for unbounded recurrence', () => {
+    const result = parseIcsResult(
+      `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:daily\nDTSTART:20200101T090000\nRRULE:FREQ=DAILY\nSUMMARY:Daily item\nEND:VEVENT\nEND:VCALENDAR`,
+      { importedAt: '2026-09-22T12:00:00.000Z' },
+    )
+    expect(result.events.length).toBeGreaterThan(700)
+    expect(result.events.length).toBeLessThanOrEqual(1_000)
+    expect(result.events.every((event) => event.date >= '2025-09-21' && event.date <= '2028-09-21')).toBe(true)
+  })
+
   it('rejects files that are not iCalendar data', () => {
     expect(() => parseIcs('not a calendar')).toThrow(/valid iCalendar/)
   })

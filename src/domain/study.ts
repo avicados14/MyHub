@@ -1,4 +1,5 @@
 import type { CalendarEvent, HomeworkAssignment, StudySettings } from './types'
+import { eventTimesOnDate } from './calendar'
 import { dateFromLocal, makeId, minutesFromTime, timeFromMinutes, toLocalDate } from '../utilities/date'
 
 const priorityScore = { high: 0, medium: 1, low: 2 }
@@ -14,9 +15,11 @@ export const rankAssignments = (assignments: HomeworkAssignment[]): HomeworkAssi
       return a.id.localeCompare(b.id)
     })
 
-const overlaps = (start: number, end: number, event: CalendarEvent): boolean => {
-  const eventStart = minutesFromTime(event.startTime)
-  const eventEnd = minutesFromTime(event.endTime)
+const overlaps = (start: number, end: number, event: CalendarEvent, date = event.date): boolean => {
+  const times = eventTimesOnDate(event, date)
+  if (!times) return false
+  const eventStart = minutesFromTime(times.startTime)
+  const eventEnd = minutesFromTime(times.endTime)
   return start < eventEnd && end > eventStart
 }
 
@@ -35,10 +38,14 @@ export const validateStudyBlock = (
   const end = minutesFromTime(candidate.endTime)
   if (end <= start) return { valid: false, warning: 'End time must be after start time.' }
   const conflict = existingEvents.find(
-    (event) => event.id !== candidate.id && event.date === candidate.date && overlaps(start, end, event),
+    (event) => event.id !== candidate.id && overlaps(start, end, event, candidate.date),
   )
+  const conflictTimes = conflict ? eventTimesOnDate(conflict, candidate.date) : null
   return conflict
-    ? { valid: true, warning: `This overlaps “${conflict.title}” from ${conflict.startTime} to ${conflict.endTime}.` }
+    ? {
+        valid: true,
+        warning: `This overlaps “${conflict.title}” from ${conflictTimes?.startTime ?? conflict.startTime} to ${conflictTimes?.endTime ?? conflict.endTime}.`,
+      }
     : { valid: true }
 }
 
@@ -87,16 +94,17 @@ export const generateStudyPlan = (
           startTime: range.startTime,
           endTime: range.endTime,
         }))
-      const dayEvents = [...existingEvents, ...blocks, ...avoided].filter((event) => event.date === date)
+      const dayEvents = [...existingEvents, ...blocks, ...avoided].filter((event) => eventTimesOnDate(event, date))
       let cursor = minutesFromTime(settings.earliestTime)
       const limit = minutesFromTime(settings.latestTime)
 
       while (remaining > 0 && cursor < limit) {
         const duration = Math.min(settings.defaultBlockMinutes, settings.maxBlockMinutes, remaining)
         const end = cursor + duration
-        const conflict = dayEvents.find((event) => overlaps(cursor, end, event))
+        const conflict = dayEvents.find((event) => overlaps(cursor, end, event, date))
         if (conflict) {
-          cursor = minutesFromTime(conflict.endTime) + settings.breakMinutes
+          const conflictEnd = eventTimesOnDate(conflict, date)?.endTime ?? conflict.endTime
+          cursor = minutesFromTime(conflictEnd) + settings.breakMinutes
           continue
         }
         if (end > limit || dateFromLocal(date, timeFromMinutes(end)).getTime() > due.getTime()) break

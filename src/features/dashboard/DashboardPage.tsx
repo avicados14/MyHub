@@ -2,6 +2,7 @@ import { ArrowUpRight, BookOpenCheck, CalendarClock, ChefHat, CircleAlert, Shopp
 import { Link } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, ProgressBar, StatusBadge } from '../../components/ui'
+import { visibleAssignments, visibleCalendarEvents } from '../../domain/calendar'
 import { dueAssignments, eventsForDate, greeting, mealsForDate, nutritionForDate } from '../../domain/selectors'
 import type { MealSlot, Nutrition } from '../../domain/types'
 import '../../styles/crosscut-v2.css'
@@ -40,10 +41,10 @@ export default function DashboardPage() {
   const groceryTotal = data.activeGroceryList?.items.length ?? 0
   const displayName = data.settings.name.trim()
   const greetingText = displayName ? `${greeting()}, ${displayName}.` : `${greeting()}.`
-  const weekAssignments = data.assignments.filter(
+  const weekAssignments = visibleAssignments(data).filter(
     (assignment) => assignment.status !== 'complete' && assignment.dueDate >= today && assignment.dueDate <= weekEnd,
   ).length
-  const weekStudyBlocks = data.events.filter(
+  const weekStudyBlocks = visibleCalendarEvents(data).filter(
     (event) => event.kind === 'study' && event.date >= today && event.date <= weekEnd,
   ).length
   const weekMeals = data.meals.filter((meal) => meal.date >= today && meal.date <= weekEnd).length

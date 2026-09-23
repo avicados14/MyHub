@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import '../styles/crosscut-v2.css'
+import { visibleAssignments } from '../domain/calendar'
 import { useApp } from './AppContext'
 
 const navigation = [
@@ -91,7 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         meta: 'Recipe',
         to: `/food/recipes/${recipe.id}`,
       }))
-    const assignments = data.assignments
+    const assignments = visibleAssignments(data)
       .filter((assignment) =>
         `${assignment.title} ${assignment.course} ${assignment.notes}`.toLowerCase().includes(term),
       )

@@ -119,4 +119,73 @@ describe('study planner', () => {
       validateStudyBlock({ id: 'block', date: '2026-09-22', startTime: '10:30', endTime: '11:15' }, [existing]),
     ).toMatchObject({ valid: true, warning: expect.stringContaining('Lab') })
   })
+
+  it('treats every covered day of a multi-day event as a study conflict', () => {
+    const trip: CalendarEvent = {
+      ...base,
+      id: 'trip',
+      title: 'Field trip',
+      date: '2026-09-22',
+      endDate: '2026-09-24',
+      startTime: '12:00',
+      endTime: '12:00',
+      kind: 'event',
+    }
+    expect(
+      validateStudyBlock({ id: 'block', date: '2026-09-23', startTime: '16:00', endTime: '16:45' }, [trip]),
+    ).toMatchObject({ valid: true, warning: expect.stringContaining('Field trip') })
+    const result = generateStudyPlan(
+      [assignment('covered-day', '2026-09-23', 'high', 45)],
+      [trip],
+      {
+        earliestTime: '16:00',
+        latestTime: '17:00',
+        defaultBlockMinutes: 45,
+        maxBlockMinutes: 60,
+        breakMinutes: 0,
+        avoidTimes: [],
+      },
+      new Date(2026, 8, 23, 8),
+    )
+    expect(result.blocks).toHaveLength(0)
+    expect(result.unscheduledMinutes).toBe(45)
+  })
+
+  it('does not generate duplicate work when locked or manually adjusted blocks are retained', () => {
+    const locked: CalendarEvent = {
+      ...base,
+      id: 'locked-study',
+      title: 'locked-work',
+      date: '2026-09-22',
+      startTime: '16:00',
+      endTime: '16:45',
+      kind: 'study',
+      assignmentId: 'locked-work',
+      locked: true,
+    }
+    const manual: CalendarEvent = {
+      ...locked,
+      id: 'manual-study',
+      title: 'manual-work',
+      assignmentId: 'manual-work',
+      date: '2026-09-23',
+      userAdjusted: true,
+      locked: false,
+    }
+    const result = generateStudyPlan(
+      [assignment('locked-work', '2026-09-23', 'high'), assignment('manual-work', '2026-09-24', 'high')],
+      [locked, manual],
+      {
+        earliestTime: '16:00',
+        latestTime: '18:00',
+        defaultBlockMinutes: 45,
+        maxBlockMinutes: 60,
+        breakMinutes: 15,
+        avoidTimes: [],
+      },
+      new Date(2026, 8, 22, 8),
+    )
+    expect(result.blocks).toEqual([])
+    expect(result.unscheduledMinutes).toBe(0)
+  })
 })

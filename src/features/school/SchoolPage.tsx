@@ -16,6 +16,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, Field, Modal, PageHeader, SegmentedControl, StatusBadge } from '../../components/ui'
+import { visibleAssignments, visibleCalendarEvents } from '../../domain/calendar'
 import { generateStudyPlan, rankAssignments } from '../../domain/study'
 import type { AssignmentStatus, HomeworkAssignment, Priority } from '../../domain/types'
 import { addDays, formatDate, formatTime, makeId, relativeDueLabel, toLocalDate } from '../../utilities/date'
@@ -49,8 +50,10 @@ export default function SchoolPage() {
   const view = params.get('view') ?? 'homework'
   const [assignmentModal, setAssignmentModal] = useState<'add' | HomeworkAssignment | null>(null)
   const [subtaskDrafts, setSubtaskDrafts] = useState<Record<string, string>>({})
-  const assignments = rankAssignments(data.assignments)
-  const studyBlocks = data.events
+  const activeAssignments = visibleAssignments(data)
+  const activeEvents = visibleCalendarEvents(data)
+  const assignments = rankAssignments(activeAssignments)
+  const studyBlocks = activeEvents
     .filter((event) => event.kind === 'study')
     .toSorted((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))
 
@@ -96,10 +99,10 @@ export default function SchoolPage() {
   }
 
   const generate = () => {
-    const retained = data.events.filter(
+    const retained = activeEvents.filter(
       (event) => event.kind !== 'study' || event.locked || event.userAdjusted || event.completed,
     )
-    const plan = generateStudyPlan(data.assignments, retained, data.settings.study)
+    const plan = generateStudyPlan(activeAssignments, retained, data.settings.study)
     updateData(
       (previous) => ({
         ...previous,

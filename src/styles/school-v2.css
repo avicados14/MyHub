@@ -183,6 +183,13 @@
 .event-block--study:active {
   cursor: grabbing;
 }
+.event-block--study.is-pointer-active {
+  z-index: 2;
+  border-color: var(--blue);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--blue) 24%, transparent);
+  cursor: grabbing;
+  user-select: none;
+}
 .event-block--study::before {
   position: absolute;
   z-index: 1;
@@ -253,6 +260,31 @@
 }
 .event-block__resize svg {
   width: 11px;
+}
+.event-block__pointer-handle {
+  position: absolute;
+  z-index: 4;
+  right: 12px;
+  left: 12px;
+  height: 9px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.event-block__pointer-handle::after {
+  position: absolute;
+  top: 3px;
+  right: 34%;
+  left: 34%;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--blue) 56%, transparent);
+  content: '';
+}
+.event-block__pointer-handle--start {
+  top: 0;
+}
+.event-block__pointer-handle--end {
+  bottom: 0;
 }
 .event-block__source {
   position: absolute;

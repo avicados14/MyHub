@@ -408,6 +408,26 @@
   gap: 16px;
 }
 
+.calendar-feed-record.is-disabled {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface-soft) 78%, var(--line));
+}
+
+.calendar-feed-record.is-disabled .settings-record__grid,
+.calendar-feed-record.is-disabled .calendar-feed-record__footer {
+  opacity: 0.72;
+}
+
+.calendar-feed-record__disabled-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--yellow);
+  color: var(--yellow-strong);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
 .calendar-feed-record__heading,
 .calendar-feed-record__footer {
   display: flex;

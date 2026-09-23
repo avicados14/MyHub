@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, Field, Modal, PageHeader, SegmentedControl, StatusBadge } from '../../components/ui'
+import { calendarEventOccurrenceKey, eventCoversDate, visibleCalendarEvents } from '../../domain/calendar'
 import { mergeImportedAssignments, mergeImportedEvents, parseIcsResult, type IcsSourceType } from '../../domain/ics'
 import { validateStudyBlock } from '../../domain/study'
 import type { CalendarEvent, CalendarFeed, HomeworkAssignment } from '../../domain/types'
@@ -88,6 +89,9 @@ const boundsForWindow = (window: DateWindow, today = new Date()): { start?: stri
 const inBounds = (date: string, bounds: ReturnType<typeof boundsForWindow>): boolean =>
   (!bounds.start || date >= bounds.start) && (!bounds.end || date <= bounds.end)
 
+const SNAP_MINUTES = 15
+const POINTER_PIXELS_PER_SNAP = 8
+
 const upsertFeeds = (existing: CalendarFeed[], incoming: CalendarFeed[]): CalendarFeed[] => {
   const feeds = new Map(existing.map((feed) => [feed.id, feed]))
   for (const feed of incoming) feeds.set(feed.id, { ...feeds.get(feed.id), ...feed })
@@ -109,6 +113,7 @@ export default function CalendarPage() {
   const weekStart = startOfWeek(anchor)
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart])
   const today = toLocalDate(new Date())
+  const visibleEvents = useMemo(() => visibleCalendarEvents(data), [data])
 
   const eventsByDate = useMemo(
     () =>
@@ -117,13 +122,13 @@ export default function CalendarPage() {
           const date = toLocalDate(day)
           return [
             date,
-            data.events
-              .filter((event) => event.date === date)
+            visibleEvents
+              .filter((event) => eventCoversDate(event, date))
               .toSorted((a, b) => a.startTime.localeCompare(b.startTime)),
           ]
         }),
       ),
-    [data.events, days],
+    [days, visibleEvents],
   )
 
   const navigate = (direction: number) => {
@@ -221,6 +226,16 @@ export default function CalendarPage() {
       `Study block moved to ${formatDate(date)}.`,
     )
 
+  const moveStudyBlockByPointer = (event: CalendarEvent, date: string, minuteDelta: number) => {
+    const duration = minutesFromTime(event.endTime) - minutesFromTime(event.startTime)
+    const nextStart = Math.max(0, Math.min(23 * 60 + 59 - duration, minutesFromTime(event.startTime) + minuteDelta))
+    updateStudyBlock(
+      event,
+      { date, startTime: timeFromMinutes(nextStart), endTime: timeFromMinutes(nextStart + duration) },
+      `Study block moved to ${formatDate(date)} at ${formatTime(timeFromMinutes(nextStart))}.`,
+    )
+  }
+
   const resizeStudyBlock = (event: CalendarEvent, minutes: number) => {
     const nextEnd = minutesFromTime(event.endTime) + minutes
     if (nextEnd <= minutesFromTime(event.startTime) || nextEnd > 23 * 60 + 59) {
@@ -231,6 +246,20 @@ export default function CalendarPage() {
       event,
       { date: event.date, startTime: event.startTime, endTime: timeFromMinutes(nextEnd) },
       `Study block ${minutes > 0 ? 'extended' : 'shortened'} by 15 minutes.`,
+    )
+  }
+
+  const resizeStudyBlockByPointer = (event: CalendarEvent, edge: 'start' | 'end', minutes: number) => {
+    const nextStart = minutesFromTime(event.startTime) + (edge === 'start' ? minutes : 0)
+    const nextEnd = minutesFromTime(event.endTime) + (edge === 'end' ? minutes : 0)
+    if (nextStart < 0 || nextEnd > 23 * 60 + 59 || nextEnd - nextStart < SNAP_MINUTES) {
+      announce('A study block must remain at least 15 minutes and stay within one day.')
+      return
+    }
+    updateStudyBlock(
+      event,
+      { date: event.date, startTime: timeFromMinutes(nextStart), endTime: timeFromMinutes(nextEnd) },
+      `Study block ${edge === 'start' ? 'start' : 'end'} resized by ${Math.abs(minutes)} minutes.`,
     )
   }
 
@@ -258,6 +287,8 @@ export default function CalendarPage() {
             sourceFeedId: feedId,
             sourceType,
             importedAt,
+            windowStart: bounds.start,
+            windowEnd: bounds.end,
           })
           const events = parsed.events.filter((event) => inBounds(event.date, bounds))
           const assignments = parsed.assignments.filter((assignment) => inBounds(assignment.dueDate, bounds))
@@ -321,22 +352,27 @@ export default function CalendarPage() {
           return
         }
         const checkedAt = new Date().toISOString()
-        const feeds: CalendarFeed[] = parsed.feeds.map((feed) => ({
-          id: feed.id,
-          name: feed.name,
-          kind: feed.type,
-          importMode: 'private-snapshot',
-          enabled: true,
-          status: 'connected',
-          lastRefresh: checkedAt,
-          lastImportCount: feed.eventCount,
-          lastAssignmentCount: feed.assignmentCount,
-        }))
         updateData((previous) => ({
           ...previous,
           events: mergeImportedEvents(previous.events, parsed.events),
           assignments: mergeImportedAssignments(previous.assignments, parsed.assignments),
-          settings: { ...previous.settings, calendarFeeds: upsertFeeds(previous.settings.calendarFeeds, feeds) },
+          settings: {
+            ...previous.settings,
+            calendarFeeds: upsertFeeds(
+              previous.settings.calendarFeeds,
+              parsed.feeds.map((feed) => ({
+                id: feed.id,
+                name: feed.name,
+                kind: feed.type,
+                importMode: 'private-snapshot' as const,
+                enabled: previous.settings.calendarFeeds.find((item) => item.id === feed.id)?.enabled ?? true,
+                status: 'connected' as const,
+                lastRefresh: checkedAt,
+                lastImportCount: feed.eventCount,
+                lastAssignmentCount: feed.assignmentCount,
+              })),
+            ),
+          },
         }))
         setPrivateStatus(
           `Private snapshot current: ${parsed.events.length} events and ${parsed.assignments.length} assignments checked ${new Date(checkedAt).toLocaleTimeString()}.`,
@@ -366,10 +402,10 @@ export default function CalendarPage() {
 
   const displayEvents =
     view === 'day'
-      ? data.events
-          .filter((event) => event.date === toLocalDate(anchor))
+      ? visibleEvents
+          .filter((event) => eventCoversDate(event, toLocalDate(anchor)))
           .toSorted((a, b) => a.startTime.localeCompare(b.startTime))
-      : data.events
+      : visibleEvents
 
   return (
     <>
@@ -388,8 +424,9 @@ export default function CalendarPage() {
           <span>
             <strong>Calendar sources</strong>
             <small>
-              {data.settings.calendarFeeds.length} saved · files remain on this device and sync through encrypted
-              AppData
+              {data.settings.calendarFeeds.filter((feed) => feed.enabled).length} enabled ·{' '}
+              {data.settings.calendarFeeds.length - data.settings.calendarFeeds.filter((feed) => feed.enabled).length}{' '}
+              hidden · records remain stored on this device
             </small>
           </span>
         </div>
@@ -460,6 +497,7 @@ export default function CalendarPage() {
                 <section
                   key={date}
                   className={date === today ? 'week-day is-today' : 'week-day'}
+                  data-calendar-date={date}
                   aria-label={formatDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}
                   onDragOver={(event) => {
                     if (event.dataTransfer.types.includes('application/x-myhub-study')) event.preventDefault()
@@ -478,10 +516,13 @@ export default function CalendarPage() {
                   <div className="week-day__events">
                     {dayEvents.map((event) => (
                       <EventBlock
-                        key={event.id}
+                        key={calendarEventOccurrenceKey(event, date)}
                         event={event}
+                        occurrenceDate={date}
                         onEdit={() => setEventModal(event)}
                         onResize={(minutes) => resizeStudyBlock(event, minutes)}
+                        onPointerMove={(targetDate, minutes) => moveStudyBlockByPointer(event, targetDate, minutes)}
+                        onPointerResize={(edge, minutes) => resizeStudyBlockByPointer(event, edge, minutes)}
                       />
                     ))}
                     {!dayEvents.length ? <span className="week-day__empty">Drop a study block here</span> : null}
@@ -498,15 +539,18 @@ export default function CalendarPage() {
               <EventBlock
                 key={event.id}
                 event={event}
+                occurrenceDate={toLocalDate(anchor)}
                 onEdit={() => setEventModal(event)}
                 onResize={(minutes) => resizeStudyBlock(event, minutes)}
+                onPointerMove={(targetDate, minutes) => moveStudyBlockByPointer(event, targetDate, minutes)}
+                onPointerResize={(edge, minutes) => resizeStudyBlockByPointer(event, edge, minutes)}
               />
             ))}
             {!displayEvents.length ? <p className="calendar-empty">No events yet. This day is open.</p> : null}
           </div>
         ) : null}
 
-        {view === 'month' ? <MonthGrid anchor={anchor} events={data.events} onSelect={setEventModal} /> : null}
+        {view === 'month' ? <MonthGrid anchor={anchor} events={visibleEvents} onSelect={setEventModal} /> : null}
       </Card>
 
       <Modal
@@ -570,7 +614,7 @@ export default function CalendarPage() {
               <select name="dateWindow" defaultValue="term">
                 <option value="term">Current term</option>
                 <option value="year">Current year</option>
-                <option value="all">All history</option>
+                <option value="all">All dated items (recurrences use a safe window)</option>
               </select>
             </Field>
           </div>
@@ -787,21 +831,29 @@ function ImportPreviewPanel({ preview }: { preview: ImportPreview }) {
 
 function EventBlock({
   event,
+  occurrenceDate,
   onEdit,
   onResize,
+  onPointerMove,
+  onPointerResize,
 }: {
   event: CalendarEvent
+  occurrenceDate: string
   onEdit: () => void
   onResize: (minutes: number) => void
+  onPointerMove: (date: string, minutes: number) => void
+  onPointerResize: (edge: 'start' | 'end', minutes: number) => void
 }) {
+  const [pointerActive, setPointerActive] = useState(false)
   const sourceUrl = safeExternalUrl(event.sourceUrl)
   const sourceName =
     event.kind === 'study' ? 'Study' : event.sourceLabel || (event.source === 'imported' ? 'Imported' : 'Manual')
   const sourceClass = event.kind === 'study' ? 'study' : event.source === 'imported' ? 'imported' : 'manual'
   return (
     <article
-      className={`event-block event-block--${sourceClass}`}
-      draggable={event.kind === 'study'}
+      className={`event-block event-block--${sourceClass}${pointerActive ? ' is-pointer-active' : ''}`}
+      data-study-block-id={event.kind === 'study' ? event.id : undefined}
+      draggable={event.kind === 'study' && !pointerActive}
       onDragStart={(dragEvent) => {
         if (event.kind === 'study') {
           dragEvent.dataTransfer.setData('application/x-myhub-study', event.id)
@@ -809,10 +861,52 @@ function EventBlock({
         }
       }}
     >
+      {event.kind === 'study' ? (
+        <PointerHandle
+          className="event-block__pointer-handle event-block__pointer-handle--start"
+          onActiveChange={setPointerActive}
+          onCommit={(minuteDelta) => onPointerResize('start', minuteDelta)}
+        />
+      ) : null}
       <button
         type="button"
         className="event-block__main"
         onClick={onEdit}
+        onPointerDown={(pointerEvent) => {
+          if (event.kind !== 'study' || pointerEvent.button !== 0) return
+          const target = pointerEvent.currentTarget
+          const originX = pointerEvent.clientX
+          const originY = pointerEvent.clientY
+          let dragged = false
+          target.setPointerCapture(pointerEvent.pointerId)
+          setPointerActive(true)
+          const move = (moveEvent: PointerEvent) => {
+            if (Math.abs(moveEvent.clientX - originX) + Math.abs(moveEvent.clientY - originY) >= 5) dragged = true
+          }
+          const cancel = () => {
+            target.removeEventListener('pointermove', move)
+            target.removeEventListener('pointerup', finish)
+            target.removeEventListener('pointercancel', cancel)
+            setPointerActive(false)
+          }
+          const finish = (endEvent: PointerEvent) => {
+            target.removeEventListener('pointermove', move)
+            target.removeEventListener('pointerup', finish)
+            target.removeEventListener('pointercancel', cancel)
+            if (target.hasPointerCapture(endEvent.pointerId)) target.releasePointerCapture(endEvent.pointerId)
+            setPointerActive(false)
+            if (!dragged) return
+            const day = document
+              .elementFromPoint(endEvent.clientX, endEvent.clientY)
+              ?.closest<HTMLElement>('[data-calendar-date]')
+            const date = day?.dataset.calendarDate ?? occurrenceDate
+            const minuteDelta = Math.round((endEvent.clientY - originY) / POINTER_PIXELS_PER_SNAP) * SNAP_MINUTES
+            onPointerMove(date, minuteDelta)
+          }
+          target.addEventListener('pointermove', move)
+          target.addEventListener('pointerup', finish)
+          target.addEventListener('pointercancel', cancel)
+        }}
         aria-label={`Edit ${event.kind === 'study' ? 'study block' : 'event'} ${event.title} at ${event.allDay ? 'all day' : formatTime(event.startTime)}`}
       >
         <span className="event-block__time">{event.allDay ? 'All day' : formatTime(event.startTime)}</span>
@@ -823,14 +917,21 @@ function EventBlock({
         </StatusBadge>
       </button>
       {event.kind === 'study' ? (
-        <div className="event-block__resize" aria-label={`Resize ${event.title}`}>
-          <button type="button" aria-label={`Shorten ${event.title} by 15 minutes`} onClick={() => onResize(-15)}>
-            <ClockArrowUp aria-hidden="true" /> −15
-          </button>
-          <button type="button" aria-label={`Extend ${event.title} by 15 minutes`} onClick={() => onResize(15)}>
-            <ClockArrowDown aria-hidden="true" /> +15
-          </button>
-        </div>
+        <>
+          <div className="event-block__resize" aria-label={`Resize ${event.title}`}>
+            <button type="button" aria-label={`Shorten ${event.title} by 15 minutes`} onClick={() => onResize(-15)}>
+              <ClockArrowUp aria-hidden="true" /> −15
+            </button>
+            <button type="button" aria-label={`Extend ${event.title} by 15 minutes`} onClick={() => onResize(15)}>
+              <ClockArrowDown aria-hidden="true" /> +15
+            </button>
+          </div>
+          <PointerHandle
+            className="event-block__pointer-handle event-block__pointer-handle--end"
+            onActiveChange={setPointerActive}
+            onCommit={(minuteDelta) => onPointerResize('end', minuteDelta)}
+          />
+        </>
       ) : sourceUrl ? (
         <a
           className="event-block__source"
@@ -843,6 +944,47 @@ function EventBlock({
         </a>
       ) : null}
     </article>
+  )
+}
+
+function PointerHandle({
+  className,
+  onActiveChange,
+  onCommit,
+}: {
+  className: string
+  onActiveChange: (active: boolean) => void
+  onCommit: (minutes: number) => void
+}) {
+  return (
+    <span
+      className={className}
+      aria-hidden="true"
+      onPointerDown={(pointerEvent) => {
+        if (pointerEvent.button !== 0) return
+        pointerEvent.preventDefault()
+        pointerEvent.stopPropagation()
+        const target = pointerEvent.currentTarget
+        const originY = pointerEvent.clientY
+        target.setPointerCapture(pointerEvent.pointerId)
+        onActiveChange(true)
+        const cancel = () => {
+          target.removeEventListener('pointerup', finish)
+          target.removeEventListener('pointercancel', cancel)
+          onActiveChange(false)
+        }
+        const finish = (endEvent: PointerEvent) => {
+          target.removeEventListener('pointerup', finish)
+          target.removeEventListener('pointercancel', cancel)
+          if (target.hasPointerCapture(endEvent.pointerId)) target.releasePointerCapture(endEvent.pointerId)
+          onActiveChange(false)
+          const minuteDelta = Math.round((endEvent.clientY - originY) / POINTER_PIXELS_PER_SNAP) * SNAP_MINUTES
+          if (minuteDelta) onCommit(minuteDelta)
+        }
+        target.addEventListener('pointerup', finish)
+        target.addEventListener('pointercancel', cancel)
+      }}
+    />
   )
 }
 
@@ -862,7 +1004,7 @@ function MonthGrid({
     <div className="month-grid">
       {days.map((day) => {
         const date = toLocalDate(day)
-        const daily = events.filter((event) => event.date === date)
+        const daily = events.filter((event) => eventCoversDate(event, date))
         return (
           <section key={date} className={day.getMonth() === anchor.getMonth() ? 'month-day' : 'month-day is-outside'}>
             <span>{day.getDate()}</span>
@@ -870,7 +1012,7 @@ function MonthGrid({
               <button
                 type="button"
                 onClick={() => onSelect(event)}
-                key={event.id}
+                key={calendarEventOccurrenceKey(event, date)}
                 className={`month-event month-event--${event.kind === 'study' ? 'study' : event.source === 'imported' ? 'imported' : 'manual'}`}
               >
                 {event.title}

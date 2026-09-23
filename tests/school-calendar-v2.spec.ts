@@ -7,6 +7,8 @@ const localDate = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+const compactDate = (date: Date): string => localDate(date).replaceAll('-', '')
+
 test('homework supports complete editing, subtasks, and safe source provenance', async ({ page }) => {
   await page.goto('/#/school')
   await page.getByRole('button', { name: 'Add homework' }).click()
@@ -112,4 +114,145 @@ test('generated study blocks expose keyboard-operable fifteen-minute resizing', 
   expect(
     Number(end.slice(0, 2)) * 60 + Number(end.slice(3)) - (Number(start.slice(0, 2)) * 60 + Number(start.slice(3))),
   ).toBe(60)
+})
+
+test('direct Canvas refresh imports homework and disabled feeds hide without deleting it', async ({ page }) => {
+  const due = new Date()
+  due.setDate(due.getDate() + 3)
+  await page.route('https://calendar.example/canvas.ics', async (route) => {
+    await route.fulfill({
+      contentType: 'text/calendar',
+      body: `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:direct-canvas-assignment\nDTSTART:${compactDate(due)}T235900\nSUMMARY:Direct feed assignment [TEST 301]\nURL:https://example.edu/courses/1/assignments/9\nEND:VEVENT\nEND:VCALENDAR`,
+    })
+  })
+
+  await page.goto('/#/settings')
+  await page.getByRole('button', { name: 'Add feed' }).click()
+  const feed = page.locator('.calendar-feed-record').last()
+  await feed.getByLabel('Feed name').fill('Canvas direct')
+  await feed.getByLabel('Provider').selectOption('canvas')
+  await feed.getByLabel('Feed URL').fill('https://calendar.example/canvas.ics')
+  await feed.getByRole('button', { name: 'Refresh feed' }).click()
+  await expect(feed.getByText('1 events · 1 homework')).toBeVisible()
+
+  await page.goto('/#/school')
+  await expect(page.getByRole('heading', { name: 'Direct feed assignment' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open source' })).toHaveAttribute(
+    'href',
+    'https://example.edu/courses/1/assignments/9',
+  )
+
+  await page.goto('/#/settings')
+  const savedFeed = page.locator('.calendar-feed-record').filter({ hasText: 'Canvas direct' })
+  await savedFeed.getByRole('checkbox').uncheck()
+  await expect(savedFeed.getByText(/hidden from Calendar, Home, School, search/)).toBeVisible()
+  await page.goto('/#/school')
+  await expect(page.getByRole('heading', { name: 'Direct feed assignment' })).toHaveCount(0)
+  await page.goto('/#/settings')
+  await page.locator('.calendar-feed-record').filter({ hasText: 'Canvas direct' }).getByRole('checkbox').check()
+  await page.goto('/#/school')
+  await expect(page.getByRole('heading', { name: 'Direct feed assignment' })).toBeVisible()
+})
+
+test('recurrences, exclusions, overrides, and multi-day spans render without duplicates', async ({ page }) => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  await page.goto('/#/calendar?view=month')
+  await page.getByRole('button', { name: 'Import .ics files' }).click()
+  await page.getByLabel('Source name').fill('Recurring calendar')
+  await page.getByLabel('Source type').selectOption('google')
+  await page.getByLabel('Date window').selectOption('year')
+  await page.locator('input[name="files"]').setInputFiles({
+    name: 'recurring.ics',
+    mimeType: 'text/calendar',
+    buffer: Buffer.from(
+      `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:recurring-1\nDTSTART:${year}${month}15T090000\nDTEND:${year}${month}15T100000\nRRULE:FREQ=DAILY;COUNT=3\nEXDATE:${year}${month}16T090000\nSUMMARY:Recurring seminar\nEND:VEVENT\nBEGIN:VEVENT\nUID:recurring-1\nRECURRENCE-ID:${year}${month}17T090000\nDTSTART:${year}${month}17T110000\nDTEND:${year}${month}17T120000\nSUMMARY:Rescheduled seminar\nEND:VEVENT\nBEGIN:VEVENT\nUID:multi-day-1\nDTSTART:${year}${month}10T120000\nDTEND:${year}${month}12T120000\nSUMMARY:Three-day conference\nEND:VEVENT\nEND:VCALENDAR`,
+    ),
+  })
+  await page.getByRole('button', { name: 'Preview files' }).click()
+  await page.getByRole('button', { name: 'Confirm import' }).click()
+  await expect(page.getByRole('button', { name: 'Recurring seminar' })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Rescheduled seminar' })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Three-day conference' })).toHaveCount(3)
+})
+
+test('study blocks support pointer date-time moves and pointer edge resizing', async ({ page }, testInfo) => {
+  await page.goto('/#/school')
+  await page.getByRole('button', { name: 'Add homework' }).click()
+  await page.getByLabel('Assignment title').fill('Pointer practice')
+  await page.getByLabel('Course').fill('TEST 302')
+  const due = new Date()
+  due.setDate(due.getDate() + 4)
+  await page.getByLabel('Due date').fill(localDate(due))
+  await page.getByLabel('Estimated minutes').fill('45')
+  await page
+    .getByRole('dialog', { name: 'Add homework' })
+    .getByRole('button', { name: 'Add homework', exact: true })
+    .click()
+  await page.getByRole('button', { name: 'Build my study plan' }).click()
+  await page.goto('/#/calendar?view=week')
+
+  const blockButton = page.getByRole('button', { name: /Edit study block Pointer practice/ })
+  await blockButton.click()
+  const originalStart = await page.getByRole('dialog', { name: 'Edit study block' }).getByLabel('Starts').inputValue()
+  await page.getByRole('dialog', { name: 'Edit study block' }).getByRole('button', { name: 'Cancel' }).click()
+  const originalDate = await blockButton
+    .locator('xpath=ancestor::section[@data-calendar-date]')
+    .getAttribute('data-calendar-date')
+  expect(originalDate).not.toBeNull()
+  const nextDay = new Date(`${originalDate}T12:00:00`)
+  nextDay.setDate(nextDay.getDate() + 1)
+  const targetDate = localDate(nextDay)
+  const targetDay = page.locator(`[data-calendar-date="${targetDate}"]`)
+  const blockBox = await blockButton.boundingBox()
+  const targetBox = await targetDay.boundingBox()
+  expect(blockBox).not.toBeNull()
+  expect(targetBox).not.toBeNull()
+  await page.mouse.move(blockBox!.x + blockBox!.width / 2, blockBox!.y + blockBox!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(targetBox!.x + targetBox!.width / 2, blockBox!.y + blockBox!.height / 2 + 16, { steps: 4 })
+  await page.mouse.up()
+
+  const moved = page.getByRole('button', { name: /Edit study block Pointer practice/ })
+  await expect(moved.locator('xpath=ancestor::section[@data-calendar-date]')).toHaveAttribute(
+    'data-calendar-date',
+    targetDate,
+  )
+  await moved.click()
+  const dialog = page.getByRole('dialog', { name: 'Edit study block' })
+  const movedStart = await dialog.getByLabel('Starts').inputValue()
+  const movedEnd = await dialog.getByLabel('Ends').inputValue()
+  expect(movedStart).not.toBe(originalStart)
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+
+  const endHandle = page
+    .locator('.event-block')
+    .filter({ hasText: 'Pointer practice' })
+    .locator('.event-block__pointer-handle--end')
+  await endHandle.scrollIntoViewIfNeeded()
+  const handleBox = await endHandle.boundingBox()
+  expect(handleBox).not.toBeNull()
+  if (testInfo.project.name === 'mobile') {
+    await endHandle.evaluate((node) => {
+      Object.defineProperty(node, 'setPointerCapture', { value: () => undefined })
+      Object.defineProperty(node, 'hasPointerCapture', { value: () => false })
+      node.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientY: 100, pointerId: 1 }))
+      node.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, clientY: 108, pointerId: 1 }))
+    })
+  } else {
+    await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2 + 8)
+    await page.mouse.up()
+  }
+  await page.getByRole('button', { name: /Edit study block Pointer practice/ }).click()
+  const resizedDialog = page.getByRole('dialog', { name: 'Edit study block' })
+  expect(await resizedDialog.getByLabel('Starts').inputValue()).toBe(movedStart)
+  const resizedEnd = await resizedDialog.getByLabel('Ends').inputValue()
+  const duration =
+    Number(resizedEnd.slice(0, 2)) * 60 +
+    Number(resizedEnd.slice(3)) -
+    (Number(movedEnd.slice(0, 2)) * 60 + Number(movedEnd.slice(3)))
+  expect(duration).toBe(15)
 })

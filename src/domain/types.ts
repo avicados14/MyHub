@@ -31,6 +31,7 @@ export interface CalendarEvent extends EntityBase {
   sourceUrl?: string
   uid?: string
   sourceFeedId?: string
+  sourceType?: CalendarFeed['kind']
   importedAt?: string
   assignmentId?: string
   locked?: boolean
@@ -72,6 +73,7 @@ export interface HomeworkAssignment extends EntityBase {
   sourceLabel?: string
   sourceUrl?: string
   sourceFeedId?: string
+  sourceType?: CalendarFeed['kind']
   externalId?: string
   importedAt?: string
 }
