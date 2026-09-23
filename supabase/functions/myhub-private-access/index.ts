@@ -1,36 +1,10 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { brokerResponse as response } from './http.ts'
 
 const GITHUB_REPOSITORY = 'avicados14/MyHub-Data'
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
-const PRODUCTION_ORIGIN = 'https://avicados14.github.io'
 const encoder = new TextEncoder()
-
-const corsOrigin = (request: Request): string => {
-  const origin = request.headers.get('origin') ?? ''
-  if (
-    origin === PRODUCTION_ORIGIN ||
-    origin.startsWith('http://127.0.0.1:') ||
-    origin.startsWith('http://localhost:')
-  ) {
-    return origin
-  }
-  return PRODUCTION_ORIGIN
-}
-
-const response = (request: Request, body: unknown, status = 200): Response =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Access-Control-Allow-Origin': corsOrigin(request),
-      'Access-Control-Allow-Headers': 'content-type',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Cache-Control': 'no-store',
-      'Content-Type': 'application/json',
-      'Referrer-Policy': 'no-referrer',
-      Vary: 'Origin',
-    },
-  })
 
 const isEncryptedEnvelope = (value: unknown, maximum: number): value is string => {
   if (typeof value !== 'string' || value.length < 100 || value.length > maximum) return false
