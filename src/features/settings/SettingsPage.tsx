@@ -382,7 +382,7 @@ export default function SettingsPage() {
                 <input
                   name="name"
                   autoComplete="name"
-                  placeholder="Optional"
+                  placeholder="Optional…"
                   value={data.settings.name}
                   onChange={(event) => updateSettings({ name: event.target.value })}
                 />
@@ -647,7 +647,7 @@ export default function SettingsPage() {
                 <Field label="Staple name">
                   <input
                     value={newStaple.name}
-                    placeholder="Olive oil"
+                    placeholder="Olive oil…"
                     onChange={(event) => setNewStaple((value) => ({ ...value, name: event.target.value }))}
                   />
                 </Field>
@@ -874,7 +874,7 @@ export default function SettingsPage() {
                           type="url"
                           autoComplete="off"
                           spellCheck={false}
-                          placeholder="https://calendar.example/your-private-feed.ics"
+                          placeholder="https://calendar.example/your-private-feed.ics…"
                           value={feed.url}
                           onChange={(event) =>
                             updateCalendarFeed(feed.id, { url: event.target.value, status: 'not-configured' })

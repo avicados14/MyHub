@@ -248,7 +248,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="command-dialog"
         aria-label="Search MyHub"
         onClose={finishClosingSearch}
+        onCancel={(event) => {
+          event.preventDefault()
+          closeSearch()
+        }}
         onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            closeSearch()
+            return
+          }
           if (event.key !== 'Tab') return
           const focusable = Array.from(
             event.currentTarget.querySelectorAll<HTMLElement>(

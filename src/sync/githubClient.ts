@@ -67,7 +67,7 @@ export class GitHubContentsClient {
 
   constructor(
     private readonly token: string,
-    private readonly fetchImplementation: GitHubApiFetch = fetch,
+    private readonly fetchImplementation: GitHubApiFetch = (...arguments_) => globalThis.fetch(...arguments_),
   ) {}
 
   private request(url: string, init: RequestInit = {}): Promise<Response> {

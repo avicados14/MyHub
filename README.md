@@ -14,7 +14,7 @@ The web application is the product-validation phase for a future native SwiftUI 
 
 ## Project Status
 
-Version **0.1.0** is a functional Phase 1 web prototype.
+Version **0.1.0** is a functional Phase 1 web prototype. The current development tree contains broader school, food, grocery, and encrypted-sync implementation. The companion food-hardening and calendar-hardening branches are not counted as final verification until they are merged and the integrated test matrix passes; `REQUIREMENTS_AUDIT.md` records that distinction.
 
 Working now:
 
@@ -33,7 +33,7 @@ Working now:
 - Daily nutrition snapshots, editable targets, and totals that exclude planned meals until consumption is recorded
 - Pantry inventory across pantry, refrigerator, and freezer
 - Grocery aggregation across compatible mass, volume, and count units; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history
-- Universal search across recipes, homework, and pantry items
+- Universal search across recipes, homework, pantry items, packaged foods, grocery history, and meal plans
 - Empty first run, IndexedDB persistence, versioned migration, JSON export/import, and confirmed clear-all
 - Optional encrypted GitHub Sync to a dedicated private data repository
 - Light, dark, desktop, tablet, and mobile layouts
@@ -116,11 +116,11 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS parsing/classification/deduplication, encrypted calendar snapshots, IndexedDB persistence, and backup validation. Focused browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block resizing, and responsive acceptance workflows.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS parsing/classification/deduplication, encrypted calendar snapshots, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block resizing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync. No browser test requires a live token, private repository, private URL, calendar export, or personal data.
 
 ## GitHub Pages Deployment
 
-The workflow at `.github/workflows/pages.yml` runs on pushes to `main` and can also be started manually. It installs dependencies, runs linting, strict type checking, unit tests, the desktop Chromium browser project, and a production build. The locally validated Food V2 suite also covers tablet and mobile; extending that full matrix to CI remains a release-practice task. The workflow then uses the current GitHub Pages artifact workflow with least-privilege `pages: write` and `id-token: write` permissions.[2]
+The workflow at `.github/workflows/pages.yml` runs on pushes to `main` and can also be started manually. It installs dependencies, checks formatting, runs linting, strict type checking, unit tests, the complete Playwright Chromium matrix, and a production build. That matrix contains desktop, tablet, and mobile projects. The workflow then uses the current GitHub Pages artifact workflow with least-privilege `pages: write` and `id-token: write` permissions.[2]
 
 In the repository, choose **Settings → Pages → Build and deployment → GitHub Actions** if it is not already selected.
 
@@ -138,7 +138,7 @@ When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data
 
 Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
 
-The target repository must be private. Conditional writes use the current blob SHA, writes are serialized, and conflicts require choosing **Use this device** or **Use GitHub**. Deleting the latest remote snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
+The target repository must be private. Conditional writes use the current blob SHA, writes are serialized, and conflicts require choosing **Use this device** or **Use GitHub**. Browser integration tests intercept the provider requests, verify private-repository enforcement, and confirm that committed request bodies contain encrypted envelopes rather than recipe names or other AppData plaintext. Deleting the latest remote snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
 
 ## Clearing Data
 

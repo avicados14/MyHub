@@ -6,6 +6,10 @@ All notable changes to MyHub are documented here.
 
 ### Added
 
+Added cross-cutting Playwright coverage for populated dashboard ordering, universal search across homework, recipes, pantry, packaged foods, grocery history, and meal plans, no-result and keyboard behavior, plaintext backup export warnings, downloaded backup structure, rejected invalid imports, and confirmed replacement with reload persistence.
+
+Added provider-level GitHub Sync browser tests with Playwright route interception and synthetic encrypted data. The suite covers private-repository verification, connect/unlock, encrypted push, pull/reload, pause/resume, deterministic conflict presentation and both choices, unlink, and latest-snapshot deletion without live credentials. Request assertions verify that committed payloads do not expose recipe names or profile plaintext.
+
 Added a complete explicit grocery workflow: compatible mass, volume, and count aggregation; per-item Pantry Check decisions including selected staples; editable shopping-list items; immutable completed-trip history; and a confirmed-purchase pantry handoff with optional per-item quantity and location review.
 
 Added explicit `AppData` schema version 2 with loss-preserving migration from version 1 local state and backups. The durable domain foundation now includes packaged foods, leftovers, nutrition provenance, immutable meal-source snapshots, study avoid-time ranges, meal-planning modes/preferences, editable grocery category/staple models, and multiple calendar feeds.
@@ -29,6 +33,12 @@ Added complete school-workflow controls for homework progress, status, priority,
 Added a narrow read-only encrypted private-calendar snapshot adapter at `myhub-data/v1/calendars.enc`. The calendar screen consumes provider capabilities rather than credentials, can check after Sync is unlocked, and reports unavailable, missing, or invalid snapshots without bundling a feed URL or calendar export.
 
 ### Changed
+
+Made Playwright web-server startup collision-safe by allocating an available local loopback port while retaining deterministic port `4287` in CI. The Pages validation command runs the configured desktop, tablet, and mobile Chromium projects.
+
+Rewrote the requirements audit around the `0e094f3` combined baseline and this cross-cutting branch. The matrix now separates verified web work, companion food/calendar hardening that must not be credited before merge, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup claims now describe the same release and privacy model.
+
+Applied the current Web Interface Guidelines to the cross-cutting surface, including explicit Escape handling for universal search. No secrets, live private repository requests, private calendar URLs or contents, cookbook data, passphrases, or personal access tokens were added.
 
 Fresh installations and **Clear all data** now produce empty personal collections rather than demo records. Sample records are isolated to test fixtures. Data/privacy copy now distinguishes local IndexedDB, optional encrypted sync, and plaintext JSON exports.
 

@@ -180,6 +180,7 @@
   margin: 0;
   padding: 12vh 16px 16px;
   overflow: visible;
+  overscroll-behavior: contain;
   border: 0;
   background: transparent;
   color: var(--ink);

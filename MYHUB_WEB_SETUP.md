@@ -78,7 +78,13 @@ Then run the browser acceptance tests:
 npm run test:e2e
 ```
 
-Playwright starts an isolated Vite server at `127.0.0.1:4287` with `--strictPort`, does not reuse an existing server, and runs the same serial desktop, tablet, and mobile Chromium matrix used by CI. The suite resets MyHub’s application and credential IndexedDB stores before each stateful scenario. It includes route-level axe checks, dark-mode axe checks, the native search dialog’s keyboard focus trap and return-focus behavior, and the connected empty-to-history persistence journey. Use `npx playwright test --project=desktop tests/accessibility.spec.ts` when you need to rerun the desktop accessibility/search regression alone.
+The Playwright launcher allocates an available loopback port for local runs, starts an isolated Vite server with `--strictPort`, and does not reuse an existing server. CI deterministically uses port `4287`. Set `PLAYWRIGHT_PORT` explicitly when a fixed local port is useful. The unfiltered command runs the same serial desktop, tablet, and mobile Chromium matrix used by CI.
+
+The suite resets MyHub’s application and credential IndexedDB stores before stateful scenarios. It includes route-level axe checks, dark-mode checks, universal-search keyboard behavior, the connected empty-to-history journey, populated dashboard ordering, plaintext backup recovery, and mocked provider-level GitHub Sync. The sync tests use synthetic route responses and encrypted fixtures; they never require a live token, private repository, private URL, uploaded calendar, cookbook data, or passphrase. Run only the cross-cutting suites with:
+
+```bash
+npm run test:e2e -- tests/crosscut.spec.ts tests/github-sync.spec.ts
+```
 
 ## 7. Deploy with GitHub Pages
 
@@ -110,7 +116,7 @@ The deployed site and local development site do not share IndexedDB. Export/impo
 
 ## 9. Configure Optional Encrypted GitHub Sync
 
-Create or use the dedicated repository `avicados14/MyHub-Data` and confirm it is **private**. Create a **fine-grained personal access token** restricted to only that repository with **Contents: read and write**. Do not create a classic PAT and do not grant Actions/workflow, administration, organization, or unrelated repository access.
+Create or use a dedicated data repository and confirm it is **private**. Create a **fine-grained personal access token** restricted to only that repository with **Contents: read and write**. Do not create a classic PAT and do not grant Actions/workflow, administration, organization, or unrelated repository access.
 
 In **Settings → GitHub Sync**, keep or update the defaults:
 
@@ -177,6 +183,8 @@ Install the Playwright browser and its Linux dependencies:
 npx playwright install --with-deps chromium
 npm run test:e2e
 ```
+
+The local runner normally avoids occupied ports automatically. If `PLAYWRIGHT_PORT` is set, make sure that exact port is available; `--strictPort` intentionally fails instead of attaching to another process.
 
 ## References
 
