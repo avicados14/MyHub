@@ -52,6 +52,74 @@ const waitForStoredCollectionSize = async (page: import('@playwright/test').Page
     .toBe(true)
 }
 
+const waitForStoredRecord = async (
+  page: import('@playwright/test').Page,
+  collection: string,
+  fields: Record<string, string | number | boolean>,
+) => {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async ({ collection, fields }) => {
+          const request = indexedDB.open('myhub-local', 2)
+          const database = await new Promise<IDBDatabase>((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(request.error)
+          })
+          const transaction = database.transaction('application', 'readonly')
+          const get = transaction.objectStore('application').get('state')
+          const state = await new Promise<Record<string, unknown>>((resolve, reject) => {
+            get.onsuccess = () => resolve(get.result as Record<string, unknown>)
+            get.onerror = () => reject(get.error)
+          })
+          database.close()
+          const records = state?.[collection]
+          return (
+            Array.isArray(records) &&
+            records.some(
+              (record) =>
+                typeof record === 'object' &&
+                record !== null &&
+                Object.entries(fields).every(([key, value]) => (record as Record<string, unknown>)[key] === value),
+            )
+          )
+        },
+        { collection, fields },
+      ),
+    )
+    .toBe(true)
+}
+
+const waitForStoredStaple = async (page: import('@playwright/test').Page, name: string, enabled: boolean) => {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async ({ name, enabled }) => {
+          const request = indexedDB.open('myhub-local', 2)
+          const database = await new Promise<IDBDatabase>((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(request.error)
+          })
+          const transaction = database.transaction('application', 'readonly')
+          const get = transaction.objectStore('application').get('state')
+          const state = await new Promise<{
+            settings?: { groceryStaples?: Array<{ name: string; enabled: boolean }> }
+          }>((resolve, reject) => {
+            get.onsuccess = () => resolve(get.result)
+            get.onerror = () => reject(get.error)
+          })
+          database.close()
+          return (
+            state.settings?.groceryStaples?.some((staple) => staple.name === name && staple.enabled === enabled) ??
+            false
+          )
+        },
+        { name, enabled },
+      ),
+    )
+    .toBe(true)
+}
+
 test('fresh install opens with empty personal collections', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening)\./ })).toBeVisible()
@@ -137,6 +205,7 @@ test('settings controls are labeled and persist configuration changes', async ({
   await expect(page.getByLabel('Enable Tahini')).toBeChecked()
   await page.getByLabel('Enable Tahini').uncheck()
 
+  await waitForStoredStaple(page, 'Tahini', false)
   await page.reload()
   await expect(page.getByLabel('Appearance')).toHaveValue('dark')
   await expect(page.getByLabel('Label')).toHaveValue('Lab')
@@ -165,6 +234,7 @@ test('connected empty-to-history journey persists across reload', async ({ page 
   await page.getByRole('button', { name: 'Build my study plan' }).click()
   await expect(page.getByRole('heading', { name: 'Your study plan' })).toBeVisible()
   await expect(page.getByRole('heading', { name: assignmentTitle })).toBeVisible()
+  await waitForStoredRecord(page, 'events', { title: assignmentTitle, kind: 'study' })
 
   await page.goto('/#/calendar?view=week')
   await page
@@ -176,6 +246,7 @@ test('connected empty-to-history journey persists across reload', async ({ page 
   await moveDialog.getByLabel('Ends').fill('10:45')
   await moveDialog.getByLabel('Lock this time').check()
   await moveDialog.getByRole('button', { name: 'Save changes' }).click()
+  await waitForStoredRecord(page, 'events', { title: assignmentTitle, kind: 'study', userAdjusted: true, locked: true })
   await page.goto('/#/school?view=planner')
   await expect(page.getByText('MYHUB 201 · Manually adjusted')).toBeVisible()
 

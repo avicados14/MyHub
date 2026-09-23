@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const localDate = (date: Date): string => {
   const year = date.getFullYear()
@@ -8,6 +8,44 @@ const localDate = (date: Date): string => {
 }
 
 const compactDate = (date: Date): string => localDate(date).replaceAll('-', '')
+
+const waitForStoredRecord = async (
+  page: Page,
+  collection: string,
+  fields: Record<string, string | number | boolean>,
+) => {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async ({ collection, fields }) => {
+          const request = indexedDB.open('myhub-local', 2)
+          const database = await new Promise<IDBDatabase>((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(request.error)
+          })
+          const transaction = database.transaction('application', 'readonly')
+          const get = transaction.objectStore('application').get('state')
+          const state = await new Promise<Record<string, unknown>>((resolve, reject) => {
+            get.onsuccess = () => resolve(get.result as Record<string, unknown>)
+            get.onerror = () => reject(get.error)
+          })
+          database.close()
+          const records = state?.[collection]
+          return (
+            Array.isArray(records) &&
+            records.some(
+              (record) =>
+                typeof record === 'object' &&
+                record !== null &&
+                Object.entries(fields).every(([key, value]) => (record as Record<string, unknown>)[key] === value),
+            )
+          )
+        },
+        { collection, fields },
+      ),
+    )
+    .toBe(true)
+}
 
 test('homework supports complete editing, subtasks, and safe source provenance', async ({ page }) => {
   await page.goto('/#/school')
@@ -84,6 +122,7 @@ test('multiple local ICS files require preview and explicit confirmation', async
   await expect(page.getByRole('heading', { name: 'Ready to import' })).toBeVisible()
   await expect(page.getByText('2 events and 1 Canvas-style homework assignments')).toBeVisible()
   await page.getByRole('button', { name: 'Confirm import' }).click()
+  await waitForStoredRecord(page, 'assignments', { title: 'Case study' })
   await page.goto('/#/school')
   await expect(page.getByRole('heading', { name: 'Case study' })).toBeVisible()
   await expect(page.getByText(/Source: Canvas exports.*Imported/)).toBeVisible()
@@ -103,6 +142,7 @@ test('generated study blocks expose keyboard-operable fifteen-minute resizing', 
     .getByRole('button', { name: 'Add homework', exact: true })
     .click()
   await page.getByRole('button', { name: 'Build my study plan' }).click()
+  await waitForStoredRecord(page, 'events', { title: 'Resize practice', kind: 'study' })
   await page.goto('/#/calendar?view=week')
   await expect(page.getByRole('button', { name: 'Extend Resize practice by 15 minutes' })).toBeVisible()
   await page.getByRole('button', { name: 'Extend Resize practice by 15 minutes' }).focus()
@@ -191,6 +231,7 @@ test('study blocks support pointer date-time moves and pointer edge resizing', a
     .getByRole('button', { name: 'Add homework', exact: true })
     .click()
   await page.getByRole('button', { name: 'Build my study plan' }).click()
+  await waitForStoredRecord(page, 'events', { title: 'Pointer practice', kind: 'study' })
   await page.goto('/#/calendar?view=week')
 
   const blockButton = page.getByRole('button', { name: /Edit study block Pointer practice/ })

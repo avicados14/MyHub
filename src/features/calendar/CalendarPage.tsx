@@ -489,7 +489,7 @@ export default function CalendarPage() {
         </div>
 
         {view === 'week' ? (
-          <div className="week-grid">
+          <div className="week-grid" role="region" aria-label="Weekly calendar" tabIndex={0}>
             {days.map((day) => {
               const date = toLocalDate(day)
               const dayEvents = eventsByDate.get(date) ?? []
