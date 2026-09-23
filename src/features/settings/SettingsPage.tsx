@@ -7,17 +7,14 @@ import {
   Copy,
   Database,
   Download,
-  Github,
   KeyRound,
   Link2Off,
   LockKeyhole,
   Pause,
   Play,
   Plus,
-  QrCode,
   RefreshCw,
   ShieldCheck,
-  Smartphone,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -40,7 +37,6 @@ import type {
 } from '../../domain/types'
 import '../../styles/crosscut-v2.css'
 import { createBackup, parseBackup } from '../../storage/database'
-import { createDevicePairingLink, type DevicePairingLink } from '../../sync/devicePairing'
 import { useGitHubSync, type GitHubSyncStatus } from '../../sync/GitHubSyncContext'
 import { makeId } from '../../utilities/date'
 
@@ -131,10 +127,9 @@ export default function SettingsPage() {
   const [token, setToken] = useState('')
   const [passphrase, setPassphrase] = useState('')
   const [syncBusy, setSyncBusy] = useState(false)
-  const [pairingOpen, setPairingOpen] = useState(false)
-  const [pairingBusy, setPairingBusy] = useState(false)
-  const [pairingError, setPairingError] = useState('')
-  const [pairing, setPairing] = useState<(DevicePairingLink & { qrDataUrl: string }) | null>(null)
+  const [privateLinkOpen, setPrivateLinkOpen] = useState(false)
+  const [privateLinkError, setPrivateLinkError] = useState('')
+  const [privateAccessUrl, setPrivateAccessUrl] = useState('')
 
   useEffect(() => {
     const preferred =
@@ -392,40 +387,33 @@ export default function SettingsPage() {
     }
   }
 
-  const closePairing = () => {
-    setPairingOpen(false)
-    setPairing(null)
-    setPairingError('')
+  const closePrivateLink = () => {
+    setPrivateLinkOpen(false)
+    setPrivateAccessUrl('')
+    setPrivateLinkError('')
   }
 
-  const startPairing = async () => {
-    setPairingOpen(true)
-    setPairingBusy(true)
-    setPairing(null)
-    setPairingError('')
+  const createPrivateLink = async () => {
+    setPrivateLinkOpen(true)
+    setPrivateAccessUrl('')
+    setPrivateLinkError('')
+    setSyncBusy(true)
     try {
-      const link = await createDevicePairingLink(github.createDevicePairing(), window.location.href)
-      const { toDataURL } = await import('qrcode')
-      const qrDataUrl = await toDataURL(link.url, {
-        width: 320,
-        margin: 2,
-        color: { dark: '#13213f', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      })
-      setPairing({ ...link, qrDataUrl })
+      const link = await github.createPrivateAccessLink(window.location.href)
+      setPrivateAccessUrl(link.url)
     } catch (error) {
-      setPairingError(error instanceof Error ? error.message : 'A pairing code could not be created.')
+      setPrivateLinkError(error instanceof Error ? error.message : 'A private access link could not be created.')
     } finally {
-      setPairingBusy(false)
+      setSyncBusy(false)
     }
   }
 
-  const copyPairingValue = async (value: string, message: string) => {
+  const copyPrivateLink = async () => {
     try {
-      await navigator.clipboard.writeText(value)
-      announce(message)
+      await navigator.clipboard.writeText(privateAccessUrl)
+      announce('Private MyHub access link copied.')
     } catch {
-      announce('Clipboard access was blocked. Keep this dialog open and type the value instead.')
+      announce('Clipboard access was blocked. Select and copy the private link from the dialog.')
     }
   }
 
@@ -1099,33 +1087,33 @@ export default function SettingsPage() {
           <Card className="settings-card settings-card--sync" as="section">
             <div className="settings-card__header" id="github-sync">
               <div>
-                <h2>GitHub Sync</h2>
-                <p>Optional encrypted synchronization for the dedicated private data repository.</p>
+                <h2>Supabase sync + GitHub backup</h2>
+                <p>End-to-end encrypted cross-device data with a versioned repository backup.</p>
               </div>
               <StatusBadge tone={syncTone(github.status)}>{github.paused ? 'paused' : github.status}</StatusBadge>
             </div>
             <div className="settings-fields">
               <div className="sync-intro">
                 <span className="section-icon section-icon--blue">
-                  <Github aria-hidden="true" />
+                  <Database aria-hidden="true" />
                 </span>
                 <div>
-                  <strong>Private, encrypted, local first</strong>
+                  <strong>Private, encrypted, and cross-device</strong>
                   <p>
-                    IndexedDB remains immediate offline storage. MyHub encrypts AppData in this browser before sending
-                    it to GitHub.
+                    IndexedDB is the immediate offline cache. Supabase is the live encrypted document, and GitHub keeps
+                    an encrypted backup history. Both services receive ciphertext only.
                   </p>
                 </div>
               </div>
               {!needsUnlock && !isConfigured ? (
                 <>
                   <div className="phone-sync-guide">
-                    <Smartphone aria-hidden="true" />
+                    <KeyRound aria-hidden="true" />
                     <div>
-                      <strong>Opening MyHub on a new phone?</strong>
+                      <strong>Opening MyHub on another device?</strong>
                       <p>
-                        On a device that is already connected, open GitHub Sync and choose “Pair another device.” Scan
-                        its QR here instead of re-entering repository credentials.
+                        Open your private MyHub access link to load the encrypted Supabase document automatically.
+                        Manual GitHub credentials remain below as a recovery path.
                       </p>
                     </div>
                   </div>
@@ -1227,9 +1215,17 @@ export default function SettingsPage() {
                     <span>{github.target.path}</span>
                     {github.lastSyncedAt ? (
                       <small>
-                        Last synced{' '}
+                        GitHub backup{' '}
                         {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
                           new Date(github.lastSyncedAt),
+                        )}
+                      </small>
+                    ) : null}
+                    {github.privateAccessActive && github.lastSupabaseSyncedAt ? (
+                      <small>
+                        Supabase primary{' '}
+                        {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
+                          new Date(github.lastSupabaseSyncedAt),
                         )}
                       </small>
                     ) : null}
@@ -1240,7 +1236,7 @@ export default function SettingsPage() {
                 <div className="inline-alert">
                   <AlertTriangle aria-hidden="true" />
                   <span>
-                    <strong>GitHub Sync needs attention.</strong>
+                    <strong>Cross-device sync needs attention.</strong>
                     {github.errorMessage}
                   </span>
                 </div>
@@ -1285,9 +1281,9 @@ export default function SettingsPage() {
                     className="button button--secondary"
                     type="button"
                     disabled={syncBusy || github.paused || github.status !== 'current'}
-                    onClick={() => void startPairing()}
+                    onClick={() => void createPrivateLink()}
                   >
-                    <Smartphone aria-hidden="true" /> Pair another device
+                    <KeyRound aria-hidden="true" /> Create private access link
                   </button>
                   <button
                     className="button button--quiet"
@@ -1304,7 +1300,9 @@ export default function SettingsPage() {
                     disabled={syncBusy}
                     onClick={() => {
                       if (
-                        window.confirm('Unlink GitHub Sync on this device? The remote encrypted snapshot will remain.')
+                        window.confirm(
+                          'Unlink Supabase and GitHub backup on this device? Remote encrypted data and the private link will remain.',
+                        )
                       )
                         void runSyncAction(github.unlink)
                     }}
@@ -1346,7 +1344,7 @@ export default function SettingsPage() {
             <div className="settings-card__header" id="data">
               <div>
                 <h2>Data & privacy</h2>
-                <p>Your records live in local IndexedDB and, only if enabled, in an encrypted GitHub snapshot.</p>
+                <p>Your records use local IndexedDB, encrypted Supabase sync, and encrypted GitHub backup.</p>
               </div>
               <span className="section-icon section-icon--mint">
                 <ShieldCheck aria-hidden="true" />
@@ -1358,7 +1356,8 @@ export default function SettingsPage() {
                 <span>
                   <strong>Local IndexedDB</strong>
                   <small>
-                    No account, analytics, ads, or backend. Sync credentials are stored separately from AppData.
+                    No ads or analytics. Sync credentials are stored separately from AppData, and cloud copies are
+                    encrypted in this browser.
                   </small>
                 </span>
               </div>
@@ -1391,7 +1390,8 @@ export default function SettingsPage() {
                 <strong>Clear all data</strong>
                 <span>
                   Erase events, assignments, recipes, meals, logs, packaged foods, leftovers, pantry, and grocery
-                  records on this device. Non-personal defaults and GitHub connection settings remain.
+                  records. Connected Supabase and GitHub copies will receive the empty state. Non-personal defaults and
+                  connection settings remain.
                 </span>
               </div>
               <button
@@ -1400,7 +1400,7 @@ export default function SettingsPage() {
                 onClick={() => {
                   if (
                     window.confirm(
-                      'Clear all MyHub data on this device? Export first if you need a copy. This cannot be undone. The GitHub snapshot is not deleted.',
+                      'Clear all MyHub records on this device and propagate the empty state to connected Supabase and GitHub copies? Export first if you need a copy. This cannot be undone.',
                     )
                   )
                     clearAllData()
@@ -1413,72 +1413,50 @@ export default function SettingsPage() {
         </div>
       </div>
       <Modal
-        open={pairingOpen}
-        title="Pair another device"
-        description="Scan the encrypted QR with your phone, then enter the separate 16-character code."
-        onClose={closePairing}
+        open={privateLinkOpen}
+        title="Private MyHub access link"
+        description="Open this one link on your phone or another device to load MyHub automatically."
+        onClose={closePrivateLink}
       >
         <div className="pairing-dialog" aria-live="polite">
-          {pairingBusy ? <p className="settings-empty-copy">Creating an encrypted setup package…</p> : null}
-          {pairingError ? (
+          {syncBusy && !privateAccessUrl && !privateLinkError ? (
+            <p className="settings-empty-copy">Creating a revocable encrypted access link…</p>
+          ) : null}
+          {privateLinkError ? (
             <div className="inline-alert" role="alert">
               <AlertTriangle aria-hidden="true" />
               <span>
-                <strong>A pairing code could not be created.</strong>
-                {pairingError}
+                <strong>A private link could not be created.</strong>
+                {privateLinkError}
               </span>
             </div>
           ) : null}
-          {pairing ? (
+          {privateAccessUrl ? (
             <>
-              <div className="pairing-dialog__qr">
-                <img src={pairing.qrDataUrl} width="320" height="320" alt="Encrypted MyHub setup QR code" />
-              </div>
-              <div className="pairing-dialog__code">
-                <span>Pairing code</span>
-                <strong translate="no">{pairing.pairingCode}</strong>
-                <small>
-                  Use both before{' '}
-                  {new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date(pairing.expiresAt))}.
-                </small>
-              </div>
               <div className="pairing-dialog__security">
-                <ShieldCheck aria-hidden="true" />
+                <AlertTriangle aria-hidden="true" />
                 <p>
-                  The QR contains an encrypted setup package, not readable credentials. It does not contain the pairing
-                  code. Anyone who gets both can connect while your GitHub token remains valid, so keep them private.
+                  <strong>This link is a password.</strong> Anyone who gets it can read and change your MyHub data while
+                  it remains active. Supabase stores only ciphertext; the link supplies its browser-only decryption and
+                  write capability. Creating a replacement link revokes the previous one.
                 </p>
               </div>
-              <details className="pairing-dialog__fallback">
-                <summary>Use an encrypted setup link instead</summary>
-                <Field label="Encrypted phone setup link" hint="This link still requires the separate pairing code.">
-                  <textarea
-                    name="deviceSetupLink"
-                    rows={3}
-                    readOnly
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={pairing.url}
-                    onFocus={(event) => event.currentTarget.select()}
-                  />
-                </Field>
-              </details>
+              <Field label="Private MyHub access link" hint="Bookmark it privately on devices you trust.">
+                <textarea
+                  name="privateAccessLink"
+                  rows={4}
+                  readOnly
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={privateAccessUrl}
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+              </Field>
               <div className="button-row">
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  onClick={() => void copyPairingValue(pairing.url, 'Encrypted phone setup link copied.')}
-                >
-                  <QrCode aria-hidden="true" /> Copy setup link
+                <button className="button button--secondary" type="button" onClick={() => void copyPrivateLink()}>
+                  <Copy aria-hidden="true" /> Copy private link
                 </button>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  onClick={() => void copyPairingValue(pairing.pairingCode, 'Pairing code copied.')}
-                >
-                  <Copy aria-hidden="true" /> Copy pairing code
-                </button>
-                <button className="button button--primary" type="button" onClick={closePairing}>
+                <button className="button button--primary" type="button" onClick={closePrivateLink}>
                   Done
                 </button>
               </div>

@@ -26,7 +26,9 @@ Added optional encrypted GitHub-backed synchronization for the dedicated private
 
 Added a GitHub Sync provider and accessible Settings controls for connect/unlock, manual sync, status, pause/resume, unlink, conflict choice, and latest-snapshot deletion. The fine-grained token is encrypted in a separate IndexedDB credential record, is excluded from AppData and backups, and requires only repository-scoped Contents read/write access.
 
-Added secure fresh-phone onboarding for GitHub Sync. An unlocked device can create a five-minute QR containing an encrypted setup package plus a separately displayed 16-character pairing code. The receiving route removes the package from browser history, requires the code, verifies the private repository, pulls the existing encrypted snapshot before opening Home, and re-encrypts the token in that browser's separate credential store. Manual credential entry remains available.
+Added end-to-end encrypted Supabase cross-device persistence using the existing MyHub project. A narrow RLS-protected Edge Function stores only encrypted credentials and encrypted AppData, hashes the write capability, verifies the private GitHub repository at link creation, revokes previous access rows, and enforces optimistic document revisions.
+
+Added a permanent revocable private access link for fresh phones and browsers. Opening the one link resolves and decrypts current Supabase data, configures the encrypted GitHub backup, removes the capability from the active address, persists it separately from AppData, and opens Home without a QR, pairing code, form, or sign-in. Later visits on that linked browser may use the ordinary MyHub URL.
 
 Added a reviewed multi-file local calendar import workflow for Canvas, Google Calendar, and standard ICS exports. Users select a source type and date window, inspect an event/homework preview, and explicitly confirm before anything is persisted. The parser retains rich event provenance, handles folded lines, all-day values, common timezone cases, stable re-import IDs, and maps Canvas-style assignment URLs to editable homework while preserving user progress and subtasks on re-import.
 
@@ -58,13 +60,13 @@ Fixed Settings section navigation so it scrolls within the HashRouter route inst
 
 Made Playwright web-server startup collision-safe by allocating an available local loopback port while retaining deterministic port `4287` in CI. The Pages validation command runs the configured desktop, tablet, and mobile Chromium projects.
 
-Rewrote the requirements audit around the completed integrated release. The final evidence records 98 unit tests, 126 responsive browser tests, the 42-action exploratory walkthrough, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup now describe the same release and privacy model.
+Rewrote the requirements audit around the completed integrated release. The final evidence records 100 unit tests, 126 responsive browser tests, the 42-action exploratory walkthrough, static-browser public API and CORS limits, and deliberate native-only boundaries. README, architecture, and setup now describe the same release and privacy model.
 
 Applied the current Web Interface Guidelines to the cross-cutting surface, including explicit Escape handling for universal search. No secrets, live private repository requests, private calendar URLs or contents, cookbook data, passphrases, or personal access tokens were added.
 
-Clarified the per-browser nature of IndexedDB after reproducing an empty phone installation. A fresh phone now receives direct pairing guidance instead of appearing to have lost remote data, and the pairing package never contains its required code or readable credentials.
+Corrected the reproduced empty-phone behavior by making Supabase the live encrypted cross-device document and GitHub the backup. Browser tests now prove phone-to-desktop propagation, focus-time refresh, ciphertext-only broker payloads, and ordinary-URL restoration after local AppData is cleared.
 
-Fresh installations and **Clear all data** now produce empty personal collections rather than demo records. Sample records are isolated to test fixtures. Data/privacy copy now distinguishes local IndexedDB, optional encrypted sync, and plaintext JSON exports.
+Fresh installations and **Clear all data** now produce empty personal collections rather than demo records. Sample records are isolated to test fixtures. Data/privacy and clear-all copy now distinguishes local IndexedDB, encrypted Supabase propagation, encrypted GitHub backup, and plaintext JSON exports.
 
 Completed and merged the focused food and calendar hardening. Each 7-scenario suite passes across desktop, tablet, and mobile, and the complete integrated browser matrix passes all 126 tests.
 

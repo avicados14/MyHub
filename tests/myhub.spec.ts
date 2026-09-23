@@ -259,7 +259,7 @@ test('settings section links are shareable and stay on the settings route', asyn
   await expect(githubLink).toHaveAttribute('href', /#\/settings\?section=github-sync$/)
   await githubLink.click()
   await expect(page).toHaveURL(/#\/settings\?section=github-sync$/)
-  await expect(page.getByRole('heading', { name: 'GitHub Sync' })).toBeInViewport()
+  await expect(page.getByRole('heading', { name: 'Supabase sync + GitHub backup' })).toBeInViewport()
 })
 
 test('settings controls are labeled and persist configuration changes', async ({ page }) => {

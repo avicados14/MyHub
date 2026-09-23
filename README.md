@@ -35,7 +35,7 @@ Working now:
 - Current-week grocery aggregation across compatible mass, volume, and count units using prepared servings and recipe overrides; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history with source-window provenance
 - Universal search across recipes, homework, pantry items, packaged foods, grocery history, and meal plans
 - Empty first run, IndexedDB persistence, versioned migration, JSON export/import, and confirmed clear-all
-- Optional encrypted GitHub Sync to a dedicated private data repository, with shareable query-backed Settings section URLs
+- End-to-end encrypted Supabase cross-device data, encrypted GitHub backup, a revocable private access link, and shareable query-backed Settings sections
 - Light, dark, desktop, tablet, and mobile layouts
 - GitHub Pages deployment workflow
 
@@ -45,7 +45,7 @@ In development or intentionally limited:
 - Recipe URL and Open Food Facts requests are direct browser requests and can fail because of CORS, network access, or incomplete public records. The interface preserves provenance, requires review for imported/OCR values, and offers pasted/manual entry fallbacks; CI uses mocked lookup/parser tests and does not require remote data.
 - Image/video OCR runs locally in the browser after the user selects a file. Social intake accepts only user-supplied captions, screenshots, or local video frames; MyHub does not log in, scrape, or bypass platform restrictions.
 - Study blocks can be dragged between week columns, but drag-and-drop is never required: the edit form and labeled keyboard-operable resize buttons remain available.
-- GitHub Sync is snapshot-based rather than a transactional database; simultaneous edits require an explicit choice of copy.
+- Supabase uses optimistic document revisions. If two devices change the same stale revision before either refreshes, MyHub stops the stale write instead of silently overwriting the newer encrypted copy.
 
 Planned for native iOS and iPadOS after web review:
 
@@ -116,7 +116,7 @@ Run the complete non-browser quality gate with:
 npm run check
 ```
 
-Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, encrypted device-pairing packages, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level mocked GitHub Sync including fresh-phone pairing. The completed release passed 98 unit tests and 126 Playwright tests across desktop, tablet, and mobile. A separate 42-action exploratory walkthrough also completed without runtime or HTTP errors.
+Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, Supabase private-link encryption and revisions, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level cross-device sync from a private link through Supabase to GitHub backup. Final release counts are recorded in `REQUIREMENTS_AUDIT.md` after the complete matrix runs.
 
 ## GitHub Pages Deployment
 
@@ -126,23 +126,25 @@ In the repository, choose **Settings → Pages → Build and deployment → GitH
 
 ## Data Storage
 
-Structured data is stored immediately in IndexedDB under the current browser profile and origin. A fresh installation starts with empty events, assignments, recipes, packaged foods, meals, leftovers, food logs, pantry, and grocery records. Version 1 local data and JSON backups migrate to the version 2 schema without dropping records.
+Structured data is stored immediately in IndexedDB under the current browser profile and origin. When the private access link is used, the browser also pushes a client-encrypted AppData document to Supabase and keeps the encrypted GitHub snapshot as backup history. A fresh installation starts with empty personal collections until it opens the private link.
 
 Use **Settings → Data & privacy → Export data** to download a portable JSON backup. Import validates and migrates the MyHub backup envelope before replacing local data. **JSON exports are plaintext** and may contain private academic and food records.
 
-## Optional GitHub Sync
+## Encrypted Supabase Sync and GitHub Backup
 
-GitHub Sync keeps IndexedDB as the offline working store and uploads only a versioned encrypted snapshot to the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc` by default. It uses PBKDF2-SHA-256 with 310,000 iterations and AES-256-GCM. The encryption passphrase remains only in component/context memory.
+IndexedDB remains the immediate offline cache. Supabase stores the live cross-device AppData document as AES-256-GCM ciphertext produced in the browser with PBKDF2-SHA-256 at 310,000 iterations. The database has Row Level Security enabled and grants no direct anonymous table access; a narrow Edge Function resolves an unguessable active record, checks a hashed write capability, and enforces monotonic optimistic revisions.[4][5] Supabase never receives readable recipes, academic records, calendar details, the private-link key, or the recovery passphrase.
+
+GitHub remains the encrypted backup and calendar-ingestion source. MyHub uploads a versioned encrypted snapshot to the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc`, using conditional blob-SHA writes and explicit conflict handling. The scheduled private-repository workflow continues to refresh the separately encrypted calendar snapshot.
 
 When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. Files larger than 1 MB use GitHub's authenticated raw media representation, as required by the Contents API.[3] A separate producer for that encrypted snapshot is not bundled with this static client.
 
-The configured private repository has been verified end to end in a fresh Chromium profile. The current encrypted snapshot contains the 27 uploaded cookbook recipes as the only recipe records, 3,328 events reparsed from the 2 encrypted calendar feeds in `America/Denver`, zero homework assignments, eight normalized 8 oz chicken ingredients, and researched nutrition estimates for the four recipes that previously lacked values. The personalized snapshot includes the approved study, meal, grocery, appearance, and eight nutrition target/limit settings. It also favors lighter breakfast/lunch choices and concentrates most suggested calories and protein in dinner and snack. The private calendar workflow has all three required Actions secrets configured and completed a real refresh successfully.
+The configured private repository and Supabase project have been verified end to end. The current encrypted data contains the 27 uploaded cookbook recipes as the only recipe records, 3,328 events reparsed from the 2 encrypted calendar feeds in `America/Denver`, zero homework assignments, eight normalized 8 oz chicken ingredients, and researched nutrition estimates for the four recipes that previously lacked values. The personalized settings and calendar workflow remain encrypted throughout.
 
-GitHub credentials are intentionally stored per browser profile, so a new phone does not automatically inherit another device's IndexedDB. On an already connected and unlocked device, choose **Settings → GitHub Sync → Pair another device**. MyHub creates a five-minute QR containing an encrypted setup package and displays a separate 16-character pairing code. The QR does not contain the code, and the code does not contain the setup package. The phone removes the encrypted package from its address bar, requires the separate code, verifies the private repository, and pulls the existing remote snapshot before showing the app. Manual token and passphrase entry remains available as a fallback.
+The approved private access link is a revocable bearer capability. It contains only a random Supabase row ID and a high-entropy browser decryption/write key in the URL fragment—not readable user data or the GitHub token. URI fragments stay client-side rather than being sent with the page request.[6] Opening the link loads and decrypts the latest Supabase AppData automatically, configures the encrypted GitHub backup, removes the capability from the active address, and opens Home without a form, QR, code, or sign-in. Creating a replacement link revokes previous broker rows. Manual GitHub token and passphrase entry remains a recovery fallback.
 
 Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
 
-The target repository must be private. Conditional writes use the current blob SHA, writes are serialized, and conflicts require choosing **Use this device** or **Use GitHub**. Browser integration tests intercept the provider requests, verify private-repository enforcement, and confirm that committed request bodies contain encrypted envelopes rather than recipe names or other AppData plaintext. Deleting the latest remote snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
+The GitHub target must be private. Browser integration tests verify private-repository enforcement, encrypted Supabase payloads, cross-device revision propagation, and ciphertext-only GitHub writes. Deleting the latest GitHub snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
 
 ## Clearing Data
 
@@ -158,6 +160,7 @@ src/features/      Dashboard, calendar, school, food, pantry, grocery, settings
 src/storage/       IndexedDB and backup boundary
 src/styles/        Semantic tokens and responsive layouts
 src/utilities/     Date, identity, and asset helpers
+supabase/          Versioned RLS migrations and the narrow encrypted-document Edge Function
 tests/             Playwright browser acceptance tests
 public/recipes/    Original local recipe photography
 .github/workflows/ Validation and GitHub Pages deployment
@@ -169,13 +172,13 @@ The future Apple application will reimplement the proven workflows using SwiftUI
 
 ## Privacy
 
-MyHub has no advertising, behavioral analytics, trackers, accounts, or marketing software. Core data and calculations stay in the browser unless the user enables optional client-side encrypted GitHub Sync. A user-initiated Canvas feed request goes directly from the browser to the provided URL; if the request is blocked, MyHub does not route it through another service.
+MyHub has no advertising, behavioral analytics, trackers, accounts, or marketing software. Core calculations stay in the browser. Supabase and GitHub receive client-encrypted records only. A user-initiated Canvas feed request goes directly from the browser to the provided URL; if the request is blocked, MyHub uses the encrypted private-repository calendar path rather than an unknown proxy.
 
 Exported JSON backups can contain private academic and food records. Store them accordingly. Do not commit personal backup files or private feed URLs.
 
 ## Known Limitations
 
-GitHub Pages is static hosting. MyHub therefore uses a user-supplied, repository-scoped fine-grained token instead of embedding a client secret. The browser necessarily holds the unlocked token and passphrase in memory while sync is active, so a compromised page/runtime can access them; unlinking clears the durable encrypted credential, not GitHub history. Pairing is a convenience for transferring that same authority to another device: anyone who obtains both an unexpired setup package and its separate code can connect while the GitHub token remains valid. Some automatic imports still require a future backend or native adapter. IndexedDB can be cleared by browser or device storage management, so regular backups or encrypted sync are recommended.
+GitHub Pages is static hosting, so the private access link is a bearer capability rather than an account session. Anyone who obtains that link can open MyHub until it is replaced; keep it in a password manager or private bookmark. The browser necessarily holds decrypted AppData and backup credentials while active, so a compromised browser runtime can access them. Optimistic Supabase revisions prevent stale silent overwrites but may require reopening the private link if two devices edit concurrently. IndexedDB can be cleared by browser or device storage management, but the encrypted Supabase document and GitHub backup remain recoverable through the private link.
 
 ## Roadmap
 
@@ -190,3 +193,6 @@ GitHub Pages is static hosting. MyHub therefore uses a user-supplied, repository
 [1]: https://vite.dev/guide/static-deploy.html 'Vite: Deploying a Static Site'
 [2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs: Using custom workflows with GitHub Pages'
 [3]: https://docs.github.com/en/rest/repos/contents 'GitHub REST API endpoints for repository contents'
+[4]: https://supabase.com/docs/guides/database/postgres/row-level-security 'Supabase: Row Level Security'
+[5]: https://supabase.com/docs/guides/functions 'Supabase: Edge Functions'
+[6]: https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment 'MDN: URI fragment'

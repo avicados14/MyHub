@@ -9,7 +9,7 @@ const routes = [
   ['Pantry', '/#/pantry'],
   ['Grocery', '/#/grocery'],
   ['Settings', '/#/settings'],
-  ['Pair device', '/#/settings/device'],
+  ['Private access', '/#/access'],
 ] as const
 
 test.beforeEach(async ({ page }) => {

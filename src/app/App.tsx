@@ -11,7 +11,7 @@ const RecipePage = lazy(() => import('../features/food/RecipePage'))
 const PantryPage = lazy(() => import('../features/pantry/PantryPage'))
 const GroceryPage = lazy(() => import('../features/grocery/GroceryPage'))
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'))
-const DevicePairingPage = lazy(() => import('../features/settings/DevicePairingPage'))
+const PrivateAccessPage = lazy(() => import('../features/settings/PrivateAccessPage'))
 
 export default function App() {
   const { ready } = useApp()
@@ -39,7 +39,7 @@ export default function App() {
             <Route path="/pantry" element={<PantryPage />} />
             <Route path="/grocery" element={<GroceryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/settings/device" element={<DevicePairingPage />} />
+            <Route path="/access" element={<PrivateAccessPage />} />
             <Route path="*" element={<Navigate replace to="/" />} />
           </Routes>
         </Suspense>

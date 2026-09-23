@@ -81,7 +81,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clearAllData = useCallback(() => {
     setData(createEmptyData())
-    announce('All MyHub data on this device was cleared. GitHub Sync settings were kept.')
+    announce('All MyHub records were cleared. Active encrypted sync will propagate the empty state.')
   }, [announce])
 
   const value = useMemo(

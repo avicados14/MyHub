@@ -6,8 +6,11 @@ import { migrateAppData } from '../domain/migrations'
 import type { AppData } from '../domain/types'
 import {
   clearGitHubCredential,
+  clearPrivateAccessCredential,
   loadGitHubCredential,
+  loadPrivateAccessCredential,
   saveGitHubCredential,
+  savePrivateAccessCredential,
   type StoredGitHubCredential,
 } from '../storage/database'
 import { decideSyncAction } from './conflict'
@@ -19,7 +22,14 @@ import {
   type GitHubRepositoryTarget,
 } from './githubClient'
 import { PRIVATE_CALENDAR_SNAPSHOT_PATH, type PrivateCalendarAccessProvider } from './calendarSnapshot'
-import type { DevicePairingMaterial } from './devicePairing'
+import {
+  createPrivateAccessUrl,
+  pushPrivateAppData,
+  resolvePrivateAccess,
+  type PrivateAccessLink,
+  type PrivateAccessMaterial,
+  type ResolvedPrivateAccess,
+} from './privateAccess'
 
 export type GitHubSyncStatus =
   'disconnected' | 'locked' | 'connecting' | 'syncing' | 'current' | 'offline' | 'conflict' | 'error'
@@ -47,7 +57,10 @@ interface GitHubSyncContextValue {
   syncNow: () => Promise<void>
   resolveUseDevice: () => Promise<void>
   resolveUseGitHub: () => Promise<void>
-  createDevicePairing: () => DevicePairingMaterial
+  privateAccessActive: boolean
+  lastSupabaseSyncedAt?: string
+  createPrivateAccessLink: (baseUrl: string) => Promise<PrivateAccessLink>
+  connectPrivateAccess: (access: ResolvedPrivateAccess) => Promise<void>
   setPaused: (paused: boolean) => Promise<void>
   unlink: () => Promise<void>
   clearRemoteSnapshot: () => Promise<void>
@@ -55,6 +68,14 @@ interface GitHubSyncContextValue {
 }
 
 const GitHubSyncContext = createContext<GitHubSyncContextValue | null>(null)
+
+interface PrivateAccessSession {
+  id: string
+  key: string
+  version: number
+  updatedAt: string
+  lastDigest: string
+}
 
 const digestData = (data: AppData): Promise<string> => sha256Digest(JSON.stringify(data))
 const offline = (): boolean => typeof navigator !== 'undefined' && navigator.onLine === false
@@ -70,6 +91,11 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
   const passphraseRef = useRef<string | null>(null)
   const operationRef = useRef<Promise<void>>(Promise.resolve())
   const applyingRemoteRef = useRef(false)
+  const privateAccessRef = useRef<PrivateAccessSession | null>(null)
+  const privateAccessPushRef = useRef<Promise<void>>(Promise.resolve())
+  const privateAccessRestoreStartedRef = useRef(false)
+  const [privateAccessActive, setPrivateAccessActive] = useState(false)
+  const [lastSupabaseSyncedAt, setLastSupabaseSyncedAt] = useState<string>()
 
   useEffect(() => {
     dataRef.current = data
@@ -84,7 +110,7 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       .then((saved) => {
         if (!active) return
         setCredential(saved)
-        setStatus(saved ? 'locked' : 'disconnected')
+        if (!privateAccessRef.current) setStatus(saved ? 'locked' : 'disconnected')
       })
       .catch(() => {
         if (active) {
@@ -206,10 +232,10 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
           applyingRemoteRef.current = true
           dataRef.current = remoteResult.data
           replaceData(remoteResult.data, 'Local data replaced with the encrypted GitHub snapshot.')
-          await markSynced(remote.sha, remoteResult.digest)
           window.setTimeout(() => {
             applyingRemoteRef.current = false
           }, 0)
+          await markSynced(remote.sha, remoteResult.digest)
           return
         }
         if (decision === 'push-local') {
@@ -306,15 +332,89 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
     [performSync, withSerializedOperation],
   )
 
-  const createDevicePairing = useCallback((): DevicePairingMaterial => {
+  const privateAccessMaterial = useCallback((): PrivateAccessMaterial => {
     const saved = credentialRef.current
     const token = tokenRef.current
     const passphrase = passphraseRef.current
     if (!saved || !token || !passphrase || saved.paused || status !== 'current') {
-      throw new Error('Bring GitHub Sync to current before pairing another device.')
+      throw new Error('Bring GitHub Sync to current before creating a private access link.')
     }
     return { repository: saved.repository, token, passphrase }
   }, [status])
+
+  const createPrivateAccessLinkForCurrentData = useCallback(
+    async (baseUrl: string): Promise<PrivateAccessLink> => {
+      const link = await createPrivateAccessUrl(privateAccessMaterial(), dataRef.current, baseUrl)
+      const lastDigest = await digestData(dataRef.current)
+      privateAccessRef.current = {
+        id: link.id,
+        key: link.key,
+        version: link.version,
+        updatedAt: link.updatedAt,
+        lastDigest,
+      }
+      await savePrivateAccessCredential({ version: 1, id: link.id, key: link.key })
+      setPrivateAccessActive(true)
+      setLastSupabaseSyncedAt(link.updatedAt)
+      return link
+    },
+    [privateAccessMaterial],
+  )
+
+  const connectPrivateAccess = useCallback(
+    async (access: ResolvedPrivateAccess) =>
+      withSerializedOperation(async () => {
+        setStatus('connecting')
+        setErrorMessage('')
+        const remoteData = migrateAppData(access.data)
+        const repository = access.material.repository
+        const client = new GitHubContentsClient(access.material.token)
+        await client.requirePrivateRepository(repository)
+        const tokenEnvelope = await encryptText(access.material.token, access.material.passphrase)
+        const next: StoredGitHubCredential = { version: 1, repository, tokenEnvelope, paused: false }
+        tokenRef.current = access.material.token
+        passphraseRef.current = access.material.passphrase
+        dataRef.current = remoteData
+        applyingRemoteRef.current = true
+        replaceData(remoteData, 'Supabase loaded the current encrypted MyHub data.')
+        window.setTimeout(() => {
+          applyingRemoteRef.current = false
+        }, 0)
+        await persistCredential(next)
+        const lastDigest = await digestData(remoteData)
+        privateAccessRef.current = {
+          id: access.id,
+          key: access.key,
+          version: access.version,
+          updatedAt: access.updatedAt,
+          lastDigest,
+        }
+        await savePrivateAccessCredential({ version: 1, id: access.id, key: access.key })
+        setPrivateAccessActive(true)
+        setLastSupabaseSyncedAt(access.updatedAt)
+        await performSync()
+      }),
+    [performSync, persistCredential, replaceData, withSerializedOperation],
+  )
+
+  useEffect(() => {
+    if (!ready || privateAccessRestoreStartedRef.current) return
+    privateAccessRestoreStartedRef.current = true
+    void loadPrivateAccessCredential()
+      .then(async (saved) => {
+        if (!saved || privateAccessRef.current) return
+        const access = await resolvePrivateAccess(saved.id, saved.key)
+        await connectPrivateAccess(access)
+      })
+      .catch(async (error: unknown) => {
+        await clearPrivateAccessCredential()
+        setErrorMessage(
+          error instanceof Error
+            ? `The saved private access link could not reconnect: ${error.message}`
+            : 'The saved private access link could not reconnect.',
+        )
+      })
+  }, [connectPrivateAccess, ready])
 
   const setPaused = useCallback(
     async (paused: boolean) => {
@@ -330,14 +430,17 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
   )
 
   const unlink = useCallback(async () => {
-    await clearGitHubCredential()
+    await Promise.all([clearGitHubCredential(), clearPrivateAccessCredential()])
     credentialRef.current = null
     setCredential(null)
     tokenRef.current = null
     passphraseRef.current = null
+    privateAccessRef.current = null
+    setPrivateAccessActive(false)
+    setLastSupabaseSyncedAt(undefined)
     setStatus('disconnected')
     setErrorMessage('')
-    announce('GitHub Sync unlinked. The remote encrypted snapshot was not deleted.')
+    announce('Cross-device sync was unlinked from this browser. Remote encrypted data and the private link remain.')
   }, [announce])
 
   const clearRemoteSnapshot = useCallback(
@@ -404,6 +507,53 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
     [calendarAccessAvailable, calendarAccessReason],
   )
 
+  const refreshPrivateAccess = useCallback(async () => {
+    const session = privateAccessRef.current
+    if (!session || offline()) return
+    try {
+      const remote = await resolvePrivateAccess(session.id, session.key)
+      if (remote.version === session.version) return
+      const remoteData = migrateAppData(remote.data)
+      const remoteDigest = await digestData(remoteData)
+      const localDigest = await digestData(dataRef.current)
+      if (localDigest !== session.lastDigest) {
+        setErrorMessage(
+          'Supabase has a newer copy while this device also has changes. Reopen your private link before editing further.',
+        )
+        return
+      }
+      dataRef.current = remoteData
+      applyingRemoteRef.current = true
+      replaceData(remoteData, 'Supabase loaded newer MyHub changes from another device.')
+      window.setTimeout(() => {
+        applyingRemoteRef.current = false
+      }, 0)
+      privateAccessRef.current = {
+        ...session,
+        version: remote.version,
+        updatedAt: remote.updatedAt,
+        lastDigest: remoteDigest,
+      }
+      setLastSupabaseSyncedAt(remote.updatedAt)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Supabase could not refresh MyHub data.')
+    }
+  }, [replaceData])
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void refreshPrivateAccess()
+    }
+    window.addEventListener('focus', refresh)
+    window.addEventListener('online', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('online', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [refreshPrivateAccess])
+
   useEffect(() => {
     if (!ready || applyingRemoteRef.current || status !== 'current' || credential?.paused || !tokenRef.current) return
     const timeout = window.setTimeout(() => {
@@ -414,6 +564,37 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timeout)
   }, [credential?.lastSyncedDigest, credential?.paused, data, ready, status, syncNow])
 
+  useEffect(() => {
+    if (!ready || applyingRemoteRef.current || !privateAccessRef.current) return
+    const timeout = window.setTimeout(() => {
+      const snapshot = data
+      privateAccessPushRef.current = privateAccessPushRef.current.then(async () => {
+        const session = privateAccessRef.current
+        if (!session) return
+        const digest = await digestData(snapshot)
+        if (digest === session.lastDigest) return
+        try {
+          const result = await pushPrivateAppData(session.id, session.key, snapshot, session.version)
+          privateAccessRef.current = {
+            ...session,
+            version: result.version,
+            updatedAt: result.updatedAt,
+            lastDigest: digest,
+          }
+          setLastSupabaseSyncedAt(result.updatedAt)
+          setErrorMessage('')
+        } catch (error) {
+          if (error instanceof Error && (error as Error & { status?: number }).status === 409) {
+            await refreshPrivateAccess()
+            return
+          }
+          setErrorMessage(error instanceof Error ? error.message : 'Supabase could not save MyHub data.')
+        }
+      })
+    }, 650)
+    return () => window.clearTimeout(timeout)
+  }, [data, ready, refreshPrivateAccess])
+
   const value = useMemo<GitHubSyncContextValue>(
     () => ({
       status,
@@ -422,12 +603,15 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       paused: credential?.paused ?? false,
       errorMessage,
       lastSyncedAt: credential?.lastSyncedAt,
+      privateAccessActive,
+      lastSupabaseSyncedAt,
       connect,
       unlock,
       syncNow,
       resolveUseDevice,
       resolveUseGitHub,
-      createDevicePairing,
+      createPrivateAccessLink: createPrivateAccessLinkForCurrentData,
+      connectPrivateAccess,
       setPaused,
       unlink,
       clearRemoteSnapshot,
@@ -437,9 +621,12 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       calendarAccess,
       clearRemoteSnapshot,
       connect,
-      createDevicePairing,
+      connectPrivateAccess,
+      createPrivateAccessLinkForCurrentData,
       credential,
       errorMessage,
+      lastSupabaseSyncedAt,
+      privateAccessActive,
       resolveUseDevice,
       resolveUseGitHub,
       setPaused,

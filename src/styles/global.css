@@ -2230,7 +2230,7 @@ kbd {
   font-size: 9px;
 }
 .phone-sync-guide,
-.pair-device-security,
+.private-access-security,
 .pairing-dialog__security {
   display: flex;
   align-items: start;
@@ -2241,7 +2241,7 @@ kbd {
   background: color-mix(in srgb, var(--pink-strong) 7%, var(--surface));
 }
 .phone-sync-guide > svg,
-.pair-device-security > svg,
+.private-access-security > svg,
 .pairing-dialog__security > svg {
   width: 21px;
   flex: 0 0 auto;
@@ -2255,7 +2255,7 @@ kbd {
   font-size: 11px;
 }
 .phone-sync-guide p,
-.pair-device-security p,
+.private-access-security p,
 .pairing-dialog__security p {
   margin: 3px 0 0;
   color: var(--ink-soft);
@@ -2340,80 +2340,30 @@ kbd {
   display: grid;
   gap: 16px;
 }
-.pairing-dialog__qr {
-  display: grid;
-  place-items: center;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: #ffffff;
-}
-.pairing-dialog__qr img {
-  width: min(100%, 320px);
-  height: auto;
-}
-.pairing-dialog__code {
-  display: grid;
-  gap: 4px;
-  padding: 16px;
-  border: 1px solid color-mix(in srgb, var(--pink-strong) 34%, var(--line));
-  border-radius: 14px;
-  background: var(--surface-soft);
-  text-align: center;
-}
-.pairing-dialog__code span,
-.pairing-dialog__code small {
-  color: var(--ink-soft);
-  font-size: 9px;
-}
-.pairing-dialog__code strong {
-  overflow-wrap: anywhere;
-  color: var(--pink-strong);
-  font-size: clamp(18px, 5vw, 25px);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
-}
-.pairing-dialog__fallback {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-soft);
-}
-.pairing-dialog__fallback summary {
-  padding: 12px 14px;
-  font-size: 10px;
-  font-weight: 800;
-  cursor: pointer;
-}
-.pairing-dialog__fallback[open] summary {
-  border-bottom: 1px solid var(--line);
-}
-.pairing-dialog__fallback .field {
-  padding: 14px;
-}
-.pairing-dialog__fallback textarea {
+.pairing-dialog textarea {
   overflow-wrap: anywhere;
   resize: vertical;
 }
-.pair-device-page {
+.private-access-page {
   width: min(100%, 760px);
   margin-inline: auto;
 }
-.pair-device-card {
+.private-access-card {
   display: grid;
   gap: 18px;
   padding: 24px;
 }
-.pair-device-card__heading {
+.private-access-card__heading {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   gap: 14px;
 }
-.pair-device-card__heading h2 {
+.private-access-card__heading h2 {
   margin-bottom: 4px;
   font-size: 18px;
 }
-.pair-device-card__heading p {
+.private-access-card__heading p {
   margin: 0;
   color: var(--ink-soft);
   font-size: 10px;

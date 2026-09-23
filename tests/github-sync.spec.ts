@@ -16,6 +16,8 @@ const target = {
 }
 const contentsUrl = `https://api.github.com/repos/${target.owner}/${target.repo}/contents/myhub-data/v1/snapshot.enc`
 const repositoryUrl = `https://api.github.com/repos/${target.owner}/${target.repo}`
+const privateAccessBrokerUrl = 'https://vlsxvwqmzcriarcctubr.supabase.co/functions/v1/myhub-private-access'
+const privateAccessId = '11111111-1111-4111-8111-111111111111'
 
 interface RemoteState {
   content: string | null
@@ -24,6 +26,13 @@ interface RemoteState {
   writes: Array<Record<string, unknown>>
   deletes: Array<Record<string, unknown>>
   repositoryChecks: number
+}
+
+interface PrivateAccessState {
+  encryptedPayload: string
+  encryptedData: string
+  version: number
+  writes: number
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -73,6 +82,40 @@ const installGitHubMock = async (page: Page, state: RemoteState) => {
       return
     }
     await json(route, { message: 'Unexpected synthetic test method.' }, 405)
+  })
+}
+
+const installPrivateAccessMock = async (page: Page, state: PrivateAccessState) => {
+  await page.route(privateAccessBrokerUrl, async (route) => {
+    const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>
+    if (body.action === 'create') {
+      state.encryptedPayload = String(body.encryptedPayload)
+      state.encryptedData = String(body.encryptedData)
+      state.version = 1
+      await json(route, { id: privateAccessId, version: state.version, updatedAt: '2026-09-23T18:00:00.000Z' }, 201)
+      return
+    }
+    if (body.action === 'resolve' && body.id === privateAccessId) {
+      await json(route, {
+        encryptedPayload: state.encryptedPayload,
+        encryptedData: state.encryptedData,
+        version: state.version,
+        updatedAt: '2026-09-23T18:00:00.000Z',
+      })
+      return
+    }
+    if (body.action === 'push' && body.id === privateAccessId) {
+      if (body.expectedVersion !== state.version) {
+        await json(route, { error: 'A newer Supabase copy exists.', currentVersion: state.version }, 409)
+        return
+      }
+      state.encryptedData = String(body.encryptedData)
+      state.version += 1
+      state.writes += 1
+      await json(route, { version: state.version, updatedAt: '2026-09-23T18:05:00.000Z' })
+      return
+    }
+    await json(route, { error: 'Unexpected private access request.' }, 400)
   })
 }
 
@@ -135,43 +178,74 @@ test('connect verifies a private repository and pushes only an encrypted snapsho
   expect(JSON.stringify(envelope)).not.toContain('Crosscut User')
 })
 
-test('an unlocked device pairs a fresh phone that pulls encrypted GitHub data without exposing credentials', async ({
+test('a private access link opens a fresh phone and syncs encrypted Supabase data with GitHub backup', async ({
   browser,
   page,
 }) => {
   const state = freshRemoteState()
+  const privateAccess = { encryptedPayload: '', encryptedData: '', version: 0, writes: 0 }
   await installGitHubMock(page, state)
+  await installPrivateAccessMock(page, privateAccess)
   const passphrase = createTestKeyMaterial()
   const { token } = await connect(page, passphrase)
   await expect(page.locator('#github-sync').getByText('current')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Pair another device' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Pair another device' })
-  await expect(dialog.getByAltText('Encrypted MyHub setup QR code')).toBeVisible()
-  const pairingCode = await dialog.getByText(/^[A-Z2-9]{4}(?:-[A-Z2-9]{4}){3}$/u).innerText()
-  await dialog.getByText('Use an encrypted setup link instead').click()
-  const setupLink = await dialog.getByLabel('Encrypted phone setup link').inputValue()
+  await page.getByRole('button', { name: 'Create private access link' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Private MyHub access link' })
+  const accessLink = await dialog.getByRole('textbox', { name: 'Private MyHub access link', exact: true }).inputValue()
 
-  expect(setupLink).not.toContain(token)
-  expect(setupLink).not.toContain(passphrase)
-  expect(setupLink).not.toContain(pairingCode)
+  expect(accessLink).not.toContain(token)
+  expect(accessLink).not.toContain(passphrase)
+  expect(accessLink).toContain(`#/access?id=${privateAccessId}&key=`)
+  expect(privateAccess.encryptedPayload).not.toContain(token)
+  expect(privateAccess.encryptedPayload).not.toContain(passphrase)
+  expect(privateAccess.encryptedData).not.toContain('Crosscut User')
+  await dialog.getByRole('button', { name: 'Done' }).click()
 
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   const phonePage = await phone.newPage()
   await installGitHubMock(phonePage, state)
-  await phonePage.goto(setupLink)
-  await expect(phonePage.getByRole('heading', { name: 'Set up this device' })).toBeVisible()
-  await expect.poll(() => phonePage.url()).not.toContain('pair=')
-  await phonePage.getByLabel('16-character pairing code').fill(pairingCode)
-  await phonePage.getByRole('button', { name: 'Connect this device' }).click()
+  await installPrivateAccessMock(phonePage, privateAccess)
+  await phonePage.goto(accessLink)
 
   await expect(
     phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
   ).toBeVisible()
+  await expect.poll(() => phonePage.url()).not.toContain('id=')
+  await expect.poll(() => phonePage.url()).not.toContain('key=')
   expect(state.writes).toHaveLength(1)
   const savedCredential = (await readSyncCredential(phonePage)) as { tokenEnvelope?: string } | null
   expect(savedCredential?.tokenEnvelope).toBeTruthy()
   expect(savedCredential?.tokenEnvelope).not.toContain(token)
+
+  await phonePage.goto('/#/settings')
+  const phoneName = phonePage.getByLabel('Your name')
+  await expect(phoneName).toHaveValue('Crosscut User')
+  await phoneName.fill('Updated on phone')
+  await expect.poll(() => privateAccess.writes, { timeout: 30_000 }).toBe(1)
+  await expect.poll(() => privateAccess.version, { timeout: 30_000 }).toBe(2)
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.getByLabel('Your name')).toHaveValue('Updated on phone')
+  await expect.poll(() => state.writes.length).toBeGreaterThanOrEqual(2)
+
+  await phonePage.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('myhub-local')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const transaction = database.transaction('application', 'readwrite')
+    transaction.objectStore('application').delete('state')
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+    database.close()
+  })
+  await phonePage.goto('/')
+  await phonePage.goto('/#/settings')
+  await expect(phonePage.getByLabel('Your name')).toHaveValue('Updated on phone')
+  expect(phonePage.url()).not.toContain('access=')
   await phone.close()
 })
 
@@ -181,7 +255,7 @@ test('connect rejects a public repository before reading or writing snapshot dat
   await installGitHubMock(page, state)
   await connect(page, createTestKeyMaterial())
 
-  await expect(page.getByText('GitHub Sync needs attention.')).toBeVisible()
+  await expect(page.getByText('Cross-device sync needs attention.')).toBeVisible()
   await expect(page.getByText(/requires a private repository/)).toBeVisible()
   expect(state.repositoryChecks).toBe(1)
   expect(state.writes).toHaveLength(0)
