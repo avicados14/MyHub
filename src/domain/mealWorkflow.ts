@@ -7,6 +7,13 @@ const roundServings = (value: number): number => Math.round(value * 1000) / 1000
 const sameMealSource = (first: MealEntry['sourceSnapshot'], second: MealEntry['sourceSnapshot']): boolean =>
   first.sourceType === second.sourceType && Boolean(first.sourceId) && first.sourceId === second.sourceId
 
+const sameLegacyCarryForwardSource = (
+  first: MealEntry['sourceSnapshot'],
+  second: MealEntry['sourceSnapshot'],
+): boolean =>
+  sameMealSource(first, second) ||
+  (second.sourceType === 'leftover' && first.name.trim().toLocaleLowerCase() === second.name.trim().toLocaleLowerCase())
+
 const repairCarriedForwardBatches = (data: AppData, timestamp: string): AppData => {
   let meals = data.meals
   let leftovers = data.leftovers
@@ -32,7 +39,7 @@ const repairCarriedForwardBatches = (data: AppData, timestamp: string): AppData 
           meal.slot === continuation.slot &&
           !meal.leftoverId &&
           !meal.autoPlannedFromMealId &&
-          sameMealSource(meal.sourceSnapshot, continuationSource) &&
+          sameLegacyCarryForwardSource(meal.sourceSnapshot, continuationSource) &&
           roundServings(meal.preparedServings - meal.consumedServings) === roundServings(continuation.preparedServings),
       )
       .sort((first, second) => second.date.localeCompare(first.date))[0]
