@@ -311,7 +311,7 @@ test.describe('food v2 workflows', () => {
       createdAt: data.initializedAt,
       updatedAt: data.initializedAt,
       source: 'generated' as const,
-      sourceMealId: secondDay.id,
+      sourceMealId: 'meal-deleted-source',
       sourceSnapshot: {
         ...secondDay.sourceSnapshot,
         sourceType: 'leftover' as const,

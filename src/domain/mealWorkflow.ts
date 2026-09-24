@@ -7,12 +7,18 @@ const roundServings = (value: number): number => Math.round(value * 1000) / 1000
 const sameMealSource = (first: MealEntry['sourceSnapshot'], second: MealEntry['sourceSnapshot']): boolean =>
   first.sourceType === second.sourceType && Boolean(first.sourceId) && first.sourceId === second.sourceId
 
+const normalizedMealName = (value: string): string =>
+  value
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replaceAll(/[^a-z0-9]+/gu, '')
+
 const sameLegacyCarryForwardSource = (
   first: MealEntry['sourceSnapshot'],
   second: MealEntry['sourceSnapshot'],
 ): boolean =>
   sameMealSource(first, second) ||
-  (second.sourceType === 'leftover' && first.name.trim().toLocaleLowerCase() === second.name.trim().toLocaleLowerCase())
+  (second.sourceType === 'leftover' && normalizedMealName(first.name) === normalizedMealName(second.name))
 
 const repairCarriedForwardBatches = (data: AppData, timestamp: string): AppData => {
   let meals = data.meals
@@ -20,61 +26,63 @@ const repairCarriedForwardBatches = (data: AppData, timestamp: string): AppData 
   let changed = false
 
   for (const leftover of data.leftovers) {
-    const continuationIndex = meals.findIndex((meal) => meal.id === leftover.sourceMealId)
-    const continuation = meals[continuationIndex]
-    if (
-      !continuation ||
-      continuation.autoPlannedFromMealId ||
-      (continuation.leftoverId && continuation.leftoverId !== leftover.id)
+    const storedSource = meals.find((meal) => meal.id === leftover.sourceMealId)
+    const continuations = meals.filter(
+      (meal) => meal.id === storedSource?.id || (meal.leftoverId === leftover.id && meal.id !== leftover.sourceMealId),
     )
-      continue
-    const continuationSource =
-      continuation.leftoverId === leftover.id ? leftover.sourceSnapshot : continuation.sourceSnapshot
+    for (const continuation of continuations) {
+      if (continuation.autoPlannedFromMealId || (continuation.leftoverId && continuation.leftoverId !== leftover.id))
+        continue
+      const continuationSource =
+        continuation.leftoverId === leftover.id ? leftover.sourceSnapshot : continuation.sourceSnapshot
+      const previousSource = meals
+        .filter(
+          (meal) =>
+            meal.id !== continuation.id &&
+            meal.date < continuation.date &&
+            meal.slot === continuation.slot &&
+            !meal.leftoverId &&
+            !meal.autoPlannedFromMealId &&
+            sameLegacyCarryForwardSource(meal.sourceSnapshot, continuationSource) &&
+            roundServings(meal.preparedServings - meal.consumedServings) ===
+              roundServings(continuation.preparedServings),
+        )
+        .sort((first, second) => second.date.localeCompare(first.date))[0]
+      if (!previousSource || (leftover.sourceMealId === previousSource.id && continuation.leftoverId === leftover.id))
+        continue
 
-    const previousSource = meals
-      .filter(
-        (meal) =>
-          meal.id !== continuation.id &&
-          meal.date < continuation.date &&
-          meal.slot === continuation.slot &&
-          !meal.leftoverId &&
-          !meal.autoPlannedFromMealId &&
-          sameLegacyCarryForwardSource(meal.sourceSnapshot, continuationSource) &&
-          roundServings(meal.preparedServings - meal.consumedServings) === roundServings(continuation.preparedServings),
+      changed = true
+      meals = meals.map((meal) =>
+        meal.id === continuation.id
+          ? {
+              ...meal,
+              updatedAt: timestamp,
+              recipeId: undefined,
+              packagedFoodId: undefined,
+              customName: undefined,
+              leftoverId: leftover.id,
+              sourceSnapshot: {
+                ...previousSource.sourceSnapshot,
+                sourceType: 'leftover',
+                sourceId: leftover.id,
+                capturedAt: timestamp,
+              },
+            }
+          : meal,
       )
-      .sort((first, second) => second.date.localeCompare(first.date))[0]
-    if (!previousSource) continue
-
-    changed = true
-    meals = meals.map((meal) =>
-      meal.id === continuation.id
-        ? {
-            ...meal,
-            updatedAt: timestamp,
-            recipeId: undefined,
-            packagedFoodId: undefined,
-            customName: undefined,
-            leftoverId: leftover.id,
-            sourceSnapshot: {
-              ...previousSource.sourceSnapshot,
-              sourceType: 'leftover',
-              sourceId: leftover.id,
-              capturedAt: timestamp,
-            },
-          }
-        : meal,
-    )
-    leftovers = leftovers.map((item) =>
-      item.id === leftover.id
-        ? {
-            ...item,
-            updatedAt: timestamp,
-            sourceMealId: previousSource.id,
-            sourceSnapshot: { ...previousSource.sourceSnapshot },
-            preparedOn: previousSource.date,
-          }
-        : item,
-    )
+      leftovers = leftovers.map((item) =>
+        item.id === leftover.id
+          ? {
+              ...item,
+              updatedAt: timestamp,
+              sourceMealId: previousSource.id,
+              sourceSnapshot: { ...previousSource.sourceSnapshot },
+              preparedOn: previousSource.date,
+            }
+          : item,
+      )
+      break
+    }
   }
 
   return changed ? { ...data, meals, leftovers } : data
