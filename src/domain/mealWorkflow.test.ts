@@ -266,4 +266,78 @@ describe('meal lifecycle', () => {
     expect(remainingBatchServingsForMeal(repaired, sourceMeal)).toBe(8)
     expect(remainingBatchServingsForMeal(repaired, manualDay)).toBe(8)
   })
+
+  it('repairs a carried-forward recipe meal that was saved as a second batch source', () => {
+    const data = createTestFixtureData(new Date(2026, 8, 24))
+    const firstDay = {
+      ...data.meals[0]!,
+      id: 'meal-first-day',
+      date: '2026-09-21',
+      slot: 'breakfast' as const,
+      servings: 12,
+      preparedServings: 12,
+      consumedServings: 2,
+    }
+    const secondDay = {
+      ...firstDay,
+      id: 'meal-second-day',
+      date: '2026-09-22',
+      servings: 2,
+      preparedServings: 10,
+      consumedServings: 2,
+    }
+    const staleLeftover = {
+      id: 'leftover-second-day',
+      createdAt: data.initializedAt,
+      updatedAt: data.initializedAt,
+      source: 'generated' as const,
+      sourceMealId: secondDay.id,
+      sourceSnapshot: secondDay.sourceSnapshot,
+      preparedOn: secondDay.date,
+      servingsRemaining: 10,
+      storageLocation: 'Refrigerator' as const,
+    }
+    const repaired = reconcileMealBatchBalances(
+      { ...data, meals: [firstDay, secondDay], leftovers: [staleLeftover], foodLog: [] },
+      '2026-09-24T12:00:00.000Z',
+    )
+    const repairedSecondDay = repaired.meals.find((meal) => meal.id === secondDay.id)!
+
+    expect(repairedSecondDay.leftoverId).toBe(staleLeftover.id)
+    expect(repairedSecondDay.recipeId).toBeUndefined()
+    expect(repaired.leftovers[0]).toEqual(
+      expect.objectContaining({ sourceMealId: firstDay.id, preparedOn: firstDay.date, servingsRemaining: 8 }),
+    )
+    expect(remainingBatchServingsForMeal(repaired, firstDay)).toBe(8)
+    expect(remainingBatchServingsForMeal(repaired, repairedSecondDay)).toBe(8)
+  })
+
+  it('uses an available earlier same-recipe batch when another day is added as a recipe', () => {
+    const data = createTestFixtureData(new Date(2026, 8, 24))
+    const firstDay = {
+      ...data.meals[0]!,
+      id: 'meal-first-day',
+      date: '2026-09-21',
+      slot: 'breakfast' as const,
+      servings: 2,
+      preparedServings: 10,
+      consumedServings: 2,
+    }
+    data.meals = []
+    data.leftovers = []
+    const withBatch = upsertMealWithLeftover(data, firstDay, '2026-09-21T12:00:00.000Z')
+    const nextDayRecipe = {
+      ...firstDay,
+      id: 'meal-next-day',
+      date: '2026-09-22',
+      preparedServings: 2,
+      consumedServings: 0,
+    }
+    const continued = upsertMealWithLeftover(withBatch, nextDayRecipe, '2026-09-22T12:00:00.000Z')
+    const nextDay = continued.meals.find((meal) => meal.id === nextDayRecipe.id)!
+
+    expect(nextDay.leftoverId).toBe(continued.leftovers[0]?.id)
+    expect(nextDay.recipeId).toBeUndefined()
+    expect(remainingBatchServingsForMeal(continued, nextDay)).toBe(8)
+  })
 })

@@ -4,6 +4,68 @@ import { addDays, dateFromLocal, makeId, toLocalDate } from '../utilities/date'
 
 const roundServings = (value: number): number => Math.round(value * 1000) / 1000
 
+const sameMealSource = (first: MealEntry['sourceSnapshot'], second: MealEntry['sourceSnapshot']): boolean =>
+  first.sourceType === second.sourceType && Boolean(first.sourceId) && first.sourceId === second.sourceId
+
+const repairCarriedForwardBatches = (data: AppData, timestamp: string): AppData => {
+  let meals = data.meals
+  let leftovers = data.leftovers
+  let changed = false
+
+  for (const leftover of data.leftovers) {
+    const continuationIndex = meals.findIndex((meal) => meal.id === leftover.sourceMealId)
+    const continuation = meals[continuationIndex]
+    if (!continuation || continuation.leftoverId || continuation.autoPlannedFromMealId) continue
+
+    const previousSource = meals
+      .filter(
+        (meal) =>
+          meal.id !== continuation.id &&
+          meal.date < continuation.date &&
+          meal.slot === continuation.slot &&
+          !meal.leftoverId &&
+          !meal.autoPlannedFromMealId &&
+          sameMealSource(meal.sourceSnapshot, continuation.sourceSnapshot) &&
+          roundServings(meal.preparedServings - meal.consumedServings) === roundServings(continuation.preparedServings),
+      )
+      .sort((first, second) => second.date.localeCompare(first.date))[0]
+    if (!previousSource) continue
+
+    changed = true
+    meals = meals.map((meal) =>
+      meal.id === continuation.id
+        ? {
+            ...meal,
+            updatedAt: timestamp,
+            recipeId: undefined,
+            packagedFoodId: undefined,
+            customName: undefined,
+            leftoverId: leftover.id,
+            sourceSnapshot: {
+              ...previousSource.sourceSnapshot,
+              sourceType: 'leftover',
+              sourceId: leftover.id,
+              capturedAt: timestamp,
+            },
+          }
+        : meal,
+    )
+    leftovers = leftovers.map((item) =>
+      item.id === leftover.id
+        ? {
+            ...item,
+            updatedAt: timestamp,
+            sourceMealId: previousSource.id,
+            sourceSnapshot: { ...previousSource.sourceSnapshot },
+            preparedOn: previousSource.date,
+          }
+        : item,
+    )
+  }
+
+  return changed ? { ...data, meals, leftovers } : data
+}
+
 const batchLeftoverId = (data: AppData, sourceMeal: MealEntry): string =>
   data.leftovers.find((leftover) => leftover.sourceMealId === sourceMeal.id)?.id ??
   data.meals.find((meal) => meal.autoPlannedFromMealId === sourceMeal.id)?.leftoverId ??
@@ -42,14 +104,15 @@ export const remainingBatchServingsForMeal = (data: AppData, meal: MealEntry): n
 }
 
 export const reconcileMealBatchBalances = (data: AppData, timestamp = new Date().toISOString()): AppData => {
+  const repaired = repairCarriedForwardBatches(data, timestamp)
   let changed = false
-  const leftovers = data.leftovers.map((leftover) => {
-    const remaining = remainingServingsForLeftover(data, leftover)
+  const leftovers = repaired.leftovers.map((leftover) => {
+    const remaining = remainingServingsForLeftover(repaired, leftover)
     if (remaining === leftover.servingsRemaining) return leftover
     changed = true
     return { ...leftover, servingsRemaining: remaining, updatedAt: timestamp }
   })
-  return changed ? { ...data, leftovers } : data
+  return changed ? { ...repaired, leftovers } : repaired
 }
 
 export const syncLeftoverForMeal = (data: AppData, meal: MealEntry, timestamp: string): AppData => {
@@ -184,18 +247,53 @@ export const upsertMealWithLeftover = (
   timestamp: string,
   options: BatchPlanningOptions = {},
 ): AppData => {
-  const displaced = data.meals.find((item) => item.id !== meal.id && item.date === meal.date && item.slot === meal.slot)
+  const availableBatch =
+    !meal.leftoverId && !meal.autoPlannedFromMealId && !options.autoPlanExtraServings
+      ? data.leftovers.find((leftover) => {
+          const sourceMeal = data.meals.find((item) => item.id === leftover.sourceMealId)
+          return (
+            sourceMeal &&
+            sourceMeal.id !== meal.id &&
+            sourceMeal.date < meal.date &&
+            sameMealSource(sourceMeal.sourceSnapshot, meal.sourceSnapshot) &&
+            meal.preparedServings <= meal.servings &&
+            meal.servings <= remainingServingsForLeftover(data, leftover)
+          )
+        })
+      : undefined
+  const normalizedMeal: MealEntry = availableBatch
+    ? {
+        ...meal,
+        recipeId: undefined,
+        packagedFoodId: undefined,
+        customName: undefined,
+        leftoverId: availableBatch.id,
+        preparedServings: meal.servings,
+        sourceSnapshot: {
+          ...availableBatch.sourceSnapshot,
+          sourceType: 'leftover',
+          sourceId: availableBatch.id,
+          capturedAt: timestamp,
+        },
+      }
+    : meal
+  const displaced = data.meals.find(
+    (item) => item.id !== normalizedMeal.id && item.date === normalizedMeal.date && item.slot === normalizedMeal.slot,
+  )
   const withoutDisplaced = displaced ? removeMealAndBatch(data, displaced.id) : data
-  const meals = withoutDisplaced.meals.some((item) => item.id === meal.id)
-    ? withoutDisplaced.meals.map((item) => (item.id === meal.id ? meal : item))
-    : [...withoutDisplaced.meals, meal]
+  const meals = withoutDisplaced.meals.some((item) => item.id === normalizedMeal.id)
+    ? withoutDisplaced.meals.map((item) => (item.id === normalizedMeal.id ? normalizedMeal : item))
+    : [...withoutDisplaced.meals, normalizedMeal]
   const withMeal = { ...withoutDisplaced, meals }
-  if (meal.leftoverId) return reconcileMealBatchBalances(withMeal, timestamp)
-  const withLeftover = syncLeftoverForMeal(withMeal, meal, timestamp)
-  if (options.autoPlanExtraServings) return planExtraPreparedServings(withLeftover, meal.id, timestamp, options)
+  if (normalizedMeal.leftoverId) return reconcileMealBatchBalances(withMeal, timestamp)
+  const withLeftover = syncLeftoverForMeal(withMeal, normalizedMeal, timestamp)
+  if (options.autoPlanExtraServings)
+    return planExtraPreparedServings(withLeftover, normalizedMeal.id, timestamp, options)
   return {
     ...withLeftover,
-    meals: withLeftover.meals.filter((item) => item.autoPlannedFromMealId !== meal.id || item.consumedServings > 0),
+    meals: withLeftover.meals.filter(
+      (item) => item.autoPlannedFromMealId !== normalizedMeal.id || item.consumedServings > 0,
+    ),
   }
 }
 
