@@ -15,7 +15,14 @@ const repairCarriedForwardBatches = (data: AppData, timestamp: string): AppData 
   for (const leftover of data.leftovers) {
     const continuationIndex = meals.findIndex((meal) => meal.id === leftover.sourceMealId)
     const continuation = meals[continuationIndex]
-    if (!continuation || continuation.leftoverId || continuation.autoPlannedFromMealId) continue
+    if (
+      !continuation ||
+      continuation.autoPlannedFromMealId ||
+      (continuation.leftoverId && continuation.leftoverId !== leftover.id)
+    )
+      continue
+    const continuationSource =
+      continuation.leftoverId === leftover.id ? leftover.sourceSnapshot : continuation.sourceSnapshot
 
     const previousSource = meals
       .filter(
@@ -25,7 +32,7 @@ const repairCarriedForwardBatches = (data: AppData, timestamp: string): AppData 
           meal.slot === continuation.slot &&
           !meal.leftoverId &&
           !meal.autoPlannedFromMealId &&
-          sameMealSource(meal.sourceSnapshot, continuation.sourceSnapshot) &&
+          sameMealSource(meal.sourceSnapshot, continuationSource) &&
           roundServings(meal.preparedServings - meal.consumedServings) === roundServings(continuation.preparedServings),
       )
       .sort((first, second) => second.date.localeCompare(first.date))[0]

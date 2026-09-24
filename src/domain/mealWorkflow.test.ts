@@ -297,8 +297,18 @@ describe('meal lifecycle', () => {
       servingsRemaining: 10,
       storageLocation: 'Refrigerator' as const,
     }
+    const selfLinkedSecondDay = {
+      ...secondDay,
+      recipeId: undefined,
+      leftoverId: staleLeftover.id,
+      sourceSnapshot: {
+        ...staleLeftover.sourceSnapshot,
+        sourceType: 'leftover' as const,
+        sourceId: staleLeftover.id,
+      },
+    }
     const repaired = reconcileMealBatchBalances(
-      { ...data, meals: [firstDay, secondDay], leftovers: [staleLeftover], foodLog: [] },
+      { ...data, meals: [firstDay, selfLinkedSecondDay], leftovers: [staleLeftover], foodLog: [] },
       '2026-09-24T12:00:00.000Z',
     )
     const repairedSecondDay = repaired.meals.find((meal) => meal.id === secondDay.id)!

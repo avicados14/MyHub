@@ -317,7 +317,17 @@ test.describe('food v2 workflows', () => {
       servingsRemaining: 10,
       storageLocation: 'Refrigerator' as const,
     }
-    data.meals = [source, secondDay]
+    const selfLinkedSecondDay = {
+      ...secondDay,
+      recipeId: undefined,
+      leftoverId: leftover.id,
+      sourceSnapshot: {
+        ...leftover.sourceSnapshot,
+        sourceType: 'leftover' as const,
+        sourceId: leftover.id,
+      },
+    }
+    data.meals = [source, selfLinkedSecondDay]
     data.leftovers = [leftover]
     data.foodLog = []
     await seedAppData(page, data, '/#/food?view=planner')
