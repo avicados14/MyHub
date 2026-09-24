@@ -298,29 +298,26 @@ test.describe('food v2 workflows', () => {
       preparedServings: 12,
       consumedServings: 2,
     }
-    const leftover = {
-      id: 'leftover-source',
-      createdAt: data.initializedAt,
-      updatedAt: data.initializedAt,
-      source: 'generated' as const,
-      sourceMealId: source.id,
-      sourceSnapshot: source.sourceSnapshot,
-      preparedOn: source.date,
-      servingsRemaining: 10,
-      storageLocation: 'Refrigerator' as const,
-    }
-    const manualDay = {
+    const secondDay = {
       ...source,
-      id: 'meal-manual-day',
+      id: 'meal-second-day',
       date: '2026-09-22',
-      recipeId: undefined,
-      leftoverId: leftover.id,
       servings: 2,
       preparedServings: 10,
       consumedServings: 2,
-      sourceSnapshot: { ...leftover.sourceSnapshot, sourceType: 'leftover' as const, sourceId: leftover.id },
     }
-    data.meals = [source, manualDay]
+    const leftover = {
+      id: 'leftover-second-day',
+      createdAt: data.initializedAt,
+      updatedAt: data.initializedAt,
+      source: 'generated' as const,
+      sourceMealId: secondDay.id,
+      sourceSnapshot: secondDay.sourceSnapshot,
+      preparedOn: secondDay.date,
+      servingsRemaining: 10,
+      storageLocation: 'Refrigerator' as const,
+    }
+    data.meals = [source, secondDay]
     data.leftovers = [leftover]
     data.foodLog = []
     await seedAppData(page, data, '/#/food?view=planner')
@@ -328,8 +325,25 @@ test.describe('food v2 workflows', () => {
     await expect(page.getByText(/8 batch servings left/u)).toHaveCount(2)
     await expect(page.getByText(/8 servings left · 0 future days linked/u)).toBeVisible()
     await expect
-      .poll(async () => (await readAppData(page)).leftovers.find((item) => item.id === leftover.id)?.servingsRemaining)
-      .toBe(8)
+      .poll(async () => {
+        const stored = await readAppData(page)
+        const storedSecondDay = stored.meals.find((meal) => meal.id === secondDay.id)
+        const storedLeftover = stored.leftovers.find((item) => item.id === leftover.id)
+        return {
+          remaining: storedLeftover?.servingsRemaining,
+          sourceMealId: storedLeftover?.sourceMealId,
+          preparedOn: storedLeftover?.preparedOn,
+          secondDayLeftoverId: storedSecondDay?.leftoverId,
+          secondDayRecipeId: storedSecondDay?.recipeId,
+        }
+      })
+      .toEqual({
+        remaining: 8,
+        sourceMealId: source.id,
+        preparedOn: source.date,
+        secondDayLeftoverId: leftover.id,
+        secondDayRecipeId: undefined,
+      })
   })
 
   test('regenerates slots, days, and weeks while preserving temporary suggestion locks', async ({ page }) => {
