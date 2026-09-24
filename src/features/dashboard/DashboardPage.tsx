@@ -241,6 +241,14 @@ export default function DashboardPage() {
             const meal = meals.find((entry) => entry.slot === slot)
             const recipe = meal?.recipeId ? recipeMap.get(meal.recipeId) : undefined
             const name = recipe?.name ?? meal?.customName ?? meal?.sourceSnapshot.name
+            const batchSourceId = meal?.autoPlannedFromMealId ?? meal?.id
+            const batchLeftover = batchSourceId
+              ? data.leftovers.find((leftover) => leftover.sourceMealId === batchSourceId)
+              : undefined
+            const isBatch = Boolean(
+              meal &&
+              (meal.autoPlannedFromMealId || data.meals.some((entry) => entry.autoPlannedFromMealId === meal.id)),
+            )
 
             return meal ? (
               <Link className="meal-card" key={slot} to={recipe ? `/food/recipes/${recipe.id}` : '/food?view=planner'}>
@@ -253,7 +261,10 @@ export default function DashboardPage() {
                   <span>{slot}</span>
                   <strong>{name || 'Custom meal'}</strong>
                   <small>
-                    {meal.servings} serving · {Math.max(0, meal.preparedServings - meal.consumedServings)} left
+                    {meal.servings} serving ·{' '}
+                    {isBatch
+                      ? `${batchLeftover?.servingsRemaining ?? 0} batch servings left`
+                      : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
                   </small>
                 </div>
               </Link>

@@ -514,6 +514,45 @@
   font-size: 9px;
 }
 
+.meal-batch-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--mint-strong) 28%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mint) 55%, var(--surface));
+  cursor: pointer;
+}
+
+.meal-batch-option input {
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--mint-strong);
+}
+
+.meal-batch-option span,
+.meal-batch-option strong,
+.meal-batch-option small {
+  display: block;
+}
+
+.meal-batch-option span {
+  flex: 1;
+}
+
+.meal-batch-option strong {
+  font-size: 11px;
+}
+
+.meal-batch-option small {
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .library-intro {
   margin-bottom: 18px;
 }

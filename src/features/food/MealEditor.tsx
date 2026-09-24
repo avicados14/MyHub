@@ -13,7 +13,7 @@ interface MealEditorProps {
   meal?: MealEntry
   initialSource?: { type: MealSourceType; id: string }
   onClose: () => void
-  onSave: (meal: MealEntry) => void
+  onSave: (meal: MealEntry, options: { autoPlanExtraServings: boolean }) => void
 }
 
 type MealSourceType = 'recipe' | 'packaged' | 'custom' | 'leftover'
@@ -26,6 +26,7 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
   const [nutrition, setNutrition] = useState<Nutrition>({ ...ZERO_NUTRITION })
   const [servings, setServings] = useState(1)
   const [prepared, setPrepared] = useState(1)
+  const [autoPlanExtra, setAutoPlanExtra] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -59,8 +60,9 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
     setNutrition(meal ? { ...meal.sourceSnapshot.nutritionPerServing } : { ...ZERO_NUTRITION })
     setServings(meal?.servings ?? 1)
     setPrepared(meal?.preparedServings ?? 1)
+    setAutoPlanExtra(meal ? data.meals.some((item) => item.autoPlannedFromMealId === meal.id) : true)
     setError('')
-  }, [data.leftovers, data.packagedFoods, data.recipes, initialSource, meal, open])
+  }, [data.leftovers, data.meals, data.packagedFoods, data.recipes, initialSource, meal, open])
 
   const changeType = (type: MealSourceType) => {
     setSourceType(type)
@@ -87,6 +89,7 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
       servings,
       preparedServings: prepared,
       consumedServings: meal?.consumedServings ?? 0,
+      autoPlannedFromMealId: meal?.autoPlannedFromMealId,
     }
     let next: MealEntry | null = null
     if (sourceType === 'recipe') {
@@ -156,7 +159,9 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
       setError('Serving counts cannot be negative.')
       return
     }
-    onSave(next)
+    onSave(next, {
+      autoPlanExtraServings: sourceType !== 'leftover' && autoPlanExtra && prepared > servings,
+    })
   }
 
   return (
@@ -261,6 +266,22 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
             />
           </Field>
         </div>
+        {sourceType !== 'leftover' && prepared > servings ? (
+          <label className="meal-batch-option">
+            <input
+              type="checkbox"
+              checked={autoPlanExtra}
+              onChange={(event) => setAutoPlanExtra(event.target.checked)}
+            />
+            <span>
+              <strong>Plan extra portions on future days</strong>
+              <small>
+                MyHub will add {prepared - servings} extra servings to the next open {target.slot} slots. Recording a
+                serving as consumed updates the amount left on every linked day.
+              </small>
+            </span>
+          </label>
+        ) : null}
         {error ? (
           <div className="inline-alert" role="alert">
             <AlertTriangle aria-hidden="true" />

@@ -1,6 +1,6 @@
 import { createEmptyData, createUnknownNutritionProvenance } from '../domain/defaults'
 import type { AppData, GroceryCategory, Nutrition, Recipe, RecipeIngredient } from '../domain/types'
-import { addDays, startOfWeek, toLocalDate } from '../utilities/date'
+import { addDays, toLocalDate } from '../utilities/date'
 
 const nowIso = () => new Date().toISOString()
 const fixtureBase = (id: string) => ({ id, createdAt: nowIso(), updatedAt: nowIso(), source: 'demo' as const })
@@ -132,7 +132,6 @@ const recipeSnapshot = (recipe: Recipe) => ({
 
 export const createTestFixtureData = (today = new Date()): AppData => {
   const data = createEmptyData(today)
-  const week = startOfWeek(today)
   const todayDate = toLocalDate(today)
   const tomorrow = toLocalDate(addDays(today, 1))
   const burrito = recipes[1]!
@@ -180,7 +179,7 @@ export const createTestFixtureData = (today = new Date()): AppData => {
       },
       {
         ...fixtureBase('meal-week'),
-        date: toLocalDate(addDays(week, 4)),
+        date: toLocalDate(addDays(today, 2)),
         slot: 'dinner',
         recipeId: burrito.id,
         servings: 1,
