@@ -24,7 +24,12 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, PageHeader, ProgressBar, SegmentedControl, StatusBadge } from '../../components/ui'
 import { createMealSuggestions, type MealSuggestion } from '../../domain/mealSuggestions'
-import { logMealConsumption, moveOrCopyMeal, upsertMealWithLeftover } from '../../domain/mealWorkflow'
+import {
+  logMealConsumption,
+  moveOrCopyMeal,
+  removeMealWithBatch,
+  upsertMealWithLeftover,
+} from '../../domain/mealWorkflow'
 import { sumNutrition } from '../../domain/recipe'
 import type { AppData, FoodLogEntry, MealEntry, MealSlot, PackagedFood, Recipe } from '../../domain/types'
 import { addDays, formatDate, makeId, startOfWeek, toLocalDate } from '../../utilities/date'
@@ -66,8 +71,9 @@ export default function FoodPage() {
     date: toLocalDate(new Date()),
     slot: 'dinner',
   })
-  const weekStart = startOfWeek(new Date())
-  const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index))
+  const [weekOffset, setWeekOffset] = useState(0)
+  const weekStart = useMemo(() => addDays(startOfWeek(new Date()), weekOffset * 7), [weekOffset])
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart])
   const filteredRecipes = data.recipes.filter((recipe) =>
     `${recipe.name} ${recipe.category} ${recipe.tags.join(' ')} ${recipe.sourceLabel}`
       .toLowerCase()
@@ -112,10 +118,12 @@ export default function FoodPage() {
     setEditingPackage(undefined)
   }
 
-  const saveMeal = (meal: MealEntry) => {
+  const saveMeal = (meal: MealEntry, options: { autoPlanExtraServings: boolean }) => {
     updateData(
-      (previous) => upsertMealWithLeftover(previous, meal, new Date().toISOString()),
-      `${meal.sourceSnapshot.name} planned. Nutrition will count only when consumed servings are recorded.`,
+      (previous) => upsertMealWithLeftover(previous, meal, new Date().toISOString(), options),
+      options.autoPlanExtraServings
+        ? `${meal.sourceSnapshot.name} planned with extra portions on later days.`
+        : `${meal.sourceSnapshot.name} planned. Nutrition will count only when consumed servings are recorded.`,
     )
     setMealOpen(false)
     setEditingMeal(undefined)
@@ -237,6 +245,8 @@ export default function FoodPage() {
             setInitialMealSource({ type: 'leftover', id })
             setMealOpen(true)
           }}
+          weekOffset={weekOffset}
+          onChangeWeek={setWeekOffset}
           updateData={updateData}
         />
       ) : null}
@@ -499,12 +509,16 @@ function PlannerView({
   data,
   onAdd,
   onPlanLeftover,
+  weekOffset,
+  onChangeWeek,
   updateData,
 }: {
   days: Date[]
   data: AppData
   onAdd: (date: string, slot: MealSlot, meal?: MealEntry) => void
   onPlanLeftover: (id: string, target: { date: string; slot: MealSlot }) => void
+  weekOffset: number
+  onChangeWeek: (offset: number) => void
   updateData: ReturnType<typeof useApp>['updateData']
 }) {
   const [generation, setGeneration] = useState(0)
@@ -527,6 +541,8 @@ function PlannerView({
     )
     return generated.map((suggestion) => lockedSuggestions.get(`${suggestion.date}:${suggestion.slot}`) ?? suggestion)
   }, [data, generation, lockedSuggestions, slotGenerations, targets])
+  const visibleDates = useMemo(() => new Set(days.map((day) => toLocalDate(day))), [days])
+  const visibleMealCount = data.meals.filter((meal) => visibleDates.has(meal.date)).length
 
   const changeGeneration = (keys: string[]) => {
     setSlotGenerations((current) => {
@@ -703,9 +719,35 @@ function PlannerView({
         <div className="meal-planner__header">
           <div>
             <h2>Week of {formatDate(toLocalDate(days[0] ?? new Date()), { month: 'long', day: 'numeric' })}</h2>
-            <p>Planned is not consumed. Record eaten servings below each meal to update nutrition.</p>
+            <p>Prepared batches continue onto later days. Record eaten servings to decrease the amount left.</p>
           </div>
-          <StatusBadge tone="food">{data.meals.length} meals planned</StatusBadge>
+          <div className="meal-planner__navigation">
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="Previous week"
+              onClick={() => onChangeWeek(weekOffset - 1)}
+            >
+              <ArrowLeft aria-hidden="true" />
+            </button>
+            <button
+              className="button button--quiet"
+              type="button"
+              disabled={weekOffset === 0}
+              onClick={() => onChangeWeek(0)}
+            >
+              This week
+            </button>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="Next week"
+              onClick={() => onChangeWeek(weekOffset + 1)}
+            >
+              <ArrowRight aria-hidden="true" />
+            </button>
+            <StatusBadge tone="food">{visibleMealCount} meals this week</StatusBadge>
+          </div>
         </div>
         <div className="meal-week">
           {days.map((day) => {
@@ -718,6 +760,14 @@ function PlannerView({
                 </header>
                 {mealSlots.map((slot) => {
                   const meal = data.meals.find((entry) => entry.date === date && entry.slot === slot)
+                  const batchSourceId = meal?.autoPlannedFromMealId ?? meal?.id
+                  const batchLeftover = batchSourceId
+                    ? data.leftovers.find((leftover) => leftover.sourceMealId === batchSourceId)
+                    : undefined
+                  const isBatch = Boolean(
+                    meal &&
+                    (meal.autoPlannedFromMealId || data.meals.some((entry) => entry.autoPlannedFromMealId === meal.id)),
+                  )
                   return (
                     <div className="meal-slot" key={slot}>
                       <span>{slot}</span>
@@ -726,8 +776,10 @@ function PlannerView({
                           <button type="button" onClick={() => onAdd(date, slot, meal)}>
                             <strong>{meal.sourceSnapshot.name}</strong>
                             <small>
-                              {meal.servings} planned · {Math.max(0, meal.preparedServings - meal.consumedServings)}{' '}
-                              left
+                              {meal.servings} planned ·{' '}
+                              {isBatch
+                                ? `${batchLeftover?.servingsRemaining ?? 0} batch servings left`
+                                : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
                             </small>
                           </button>
                           <button
@@ -736,15 +788,10 @@ function PlannerView({
                             aria-label={`Remove ${slot} on ${formatDate(date)}`}
                             onClick={() =>
                               updateData(
-                                (previous) => ({
-                                  ...previous,
-                                  meals: previous.meals.filter((entry) => entry.id !== meal.id),
-                                  leftovers: previous.leftovers.filter((entry) => entry.sourceMealId !== meal.id),
-                                  foodLog: previous.foodLog.filter(
-                                    (entry) => entry.sourceSnapshot.sourceId !== `meal:${meal.id}`,
-                                  ),
-                                }),
-                                'Meal removed from the plan.',
+                                (previous) => removeMealWithBatch(previous, meal.id),
+                                meal.autoPlannedFromMealId
+                                  ? 'Future batch serving removed from the plan.'
+                                  : 'Meal and its future batch servings removed from the plan.',
                               )
                             }
                           >
@@ -837,45 +884,54 @@ function Leftovers({
       <div className="library-intro">
         <div>
           <h2>Leftovers</h2>
-          <p>Derived from prepared minus consumed servings. Choose Leftover when adding a later meal.</p>
+          <p>Batch servings stay linked across planned days and decrease together when you record what you ate.</p>
         </div>
         <StatusBadge tone="lilac">{data.leftovers.length} available</StatusBadge>
       </div>
       {data.leftovers.length ? (
         <div className="leftover-list">
-          {data.leftovers.map((leftover) => (
-            <article key={leftover.id}>
-              <span className="section-icon section-icon--lilac">
-                <Archive aria-hidden="true" />
-              </span>
-              <div>
-                <strong>{leftover.sourceSnapshot.name}</strong>
-                <small>
-                  {leftover.servingsRemaining} servings · {leftover.storageLocation} · prepared{' '}
-                  {formatDate(leftover.preparedOn)}
-                </small>
-              </div>
-              <button className="button button--secondary" type="button" onClick={() => onPlan(leftover.id)}>
-                Plan later
-              </button>
-              <button
-                className="icon-button icon-button--danger"
-                type="button"
-                aria-label={`Discard ${leftover.sourceSnapshot.name} leftovers`}
-                onClick={() =>
-                  updateData(
-                    (previous) => ({
-                      ...previous,
-                      leftovers: previous.leftovers.filter((item) => item.id !== leftover.id),
-                    }),
-                    'Leftover removed.',
-                  )
-                }
-              >
-                <Trash2 aria-hidden="true" />
-              </button>
-            </article>
-          ))}
+          {data.leftovers.map((leftover) => {
+            const scheduledDays = data.meals.filter(
+              (meal) => meal.leftoverId === leftover.id && meal.consumedServings < meal.servings,
+            ).length
+            return (
+              <article key={leftover.id}>
+                <span className="section-icon section-icon--lilac">
+                  <Archive aria-hidden="true" />
+                </span>
+                <div>
+                  <strong>{leftover.sourceSnapshot.name}</strong>
+                  <small>
+                    {leftover.servingsRemaining} servings left · {scheduledDays} future{' '}
+                    {scheduledDays === 1 ? 'day' : 'days'} linked · prepared {formatDate(leftover.preparedOn)}
+                  </small>
+                </div>
+                <button className="button button--secondary" type="button" onClick={() => onPlan(leftover.id)}>
+                  Add another day
+                </button>
+                <button
+                  className="icon-button icon-button--danger"
+                  type="button"
+                  aria-label={`Discard ${leftover.sourceSnapshot.name} leftovers`}
+                  onClick={() =>
+                    updateData(
+                      (previous) => ({
+                        ...previous,
+                        meals: previous.meals.filter(
+                          (meal) =>
+                            meal.autoPlannedFromMealId !== leftover.sourceMealId && meal.leftoverId !== leftover.id,
+                        ),
+                        leftovers: previous.leftovers.filter((item) => item.id !== leftover.id),
+                      }),
+                      'Leftover and its future planned servings removed.',
+                    )
+                  }
+                >
+                  <Trash2 aria-hidden="true" />
+                </button>
+              </article>
+            )
+          })}
         </div>
       ) : (
         <EmptyState

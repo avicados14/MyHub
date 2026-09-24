@@ -170,6 +170,7 @@ export interface MealEntry extends EntityBase {
   recipeId?: string
   packagedFoodId?: string
   leftoverId?: string
+  autoPlannedFromMealId?: string
   customName?: string
   servings: number
   preparedServings: number

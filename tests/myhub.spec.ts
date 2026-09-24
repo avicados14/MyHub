@@ -353,10 +353,11 @@ test('connected empty-to-history journey persists across reload', async ({ page 
   await planDialog.getByRole('spinbutton', { name: 'Prepared servings', exact: true }).fill('5')
   await planDialog.getByRole('button', { name: 'Add to plan' }).click()
 
-  await waitForStoredCollectionSize(page, 'meals', 1)
+  await waitForStoredCollectionSize(page, 'meals', 3)
   await page.goto('/')
   const dashboardMeal = page.locator('.meal-card').filter({ hasText: recipeName })
   await expect(dashboardMeal).toBeVisible()
+  await expect(dashboardMeal.getByText(/5 batch servings left/u)).toBeVisible()
   await expect(dashboardMeal.locator('img')).toHaveCount(0)
   await expect(dashboardMeal.locator('.meal-card__placeholder')).toBeVisible()
 
@@ -392,7 +393,7 @@ test('connected empty-to-history journey persists across reload', async ({ page 
 
   await waitForStoredCollectionSize(page, 'assignments', 1)
   await waitForStoredCollectionSize(page, 'recipes', 1)
-  await waitForStoredCollectionSize(page, 'meals', 1)
+  await waitForStoredCollectionSize(page, 'meals', 3)
   await waitForStoredCollectionSize(page, 'foodLog', 1)
   await waitForStoredCollectionSize(page, 'groceryHistory', 1)
   await page.reload()

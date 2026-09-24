@@ -28,7 +28,7 @@ Working now:
 - Study-block locking, completion, removal, accessible form editing, direct week-column drag, and 15-minute resize buttons
 - Structured recipe creation/editing, source metadata, notes, ingredient overrides, persistent current yield, and US/metric display conversion; the personal cookbook uses 8 oz for every former 6–8 oz chicken ingredient and includes ingredient-based nutrition for every recipe
 - Reviewable recipe drafts from permitted URL JSON-LD, pasted content, local image OCR, or user-supplied social caption/screenshot/video frame
-- Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with explicit planned, prepared, consumed, and leftover balances; planning never records consumption automatically
+- Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with explicit planned, prepared, consumed, and leftover balances; extra prepared portions can automatically fill later open days, every linked day shows the same decreasing batch balance, and planning never records consumption automatically
 - Packaged-food entry and food-log search by barcode or text through read-only Open Food Facts, local Nutrition Facts OCR with confirmation, and immutable eight-metric nutrition snapshots
 - Daily calories, protein, carbohydrates, fat, sugar, saturated fat, fiber, and sodium progress; editable targets/limits; and totals that exclude planned meals until consumption is recorded
 - Pantry inventory across pantry, refrigerator, and freezer

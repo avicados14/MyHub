@@ -124,11 +124,11 @@ test.describe('food v2 workflows', () => {
     const consumedSummary = page.locator('.nutrition-summary__lead')
     await expect(consumedSummary.getByText('0 kcal')).toBeVisible()
     await page.getByText('Meal planner', { exact: true }).click()
-    await page.getByLabel('Consumed servings for Protein toast').fill('1.5')
+    await page.locator('.meal-day.is-today').getByLabel('Consumed servings for Protein toast').fill('1.5')
     await page.getByText('Nutrition', { exact: true }).click()
     await expect(consumedSummary.getByText('600 kcal')).toBeVisible()
     await page.getByText('Meal planner', { exact: true }).click()
-    await expect(page.getByText('1.5 left')).toBeVisible()
+    await expect(page.getByText(/1.5 batch servings left/u)).toHaveCount(3)
     await expect(page.getByRole('heading', { name: 'Leftovers' })).toBeVisible()
   })
 
@@ -221,23 +221,69 @@ test.describe('food v2 workflows', () => {
     )
   })
 
-  test('recipe planning preserves all prepared servings until consumption is recorded', async ({ page }) => {
+  test('prepared batches populate future days and decrease together as servings are eaten', async ({ page }) => {
     const data = createTestFixtureData(new Date(2026, 8, 22))
+    data.meals = []
+    data.leftovers = []
+    data.foodLog = []
     await seedAppData(page, data, '/#/food/recipes/recipe-burrito')
     await page.getByRole('button', { name: 'Add to meal plan' }).click()
     const dialog = page.getByRole('dialog', { name: 'Add to meal plan' })
-    await dialog.getByLabel('Date').fill('2026-09-30')
-    await dialog.getByLabel('Planned servings').fill('1.5')
-    await dialog.getByLabel('Prepared servings').fill('4')
+    await dialog.getByLabel('Date').fill('2026-09-22')
+    await dialog.getByLabel('Planned servings', { exact: true }).fill('1')
+    await dialog.getByLabel('Prepared servings', { exact: true }).fill('4')
+    await expect(dialog.getByText('Plan extra portions on future days')).toBeVisible()
     await dialog.getByRole('button', { name: 'Add to plan' }).click()
     await expect
       .poll(async () => {
         const stored = await readAppData(page)
-        const meal = stored.meals.find((item) => item.date === '2026-09-30' && item.slot === 'dinner')
+        const meal = stored.meals.find((item) => item.date === '2026-09-22' && item.slot === 'dinner')
         const leftover = stored.leftovers.find((item) => item.sourceMealId === meal?.id)
-        return { consumed: meal?.consumedServings, remaining: leftover?.servingsRemaining }
+        const futureDates = stored.meals
+          .filter((item) => item.autoPlannedFromMealId === meal?.id)
+          .map((item) => item.date)
+          .sort()
+        return { consumed: meal?.consumedServings, remaining: leftover?.servingsRemaining, futureDates }
       })
-      .toEqual({ consumed: 0, remaining: 4 })
+      .toEqual({ consumed: 0, remaining: 4, futureDates: ['2026-09-23', '2026-09-24', '2026-09-25'] })
+
+    await page.goto('/#/food?view=planner')
+    await expect(page.getByText(/4 batch servings left/u)).toHaveCount(4)
+    const tuesday = page.locator('.meal-day').filter({ has: page.getByText('Tue', { exact: true }) })
+    await tuesday.getByLabel('Consumed servings for Chicken Burrito Bowls').fill('1')
+    await expect(page.getByText(/3 batch servings left/u)).toHaveCount(4)
+    const wednesday = page.locator('.meal-day').filter({ has: page.getByText('Wed', { exact: true }) })
+    await wednesday.getByLabel('Consumed servings for Chicken Burrito Bowls').fill('1')
+    await expect(page.getByText(/2 batch servings left/u)).toHaveCount(4)
+    await expect(page.getByText(/2 servings left · 2 future days linked/u)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next week' })).toBeVisible()
+  })
+
+  test('planner meal editor schedules extra prepared portions by default', async ({ page }) => {
+    const data = createTestFixtureData(new Date(2026, 8, 22))
+    data.meals = []
+    data.leftovers = []
+    data.foodLog = []
+    await seedAppData(page, data, '/#/food?view=planner')
+
+    const tuesday = page.locator('.meal-day').filter({ has: page.getByText('Tue', { exact: true }) })
+    const dinner = tuesday.locator('.meal-slot').filter({ has: page.getByText('dinner', { exact: true }) })
+    await dinner.getByRole('button', { name: 'Add' }).click()
+    const editor = page.getByRole('dialog', { name: 'Plan dinner' })
+    await editor.getByLabel('Saved recipe').selectOption('recipe-burrito')
+    await editor.getByLabel('Servings planned').fill('1')
+    await editor.getByLabel('Servings prepared').fill('3')
+    await expect(editor.getByRole('checkbox', { name: /Plan extra portions on future days/u })).toBeChecked()
+    await editor.getByRole('button', { name: 'Plan meal' }).click()
+
+    await expect(page.getByText(/3 batch servings left/u)).toHaveCount(3)
+    await expect
+      .poll(async () => {
+        const stored = await readAppData(page)
+        const source = stored.meals.find((meal) => meal.date === '2026-09-22' && meal.slot === 'dinner')
+        return stored.meals.filter((meal) => meal.autoPlannedFromMealId === source?.id).map((meal) => meal.date)
+      })
+      .toEqual(['2026-09-23', '2026-09-24'])
   })
 
   test('regenerates slots, days, and weeks while preserving temporary suggestion locks', async ({ page }) => {

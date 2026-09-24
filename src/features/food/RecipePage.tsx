@@ -62,6 +62,7 @@ export default function RecipePage() {
     const timestamp = new Date().toISOString()
     const plannedServings = Number(values.get('servings'))
     const preparedServings = Number(values.get('preparedServings'))
+    const autoPlanExtraServings = values.get('autoPlanExtra') === 'on' && preparedServings > plannedServings
     const entry: MealEntry = {
       id: makeId('meal'),
       createdAt: timestamp,
@@ -84,8 +85,10 @@ export default function RecipePage() {
       },
     }
     updateData(
-      (previous) => upsertMealWithLeftover(previous, entry, timestamp),
-      `${recipe.name} added to your meal plan.`,
+      (previous) => upsertMealWithLeftover(previous, entry, timestamp, { autoPlanExtraServings }),
+      autoPlanExtraServings
+        ? `${recipe.name} planned; extra portions were added to later days.`
+        : `${recipe.name} added to your meal plan.`,
     )
     setPlanOpen(false)
   }
@@ -288,6 +291,16 @@ export default function RecipePage() {
               <input name="preparedServings" type="number" min="0" step="0.25" defaultValue={servings} required />
             </Field>
           </div>
+          <label className="meal-batch-option">
+            <input name="autoPlanExtra" type="checkbox" defaultChecked />
+            <span>
+              <strong>Plan extra portions on future days</strong>
+              <small>
+                When prepared servings exceed planned servings, MyHub fills the next open matching meal slots and keeps
+                the amount left synchronized as you eat them.
+              </small>
+            </span>
+          </label>
           <div className="modal__actions">
             <button className="button button--quiet" type="button" onClick={() => setPlanOpen(false)}>
               Cancel
