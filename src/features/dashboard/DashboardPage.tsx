@@ -5,6 +5,7 @@ import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, ProgressBar, StatusBadge } from '../../components/ui'
 import { visibleAssignments, visibleCalendarEvents } from '../../domain/calendar'
 import { dashboardScheduleWindow, type TimedScheduleItem } from '../../domain/dashboardSchedule'
+import { remainingBatchServingsForMeal } from '../../domain/mealWorkflow'
 import { dueAssignments, eventsForDate, greeting, mealsForDate, nutritionForDate } from '../../domain/selectors'
 import type { MealSlot, Nutrition } from '../../domain/types'
 import '../../styles/crosscut-v2.css'
@@ -241,14 +242,7 @@ export default function DashboardPage() {
             const meal = meals.find((entry) => entry.slot === slot)
             const recipe = meal?.recipeId ? recipeMap.get(meal.recipeId) : undefined
             const name = recipe?.name ?? meal?.customName ?? meal?.sourceSnapshot.name
-            const batchSourceId = meal?.autoPlannedFromMealId ?? meal?.id
-            const batchLeftover = batchSourceId
-              ? data.leftovers.find((leftover) => leftover.sourceMealId === batchSourceId)
-              : undefined
-            const isBatch = Boolean(
-              meal &&
-              (meal.autoPlannedFromMealId || data.meals.some((entry) => entry.autoPlannedFromMealId === meal.id)),
-            )
+            const batchRemaining = meal ? remainingBatchServingsForMeal(data, meal) : null
 
             return meal ? (
               <Link className="meal-card" key={slot} to={recipe ? `/food/recipes/${recipe.id}` : '/food?view=planner'}>
@@ -262,8 +256,8 @@ export default function DashboardPage() {
                   <strong>{name || 'Custom meal'}</strong>
                   <small>
                     {meal.servings} serving ·{' '}
-                    {isBatch
-                      ? `${batchLeftover?.servingsRemaining ?? 0} batch servings left`
+                    {batchRemaining !== null
+                      ? `${batchRemaining} batch servings left`
                       : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
                   </small>
                 </div>

@@ -286,6 +286,52 @@ test.describe('food v2 workflows', () => {
       .toEqual(['2026-09-23', '2026-09-24'])
   })
 
+  test('manually added batch days repair and display one shared remaining balance', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 8, 24, 12))
+    const data = createTestFixtureData(new Date(2026, 8, 24, 12))
+    const source = {
+      ...data.meals[0]!,
+      id: 'meal-source',
+      date: '2026-09-21',
+      slot: 'breakfast' as const,
+      servings: 12,
+      preparedServings: 12,
+      consumedServings: 2,
+    }
+    const leftover = {
+      id: 'leftover-source',
+      createdAt: data.initializedAt,
+      updatedAt: data.initializedAt,
+      source: 'generated' as const,
+      sourceMealId: source.id,
+      sourceSnapshot: source.sourceSnapshot,
+      preparedOn: source.date,
+      servingsRemaining: 10,
+      storageLocation: 'Refrigerator' as const,
+    }
+    const manualDay = {
+      ...source,
+      id: 'meal-manual-day',
+      date: '2026-09-22',
+      recipeId: undefined,
+      leftoverId: leftover.id,
+      servings: 2,
+      preparedServings: 10,
+      consumedServings: 2,
+      sourceSnapshot: { ...leftover.sourceSnapshot, sourceType: 'leftover' as const, sourceId: leftover.id },
+    }
+    data.meals = [source, manualDay]
+    data.leftovers = [leftover]
+    data.foodLog = []
+    await seedAppData(page, data, '/#/food?view=planner')
+
+    await expect(page.getByText(/8 batch servings left/u)).toHaveCount(2)
+    await expect(page.getByText(/8 servings left · 0 future days linked/u)).toBeVisible()
+    await expect
+      .poll(async () => (await readAppData(page)).leftovers.find((item) => item.id === leftover.id)?.servingsRemaining)
+      .toBe(8)
+  })
+
   test('regenerates slots, days, and weeks while preserving temporary suggestion locks', async ({ page }) => {
     const data = createTestFixtureData(new Date(2026, 8, 22))
     data.meals = []

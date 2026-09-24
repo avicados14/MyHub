@@ -28,6 +28,30 @@ const batchConsumedServings = (data: AppData, sourceMeal: MealEntry): number => 
 const remainingBatchServings = (data: AppData, sourceMeal: MealEntry): number =>
   Math.max(0, roundServings(sourceMeal.preparedServings - batchConsumedServings(data, sourceMeal)))
 
+export const remainingServingsForLeftover = (data: AppData, leftover: Leftover): number => {
+  const sourceMeal = data.meals.find((meal) => meal.id === leftover.sourceMealId)
+  return sourceMeal ? remainingBatchServings(data, sourceMeal) : leftover.servingsRemaining
+}
+
+export const remainingBatchServingsForMeal = (data: AppData, meal: MealEntry): number | null => {
+  const sourceMealId = meal.autoPlannedFromMealId ?? meal.id
+  const leftover = meal.leftoverId
+    ? data.leftovers.find((item) => item.id === meal.leftoverId)
+    : data.leftovers.find((item) => item.sourceMealId === sourceMealId)
+  return leftover ? remainingServingsForLeftover(data, leftover) : null
+}
+
+export const reconcileMealBatchBalances = (data: AppData, timestamp = new Date().toISOString()): AppData => {
+  let changed = false
+  const leftovers = data.leftovers.map((leftover) => {
+    const remaining = remainingServingsForLeftover(data, leftover)
+    if (remaining === leftover.servingsRemaining) return leftover
+    changed = true
+    return { ...leftover, servingsRemaining: remaining, updatedAt: timestamp }
+  })
+  return changed ? { ...data, leftovers } : data
+}
+
 export const syncLeftoverForMeal = (data: AppData, meal: MealEntry, timestamp: string): AppData => {
   const remaining = meal.autoPlannedFromMealId
     ? 0
@@ -166,7 +190,7 @@ export const upsertMealWithLeftover = (
     ? withoutDisplaced.meals.map((item) => (item.id === meal.id ? meal : item))
     : [...withoutDisplaced.meals, meal]
   const withMeal = { ...withoutDisplaced, meals }
-  if (meal.leftoverId) return withMeal
+  if (meal.leftoverId) return reconcileMealBatchBalances(withMeal, timestamp)
   const withLeftover = syncLeftoverForMeal(withMeal, meal, timestamp)
   if (options.autoPlanExtraServings) return planExtraPreparedServings(withLeftover, meal.id, timestamp, options)
   return {
@@ -175,7 +199,8 @@ export const upsertMealWithLeftover = (
   }
 }
 
-export const removeMealWithBatch = (data: AppData, mealId: string): AppData => removeMealAndBatch(data, mealId)
+export const removeMealWithBatch = (data: AppData, mealId: string): AppData =>
+  reconcileMealBatchBalances(removeMealAndBatch(data, mealId))
 
 export const logMealConsumption = (
   data: AppData,
@@ -243,7 +268,7 @@ export const moveOrCopyMeal = (
           consumedServings: 0,
           autoPlannedFromMealId: undefined,
         }
-  return { ...data, meals: [...withoutTarget, next] }
+  return reconcileMealBatchBalances({ ...data, meals: [...withoutTarget, next] }, timestamp)
 }
 
 export const consumeLeftover = (
