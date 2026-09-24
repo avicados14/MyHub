@@ -312,7 +312,11 @@ test.describe('food v2 workflows', () => {
       updatedAt: data.initializedAt,
       source: 'generated' as const,
       sourceMealId: secondDay.id,
-      sourceSnapshot: secondDay.sourceSnapshot,
+      sourceSnapshot: {
+        ...secondDay.sourceSnapshot,
+        sourceType: 'leftover' as const,
+        sourceId: 'legacy-leftover-source',
+      },
       preparedOn: secondDay.date,
       servingsRemaining: 10,
       storageLocation: 'Refrigerator' as const,
