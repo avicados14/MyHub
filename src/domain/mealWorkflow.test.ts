@@ -4,6 +4,8 @@ import {
   consumeLeftover,
   logMealConsumption,
   moveOrCopyMeal,
+  reconcileMealBatchBalances,
+  remainingBatchServingsForMeal,
   removeMealWithBatch,
   upsertMealWithLeftover,
 } from './mealWorkflow'
@@ -222,5 +224,46 @@ describe('meal lifecycle', () => {
     expect(afterDirectLog.leftovers[0]?.servingsRemaining).toBe(3)
     expect(afterAutomaticDay.leftovers[0]?.servingsRemaining).toBe(2)
     expect(afterManualDay.leftovers[0]?.servingsRemaining).toBe(1)
+  })
+
+  it('repairs a stale 10-serving record to 8 after a manually added day records two servings', () => {
+    const data = createTestFixtureData(new Date(2026, 8, 24))
+    const sourceMeal = {
+      ...data.meals[0]!,
+      id: 'meal-source',
+      date: '2026-09-21',
+      slot: 'breakfast' as const,
+      servings: 12,
+      preparedServings: 12,
+      consumedServings: 2,
+    }
+    const leftover = {
+      id: 'leftover-source',
+      createdAt: data.initializedAt,
+      updatedAt: data.initializedAt,
+      source: 'generated' as const,
+      sourceMealId: sourceMeal.id,
+      sourceSnapshot: sourceMeal.sourceSnapshot,
+      preparedOn: sourceMeal.date,
+      servingsRemaining: 10,
+      storageLocation: 'Refrigerator' as const,
+    }
+    const manualDay = {
+      ...sourceMeal,
+      id: 'meal-manual-day',
+      date: '2026-09-22',
+      recipeId: undefined,
+      leftoverId: leftover.id,
+      servings: 2,
+      preparedServings: 10,
+      consumedServings: 2,
+      sourceSnapshot: { ...leftover.sourceSnapshot, sourceType: 'leftover' as const, sourceId: leftover.id },
+    }
+    const stale = { ...data, meals: [sourceMeal, manualDay], leftovers: [leftover], foodLog: [] }
+    const repaired = reconcileMealBatchBalances(stale, '2026-09-24T12:00:00.000Z')
+
+    expect(repaired.leftovers[0]?.servingsRemaining).toBe(8)
+    expect(remainingBatchServingsForMeal(repaired, sourceMeal)).toBe(8)
+    expect(remainingBatchServingsForMeal(repaired, manualDay)).toBe(8)
   })
 })

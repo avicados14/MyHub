@@ -2,6 +2,7 @@ import { AlertTriangle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Field, Modal, SegmentedControl } from '../../components/ui'
 import { createUnknownNutritionProvenance } from '../../domain/defaults'
+import { remainingServingsForLeftover } from '../../domain/mealWorkflow'
 import { createZeroNutrition, NUTRITION_FIELDS } from '../../domain/nutrition'
 import type { AppData, MealEntry, MealSlot, Nutrition } from '../../domain/types'
 import { formatDate, makeId } from '../../utilities/date'
@@ -126,11 +127,12 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
         }
     } else if (sourceType === 'leftover') {
       const leftover = data.leftovers.find((item) => item.id === sourceId)
+      const remaining = leftover ? remainingServingsForLeftover(data, leftover) : 0
       if (leftover)
         next = {
           ...base,
           leftoverId: leftover.id,
-          preparedServings: Math.min(prepared, leftover.servingsRemaining),
+          preparedServings: Math.min(prepared, remaining),
           sourceSnapshot: {
             ...leftover.sourceSnapshot,
             sourceType: 'leftover',
@@ -213,10 +215,10 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
             <select value={sourceId} onChange={(event) => setSourceId(event.target.value)}>
               <option value="">Choose a leftover</option>
               {data.leftovers
-                .filter((item) => item.servingsRemaining > 0)
+                .filter((item) => remainingServingsForLeftover(data, item) > 0)
                 .map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.sourceSnapshot.name} — {item.servingsRemaining} left
+                    {item.sourceSnapshot.name} — {remainingServingsForLeftover(data, item)} left
                   </option>
                 ))}
             </select>

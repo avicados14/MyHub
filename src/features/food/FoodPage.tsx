@@ -27,6 +27,8 @@ import { createMealSuggestions, type MealSuggestion } from '../../domain/mealSug
 import {
   logMealConsumption,
   moveOrCopyMeal,
+  remainingBatchServingsForMeal,
+  remainingServingsForLeftover,
   removeMealWithBatch,
   upsertMealWithLeftover,
 } from '../../domain/mealWorkflow'
@@ -760,14 +762,7 @@ function PlannerView({
                 </header>
                 {mealSlots.map((slot) => {
                   const meal = data.meals.find((entry) => entry.date === date && entry.slot === slot)
-                  const batchSourceId = meal?.autoPlannedFromMealId ?? meal?.id
-                  const batchLeftover = batchSourceId
-                    ? data.leftovers.find((leftover) => leftover.sourceMealId === batchSourceId)
-                    : undefined
-                  const isBatch = Boolean(
-                    meal &&
-                    (meal.autoPlannedFromMealId || data.meals.some((entry) => entry.autoPlannedFromMealId === meal.id)),
-                  )
+                  const batchRemaining = meal ? remainingBatchServingsForMeal(data, meal) : null
                   return (
                     <div className="meal-slot" key={slot}>
                       <span>{slot}</span>
@@ -777,8 +772,8 @@ function PlannerView({
                             <strong>{meal.sourceSnapshot.name}</strong>
                             <small>
                               {meal.servings} planned ·{' '}
-                              {isBatch
-                                ? `${batchLeftover?.servingsRemaining ?? 0} batch servings left`
+                              {batchRemaining !== null
+                                ? `${batchRemaining} batch servings left`
                                 : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
                             </small>
                           </button>
@@ -891,6 +886,7 @@ function Leftovers({
       {data.leftovers.length ? (
         <div className="leftover-list">
           {data.leftovers.map((leftover) => {
+            const servingsRemaining = remainingServingsForLeftover(data, leftover)
             const scheduledDays = data.meals.filter(
               (meal) => meal.leftoverId === leftover.id && meal.consumedServings < meal.servings,
             ).length
@@ -902,8 +898,8 @@ function Leftovers({
                 <div>
                   <strong>{leftover.sourceSnapshot.name}</strong>
                   <small>
-                    {leftover.servingsRemaining} servings left · {scheduledDays} future{' '}
-                    {scheduledDays === 1 ? 'day' : 'days'} linked · prepared {formatDate(leftover.preparedOn)}
+                    {servingsRemaining} servings left · {scheduledDays} future {scheduledDays === 1 ? 'day' : 'days'}{' '}
+                    linked · prepared {formatDate(leftover.preparedOn)}
                   </small>
                 </div>
                 <button className="button button--secondary" type="button" onClick={() => onPlan(leftover.id)}>

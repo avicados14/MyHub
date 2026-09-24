@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createEmptyData } from '../domain/defaults'
+import { reconcileMealBatchBalances } from '../domain/mealWorkflow'
 import type { AppData } from '../domain/types'
 import { loadAppData, saveAppData } from '../storage/database'
 
@@ -27,7 +28,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let active = true
     void loadAppData()
       .then((saved) => {
-        if (active) setData(saved)
+        if (active) setData(reconcileMealBatchBalances(saved))
       })
       .catch(() => {
         if (active) setAnnouncement('Local data could not be opened. MyHub is using temporary empty data.')
@@ -65,7 +66,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateData = useCallback(
     (updater: DataUpdater, message?: string) => {
-      setData((previous) => (typeof updater === 'function' ? updater(previous) : updater))
+      setData((previous) => reconcileMealBatchBalances(typeof updater === 'function' ? updater(previous) : updater))
       if (message) announce(message)
     },
     [announce],
@@ -73,7 +74,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const replaceData = useCallback(
     (next: AppData, message = 'Data imported successfully.') => {
-      setData(next)
+      setData(reconcileMealBatchBalances(next))
       announce(message)
     },
     [announce],
