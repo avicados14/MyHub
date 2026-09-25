@@ -129,7 +129,9 @@ test('pantry supports validated full-field CRUD and safe quantity controls', asy
 })
 
 test('pantry check requires decisions, confirms staples, and supports full shopping-list editing', async ({ page }) => {
-  const data = createTestFixtureData()
+  const fixedTime = new Date(2026, 8, 22, 12)
+  await page.clock.setFixedTime(fixedTime)
+  const data = createTestFixtureData(fixedTime)
   data.meals.push({ ...structuredClone(data.meals[0]!), id: 'meal-historic', date: '2020-01-01' })
   data.settings.groceryCategories.push({ id: 'category-bulk', name: 'Bulk', sortOrder: 2.5, enabled: true })
   data.settings.groceryStaples = [
