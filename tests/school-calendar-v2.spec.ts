@@ -162,7 +162,20 @@ test('direct Canvas refresh imports homework and disabled feeds hide without del
   await page.route('https://calendar.example/canvas.ics', async (route) => {
     await route.fulfill({
       contentType: 'text/calendar',
-      body: `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:direct-canvas-assignment\nDTSTART:${compactDate(due)}T235900\nSUMMARY:Direct feed assignment [TEST 301]\nURL:https://example.edu/courses/1/assignments/9\nEND:VEVENT\nEND:VCALENDAR`,
+      body: `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:event-assignment-9
+DTSTART:${compactDate(due)}T235900
+SUMMARY:Direct feed assignment [TEST 301]
+URL:https://example.edu/calendar
+END:VEVENT
+BEGIN:VEVENT
+UID:event-calendar-10
+DTSTART:${compactDate(due)}T090000
+SUMMARY:Canvas office hours [TEST 301]
+URL:https://example.edu/calendar
+END:VEVENT
+END:VCALENDAR`,
     })
   })
 
@@ -173,14 +186,12 @@ test('direct Canvas refresh imports homework and disabled feeds hide without del
   await feed.getByLabel('Provider').selectOption('canvas')
   await feed.getByLabel('Feed URL').fill('https://calendar.example/canvas.ics')
   await feed.getByRole('button', { name: 'Refresh feed' }).click()
-  await expect(feed.getByText('1 events · 1 homework')).toBeVisible()
+  await expect(feed.getByText('2 events · 1 homework')).toBeVisible()
 
   await page.goto('/#/school')
   await expect(page.getByRole('heading', { name: 'Direct feed assignment' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Open source' })).toHaveAttribute(
-    'href',
-    'https://example.edu/courses/1/assignments/9',
-  )
+  await expect(page.getByRole('heading', { name: 'Canvas office hours' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Open source' })).toHaveAttribute('href', 'https://example.edu/calendar')
 
   await page.goto('/#/settings')
   const savedFeed = page.locator('.calendar-feed-record').filter({ hasText: 'Canvas direct' })

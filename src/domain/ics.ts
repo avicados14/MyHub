@@ -227,6 +227,8 @@ const isCanvasAssignment = (lines: ContentLine[], sourceType: IcsSourceType, sum
   const description = firstProperty(lines, 'DESCRIPTION')?.value ?? ''
   if (/\/assignments(?:\/|\?|$)/i.test(url)) return true
   if (sourceType !== 'canvas') return false
+  const uid = firstProperty(lines, 'UID')?.value.trim() ?? ''
+  if (/^event-assignment(?:-override)?-\d+$/i.test(uid)) return true
   return /(?:assignment|quiz|discussion)\s+(?:due|deadline)/i.test(`${summary} ${description}`)
 }
 
