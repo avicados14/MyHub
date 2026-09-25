@@ -136,6 +136,47 @@ END:VCALENDAR`,
     expect(mergeImportedEvents(result.events, result.events)).toHaveLength(1)
   })
 
+  it('classifies canonical Canvas assignment UIDs when every item uses the generic calendar URL', () => {
+    const result = parseIcsResult(
+      `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:event-assignment-42
+DTSTART;VALUE=DATE:20260925
+SUMMARY:Problem Set 4 [MATH 221]
+URL:https://canvas.example/calendar
+END:VEVENT
+BEGIN:VEVENT
+UID:event-assignment-override-43
+DTSTART:20260926T180000
+SUMMARY:Lab report [CHEM 101]
+URL:https://canvas.example/calendar
+END:VEVENT
+BEGIN:VEVENT
+UID:event-calendar-44
+DTSTART:20260927T090000
+SUMMARY:Office hours [MATH 221]
+URL:https://canvas.example/calendar
+END:VEVENT
+END:VCALENDAR`,
+      {
+        sourceLabel: 'Canvas feed',
+        sourceFeedId: 'canvas-live-shape',
+        sourceType: 'canvas',
+        importedAt: '2026-09-24T12:00:00.000Z',
+      },
+    )
+
+    expect(result.events).toHaveLength(3)
+    expect(result.assignments).toHaveLength(2)
+    expect(result.assignments.map((assignment) => [assignment.title, assignment.dueDate, assignment.dueTime])).toEqual([
+      ['Problem Set 4', '2026-09-25', '23:59'],
+      ['Lab report', '2026-09-26', '18:00'],
+    ])
+    expect(result.assignments.every((assignment) => assignment.sourceUrl === 'https://canvas.example/calendar')).toBe(
+      true,
+    )
+  })
+
   it('expands common recurrence rules inside explicit bounds with stable occurrence IDs', () => {
     const text = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:weekly-class\nDTSTART:20260901T090000\nDTEND:20260901T100000\nRRULE:FREQ=WEEKLY;BYDAY=TU,TH;COUNT=8\nSUMMARY:Structures\nEND:VEVENT\nEND:VCALENDAR`
     const options = {

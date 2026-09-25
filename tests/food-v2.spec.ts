@@ -105,6 +105,7 @@ test.describe('food v2 workflows', () => {
   })
 
   test('planned nutrition is excluded until consumed servings are entered', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 8, 22, 12))
     await page.goto('/#/food')
     await page.getByRole('button', { name: 'Add recipe' }).first().click()
     const recipeEditor = page.getByRole('dialog', { name: 'Create a recipe' })
