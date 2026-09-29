@@ -1,6 +1,6 @@
 # MyHub Phase 2 TODO
 
-Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the native iPhone and iPad application described in `MYHUB_IOS_PLAN.md`, with any web refinements needed to establish a reliable shared contract. This is a working checklist, not a claim that native work has started.
+Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the native iPhone and iPad application described in `MYHUB_IOS_PLAN.md`, with any web refinements needed to establish a reliable shared contract. This is a working checklist. The native foundation is now implemented on the continuation branch; full feature parity and acceptance remain open.
 
 ## 0. Close the Phase 1 handoff gate
 
@@ -11,10 +11,10 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 
 ## 1. Freeze the portable data and behavior contract
 
-- [ ] Document `AppData` schema version 2, its IDs, source/provenance fields, local dates, timestamps, immutable snapshots, and migration rules. Identify which fields transfer to native storage and which browser-only credentials must never enter a portable backup.
-- [ ] Save representative, non-personal JSON fixtures and golden expected results for recipe scaling/fractions, unit-compatible grocery aggregation, eight-field nutrition totals, prepared/consumed/leftover balances, homework priority, study scheduling, and completed-trip history.
+- [x] Document `AppData` schema version 2, its IDs, source/provenance fields, local dates, timestamps, immutable snapshots, and migration rules. Identify which fields transfer to native storage and which browser-only credentials must never enter a portable backup.
+- [x] Save representative, non-personal JSON fixtures and golden expected results for recipe scaling/fractions, unit-compatible grocery aggregation, eight-field nutrition totals, prepared/consumed/leftover balances, homework priority, study scheduling, and completed-trip history.
 - [ ] Decide how native import/export will validate and migrate MyHub backups, reject unknown future versions, and preserve user records. Test a web-export-to-native-import round trip with non-personal fixtures.
-- [ ] Define the native storage model (for example SwiftData after review), explicit local-date/time-zone behavior, offline writes, and migration strategy. Preserve web history and current source provenance.
+- [x] Define the native storage model (for example SwiftData after review), explicit local-date/time-zone behavior, offline writes, and migration strategy. Preserve web history and current source provenance.
 
 ## 2. Build the native foundation
 
@@ -46,3 +46,12 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 ## Source of this plan
 
 `README.md` roadmap; `MYHUB_IOS_PLAN.md` acceptance gate and native adapters; `ARCHITECTURE.md` data contract; `REQUIREMENTS_AUDIT.md` Phase 1 coverage; and `HANDOFF_CONTINUATION_GUIDE.md` from the private September 28 handoff. Update this checklist as decisions and evidence change.
+
+## September 28 continuation checkpoint
+
+- Contract/schema documentation and seven executable golden behavior fixtures: `contracts/v2/README.md`, `src/domain/portableContract.test.ts`. Owner acceptance is still pending; this is a compatibility candidate, not a declaration that all workflows are frozen.
+- Native storage decision implemented for the foundation: atomic versioned Codable JSON in Application Support, preserving IDs/local dates/snapshots; iOS file protection. SwiftData deferred. See `native/README.md`.
+- Native foundation source exists: standalone SwiftUI Xcode project, iPhone tabs/iPad split view, offline backup import/export with replacement confirmation, and read-only Home/Calendar/School/recipe viewing. Navigation accessibility/device validation, complete editing and calculation parity remain unchecked.
+- Native v2 import validation and round-trip tests are implemented. Direct v1 migration is not: use the web migrator then export v2. Do not check the combined import/migration task until the agreed migration scope and native tests are verified.
+- Live Phase 1 gate remains blocked: no original linked browser or usable private-link session is available. Supabase revision 60 is metadata evidence only, not proof of 168 assignments. Exact observation and baseline: `docs/CONTINUATION_2026-09-28.md`.
+- Owner decisions are prepared in `docs/NATIVE_DECISIONS.md`: approve existing web behavior or identify workflow changes; choose a sync direction/access model before native synchronization. Integrations and full workflow ports retain these dependencies.

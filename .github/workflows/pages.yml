@@ -31,6 +31,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check formatting
         run: npm run format:check
+      - name: Check portable contract drift
+        run: npm run contract:check
       - name: Lint
         run: npm run lint
       - name: Type check
