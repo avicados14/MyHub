@@ -68,6 +68,7 @@ struct SectionView: View {
         Group {
             if section == .settings { SettingsView() }
             else if section == .school, model.backup != nil { SchoolView() }
+            else if section == .calendar, model.backup != nil { CalendarView() }
             else if let data = model.backup?.data {
                 List {
                     switch section {
@@ -76,10 +77,7 @@ struct SectionView: View {
                         LabeledContent("Homework", value: String(data.assignments.count))
                         LabeledContent("Recipes", value: String(data.recipes.count))
                         Text("Offline data stays on this device. Homework edits and study plans save locally.")
-                    case .calendar:
-                        ForEach(Domain.visibleEvents(data).sorted { ($0.date, $0.startTime, $0.id) < ($1.date, $1.startTime, $1.id) }, id: \.id) { event in
-                            VStack(alignment: .leading) { Text(event.title).font(.headline); Text("\(event.date) · \(event.startTime)–\(event.endTime)").font(.subheadline) }
-                        }
+                    case .calendar: EmptyView()
                     case .school: EmptyView()
                     case .food:
                         ForEach(data.recipes, id: \.id) { recipe in
@@ -236,6 +234,8 @@ struct SchoolView: View {
         List {
             if let data = model.backup?.data {
                 NavigationLink("Plan study time") { StudyPreviewView(data: data) }
+                NavigationLink("Study blocks") { CalendarView(studyOnly: true) }
+                NavigationLink("Study settings") { StudySettingsView(settings: data.settings.study) }
                 Toggle("Show completed homework", isOn: $showCompleted)
                 let visible = Domain.visibleAssignments(data)
                 let tasks = showCompleted ? visible.filter { $0.status == "complete" }.sorted { $0.dueDate < $1.dueDate } : Domain.rankAssignments(visible)

@@ -85,3 +85,19 @@ Added core tests for create/edit/reload, imported provenance, malformed/stale dr
 At `ec4f664`, native workflow `36596491185`, job `109502621590`, passed **13 Swift tests** (3 contract/storage, 6 domain, 4 School command tests) and the standalone iPhone/iPad simulator build. Local full web checks also passed. The earlier full browser result remains 132/132 at `97e484f`; automatic browser reruns on subsequent native/documentation commits do not change that evidence scope.
 
 Corrected current native descriptions to include working homework editing and confirmed study application. Remaining work: study block editing/settings, full dashboard/calendar and food workflow parity, native legacy migration, native device/accessibility checks, integration models, selected enrollment/sync model and distribution. The original linked-browser status and a fresh private-link browser's School count remain the exact Phase 1 acceptance observations still unavailable. No secrets or personal fixtures were committed.
+
+## September 29 — next implementation plan and calendar/study increment
+
+Rechecked public main (`3472b55`) and continuation head (`0c312bd`); both remote workflows at that head passed. Working tree was clean. Read the current checklists, legacy migration implementation, Calendar/School commands and study settings before editing.
+
+Plan in dependency order:
+
+1. Complete the next offline calendar/study controls with source-compatible commands and focused synthetic tests.
+2. Establish dedicated legacy migration fixtures before implementing direct native v1 repair/cleanup. Keep the existing web-migrate-to-v2 route explicit meanwhile.
+3. Continue dashboard/calendar presentation and native food calculation/editing parity, preserving meal states and historical snapshots.
+4. Define integration privacy/access contracts, then implement adapters. Select native enrollment/sync behavior before implementing synchronization.
+5. Run relevant gates and record precise device/browser blockers; do not equate simulator builds with device acceptance.
+
+Implemented native event creation/editing/deletion, study locking/completion/reopening, and study settings with weekday avoid ranges. Edits preserve provenance; changed study blocks become protected on regeneration. Overlaps require explicit review; stale drafts and invalid ranges fail before persistence. Imported multi-day bounds are preserved; moving their range remains unsupported and is disabled in the editor. Manual single-day and all-day events are supported. Added five focused test cases for regeneration protection, completion semantics, overlap validation, imported bounds and settings.
+
+The new source requires Mac CI before a passing implementation checkpoint can be claimed. No private archive contents, production calendar parser or backend were changed. Full native calendar/dashboard/device acceptance remains open.
