@@ -7,7 +7,7 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - [ ] Verify that the September 28 encrypted calendar import reached Supabase: the linked browser should settle at a current sync state, and a separate fresh private-link browser should show the same aggregate assignment count in School. The connected browser showed 3,332 events and 168 assignments; fresh-device propagation was not independently checked. Use counts and revision metadata only, without exposing private content or capabilities. See `FIXME.md`.
 - [ ] If the counts disagree, trace the Supabase document revision, local hydration, and serialized push/refresh path before changing the deployed Canvas UID parser. Add a focused regression only for the reproduced failure.
 - [ ] Record the verified baseline (source commit, data-repository commit, counts, timezone, test results) and reconcile the older counts in `README.md` and `REQUIREMENTS_AUDIT.md`.
-- [ ] Review the Phase 1 dashboard, calendar/homework, study planner, food, nutrition, pantry/grocery, and backup workflows with the owner. Record approved behavior and requested changes before freezing the native contract.
+- [x] Review the Phase 1 dashboard, calendar/homework, study planner, food, nutrition, pantry/grocery, and backup workflows with the owner. Record approved behavior and requested changes before freezing the native contract.
 
 ## 1. Freeze the portable data and behavior contract
 
@@ -49,12 +49,12 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 
 ## September 28 continuation checkpoint
 
-- Contract/schema documentation and seven executable golden behavior fixtures: `contracts/v2/README.md`, `src/domain/portableContract.test.ts`. Owner acceptance is still pending; this is a compatibility candidate, not a declaration that all workflows are frozen.
+- Contract/schema documentation and seven executable golden behavior fixtures: `contracts/v2/README.md`, `src/domain/portableContract.test.ts`. Owner selected current web behavior as the native baseline on September 29; implementations must still pass the shared fixtures and device acceptance.
 - Native storage decision implemented for the foundation: atomic versioned Codable JSON in Application Support, preserving IDs/local dates/snapshots; iOS file protection. SwiftData deferred. See `native/README.md`.
 - Native foundation source exists: standalone SwiftUI Xcode project, iPhone tabs/iPad split view, offline backup import/export with replacement confirmation, and read-only Home/Calendar/School/recipe viewing. Navigation accessibility/device validation, complete editing and calculation parity remain unchecked.
 - Native v2 import validation and round-trip tests are implemented. Direct v1 migration is not: use the web migrator then export v2. Do not check the combined import/migration task until the agreed migration scope and native tests are verified.
-- Live Phase 1 gate remains blocked: no original linked browser or usable private-link session is available. Supabase revision 60 is metadata evidence only, not proof of 168 assignments. Exact observation and baseline: `docs/CONTINUATION_2026-09-28.md`.
-- Owner decisions are prepared in `docs/NATIVE_DECISIONS.md`: approve existing web behavior or identify workflow changes; choose a sync direction/access model before native synchronization. Integrations and full workflow ports retain these dependencies.
+- Phase 1 remote retrieval verified September 29: a fresh stateless client decrypted revision 60 with 3,361 events / 168 assignments. Original-session settled status and fresh-browser School rendering remain unobserved. Exact observation and baseline: `docs/CONTINUATION_2026-09-28.md`.
+- Owner approved existing web behavior on September 29. The remaining sync direction/access decision is prepared in `docs/NATIVE_DECISIONS.md`; integration privacy models and native device acceptance remain open.
 
 - Native validation at `ce707bf`: macOS workflow `36507350376`, job `109211657010`, passed all 3 Swift tests and the standalone iPhone/iPad simulator build. This checks project creation, not accessibility/device acceptance or full feature parity.
 

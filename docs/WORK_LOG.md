@@ -1,6 +1,6 @@
 # MyHub continuation work log
 
-This is the running implementation record for Phase 2. Dates use America/Denver unless explicitly marked UTC. Evidence is limited to source, synthetic tests, and privacy-safe aggregate metadata. No private links, credentials, feed URLs, calendar contents, personal records or backup payloads belong here.
+This is the running implementation record for Phase 2. Dates use America/Denver unless explicitly marked UTC. Recorded evidence is limited to source, synthetic tests, and privacy-safe counts/revision/status. No private links, credentials, feed URLs, calendar contents, personal records or backup payloads belong here.
 
 ## September 28, 2026 — contract and native foundation
 
@@ -55,3 +55,19 @@ After publishing the clock/log checkpoint as `8e5e910`, continued independent na
 ### September 29 — focused clock/Canvas gate passed
 
 At `8e5e910`, web workflow `36580422648`, job `109446821494`, completed the focused meal-date/Canvas regression step successfully across desktop, tablet and mobile with retries disabled (nine selected cases). The full matrix was still running at this observation; no full-suite pass is claimed yet. Native workflow `36580422782` also passed for the earlier foundation source. The next commit contains additional native calculations and therefore needs a new native validation result.
+
+### September 29 — remote counts verified and native checks passed
+
+**Correction to the initial blocker:** the additional private-handoff README clarified that protected recovery material existed in the full archive. Used it without displaying or committing it. A fresh stateless client ran the current application's resolve/decrypt path against Supabase and emitted only revision/status/counts: revision 60, updated September 28 22:53:52.106 UTC, 3,361 events and 168 assignments. Contents stayed in memory; temporary recovery material was removed. No replacement link or document write was made. Access resolution can update access-status metadata.
+
+This proves independently retrievable remote assignments, but not record identity with the earlier import or fresh-browser UI hydration. The original linked browser is unavailable and the available browser is blank. The remaining gate is its settled status plus a fresh browser's School count/revision. Updated TODO/FIXME and the continuation report; retained the dated 3,332-event historical observation without inventing a reason for the difference.
+
+**Native source `97e484f`:** workflow `36581037456`, job `109448967623`, passed the portable Swift tests and standalone iPhone/iPad simulator build, including the new recipe/study preview calculations. This does not complete editing parity or device acceptance. Full web workflow `36581037358` is still running at this checkpoint.
+
+### September 29 — baseline approved and full gate green
+
+The owner explicitly selected **Keep web behavior** as the native implementation baseline. This closes the workflow-choice dependency; it does not select a sync backend or approve integration permissions. Native features will preserve existing semantics and shared fixtures.
+
+At `97e484f`, web workflow `36581037358` passed formatting, schema drift, lint, types, 121 unit tests, nine focused browser cases with retries disabled, all 132 full browser cases, and production build. Native workflow `36581037456` passed nine Swift tests and the simulator build. Earlier web run `36580422648` was superseded/cancelled after its focused step passed; it is not a full-suite pass.
+
+Next increment: native homework create/edit/delete and study-plan application with atomic persistence, stale-draft rejection and preservation of imported provenance/history. Full feature checkboxes remain open until their complete scope is implemented and validated.

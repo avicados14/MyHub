@@ -7,13 +7,15 @@
 - Connected MyHub Supabase project: ACTIVE_HEALTHY; broker ACTIVE, deployed version 3. Five migrations were listed. Remote migration timestamps differ from the source filenames; names correspond. A read-only check also confirmed RLS enabled and no direct SELECT/INSERT/UPDATE/DELETE privilege for anon or authenticated. No schema/deployment changes were made.
 - Aggregate-only SQL: four broker records, one active; active revision **60**, data updated **2026-09-28 22:53:52.106 UTC**, last resolved **23:07:54.411 UTC**. The query selected no row IDs, capabilities, hashes or encrypted payloads.
 
-## Phase 1 verification remains blocked, not failed
+## Phase 1: remote counts verified; browser acceptance remains open
 
-The available browser inventory contained only one blank tab. The handoff does not supply a usable live private-link session. Therefore neither the original browser's settled Supabase sync status nor an independent fresh-profile assignment count could be observed.
+Correction on September 29: the additional private-handoff README identified protected recovery material in the full archive. The initial statement that the handoff supplied no usable link was incorrect. The available browser inventory still contained only one blank tab.
 
-Revision 60 confirms that Supabase accepted a write. It cannot establish the encrypted document's assignment count, which import produced it, or whether a fresh browser restored it. The handoff's **3,332 events / 168 assignments** remains a September 28 connected-browser observation. No sync defect was reproduced and the Canvas UID parser was not changed.
+A fresh stateless client used the current application's `resolvePrivateAccess` implementation to retrieve and decrypt the live Supabase document, retaining contents only in memory and emitting counts/revision metadata only. Result: revision **60**, updated **September 28 at 22:53:52.106 UTC**, contained **3,361 events and 168 assignments**. Temporary recovery material was removed. No replacement capability or document write was made; resolving access may update access-status metadata.
 
-To close the gate: make the original linked browser available; record only its latest Supabase sync time/status and aggregate counts; open the existing private link in a separate clean browser profile, record counts and matching revision/status, and compare. Do not paste the private link into a PR, issue, log or chat. Do not generate a replacement capability just for verification.
+This establishes that 168 assignments reached Supabase and are independently retrievable with the existing capability. It does not establish record-by-record identity with the September 28 import, why the event count differs from the handoff's 3,332, or successful hydration/rendering in a fresh browser. The handoff's **3,332 events / 168 assignments** remains its historical connected-browser observation. No sync defect was reproduced and the Canvas UID parser was not changed.
+
+To close the remaining UI gate: observe the original linked browser's settled Supabase status, then restore the existing private link in a separate clean browser profile and compare School's aggregate count and revision/status. The original linked session is unavailable, and the available browser has no private session. Never paste the capability into a PR, issue, log or chat or replace it merely for verification.
 
 ## Implementation trace
 

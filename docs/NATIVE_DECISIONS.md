@@ -11,7 +11,7 @@ The versioned schema, synthetic backup and golden web behavior tests are in `con
 | A — approve current web semantics as the native baseline (recommended) | Keep compact dashboard priorities; source-aware calendar/homework; due/priority/ID study ordering; explicit planning/preparation/consumption; reviewed pantry handoff; immutable logs/trips; opaque IDs and local dates | Allows native editing and golden algorithm parity to proceed in dependency order. Does not approve a sync backend or claim fresh-device verification. |
 | B — request workflow changes before native editing                     | Identify changes to the six acceptance areas in MYHUB_IOS_PLAN; update web behavior/fixtures first                                                                                                                      | Avoids implementing native workflows that need redesign. Read-only import foundation remains useful.                                                  |
 
-The explicit choice is needed because the existing native plan calls for owner approval, and the continuation request preserves that acceptance dependency. No design document is being counted as a completed feature implementation.
+**Decision recorded September 29, 2026:** the owner selected “Keep web behavior.” Current web semantics and the synthetic fixtures are the native compatibility baseline. This authorizes native feature implementation; it does not select a sync backend or mark implementation/device acceptance complete.
 
 ## Decision 2 — native synchronization direction
 

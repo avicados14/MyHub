@@ -2,7 +2,7 @@
 
 This file distinguishes a confirmed correction from an unverified condition. At the September 28 handoff, no known source defect was left open after the Canvas UID fix. Do not infer a regression from the earlier README counts alone.
 
-## Immediate verification — status: open, outcome unknown
+## Immediate verification — remote counts confirmed; browser gate open
 
 - [ ] **Confirm cross-device propagation of the latest Canvas assignments.** The connected Calendar imported an encrypted snapshot with 3,332 events and 168 assignments, and School rendered assignment cards. The handoff did not recheck whether that newly imported state reached the Supabase encrypted `AppData` document or a fresh private-link browser. First check the existing linked browser's sync state; then check aggregate counts in a separate fresh profile. Do not print the link, key, token, passphrase, raw ICS, or decrypted assignments. If there is a mismatch, inspect revision/sync-queue metadata and reproduce the exact path before editing code. Source: `HANDOFF_CONTINUATION_GUIDE.md` §§6 and 8.
 
@@ -25,7 +25,7 @@ Before a fix, establish where the authoritative data resides (IndexedDB, encrypt
 
 ## September 28 continuation evidence
 
-- **Live propagation: blocked, not a reproduced defect.** Current main was `3472b55`. One active Supabase record is at revision 60, updated September 28 22:53:52.106 UTC and last resolved 23:07:54.411 UTC. Only aggregate status/revision information was queried. The available browser had only a blank tab. The exact missing observation is the original session's settled status and an independent fresh-profile restore/count comparison. The 168-assignment claim has not been upgraded to remote verification.
+- **Remote retrieval confirmed September 29; browser gate open.** Current application code independently resolved and decrypted Supabase revision 60 (updated September 28 22:53:52.106 UTC): 3,361 events and 168 assignments. Only counts/status were emitted. This corrects the initial metadata-only assessment after protected recovery material was identified. Original-session settled status and fresh-browser School rendering remain unobserved; no sync defect was reproduced. See `docs/CONTINUATION_2026-09-28.md`.
 - **Documentation scope corrected:** README distinguishes September 23 historical counts from the September 28 connected-browser import. Audit totals are explicitly historical. Direct browser refresh, scheduled encrypted snapshot and reviewed local ICS import are separate paths. No new baseline deployment is claimed.
 - [x] **Malformed nested backup accepted — reproduced and fixed.** A v2 backup with `recipes: [{}]` passed `parseBackup` before this change. `src/storage/backup-validation.test.ts` failed on that exact case; generated nested shape validation now rejects it before replacement. Future versions and unknown AppData fields are rejected. Validation errors contain no record values.
 - **Native work remains partial:** Codable/atomic persistence tests and simulator build gate are added, and macOS CI now passes both. This Linux environment has neither Swift nor Xcode; owner/device acceptance is still required before checking full working-native acceptance items. Read-only viewers do not complete the requested feature ports.
