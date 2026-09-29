@@ -18,3 +18,5 @@ This is not the completed native feature set. See `../docs/NATIVE_DECISIONS.md` 
 Validated at `ce707bf` by macOS workflow `36507350376`: 3 Swift tests passed; standalone iPhone/iPad simulator build succeeded. Device interaction and accessibility acceptance remain open.
 
 Native calculation work in progress: scaling/fractions, consumption-only nutrition, source visibility, homework ranking and study previews now have Swift tests. Recipe serving controls and School study preview do not persist edits. Grocery/batch calculation parity and full editing remain open; consult the running work log for the exact tested commit.
+
+September 29 increment: the owner approved web behavior as the baseline. Native School now includes homework forms/subtasks, confirmation before deletion, completed-item reopening, and confirmed study-preview application. Commands reject stale drafts and preserve provenance; saving precedes UI publication. This increment requires its own Mac CI result; see `../docs/WORK_LOG.md`. Study-block editing and full feature/device acceptance remain open.

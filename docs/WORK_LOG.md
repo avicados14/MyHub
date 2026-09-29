@@ -71,3 +71,9 @@ The owner explicitly selected **Keep web behavior** as the native implementation
 At `97e484f`, web workflow `36581037358` passed formatting, schema drift, lint, types, 121 unit tests, nine focused browser cases with retries disabled, all 132 full browser cases, and production build. Native workflow `36581037456` passed nine Swift tests and the simulator build. Earlier web run `36580422648` was superseded/cancelled after its focused step passed; it is not a full-suite pass.
 
 Next increment: native homework create/edit/delete and study-plan application with atomic persistence, stale-draft rejection and preservation of imported provenance/history. Full feature checkboxes remain open until their complete scope is implemented and validated.
+
+### September 29 — native School editing implementation
+
+After the evidence/decision checkpoint `25bad0e`, traced `SchoolPage` save/status/subtask/delete/generate behavior and implemented native draft commands plus SwiftUI forms. Homework can be created, edited, completed, reopened, and deleted with confirmation; subtasks can be added/edited/toggled/removed. Imported identity, timestamps and provenance survive edits. Study previews can be applied with confirmation, preserving locked/completed/adjusted study blocks and other events. Stale drafts/previews are rejected. The local document is saved atomically before UI state changes.
+
+Added core tests for create/edit/reload, imported provenance, malformed/stale drafts, protected block regeneration and deletion scope, retaining immutable food/trip history. Mac CI must validate this increment before it is reported as passed. Full School/calendar/dashboard acceptance remains open (study block editing, settings, device interaction and accessibility are still incomplete).

@@ -21,6 +21,12 @@ final class AppModel: ObservableObject {
             catch { message = "Saved data could not be opened. It has not been replaced." }
         }
     }
+    func commit(_ change: (AppData) throws -> AppData) throws {
+        guard var candidate = backup else { throw SchoolError.staleDraft }
+        candidate.data = try change(candidate.data)
+        try store.save(candidate)
+        backup = candidate
+    }
     func replace(with candidate: Backup) {
         do { try store.save(candidate); backup = candidate; message = "Backup imported on this device." }
         catch { message = "The import could not be saved. Existing data has been retained." }
@@ -61,6 +67,7 @@ struct SectionView: View {
     var body: some View {
         Group {
             if section == .settings { SettingsView() }
+            else if section == .school, model.backup != nil { SchoolView() }
             else if let data = model.backup?.data {
                 List {
                     switch section {
@@ -68,16 +75,12 @@ struct SectionView: View {
                         LabeledContent("Calendar events", value: String(data.events.count))
                         LabeledContent("Homework", value: String(data.assignments.count))
                         LabeledContent("Recipes", value: String(data.recipes.count))
-                        Text("This native foundation provides offline backup viewing. Editing and integrations await workflow acceptance.")
+                        Text("Offline data stays on this device. Homework edits and study plans save locally.")
                     case .calendar:
                         ForEach(Domain.visibleEvents(data).sorted { ($0.date, $0.startTime, $0.id) < ($1.date, $1.startTime, $1.id) }, id: \.id) { event in
                             VStack(alignment: .leading) { Text(event.title).font(.headline); Text("\(event.date) · \(event.startTime)–\(event.endTime)").font(.subheadline) }
                         }
-                    case .school:
-                        NavigationLink("Preview study plan") { StudyPreviewView(data: data) }
-                        ForEach(Domain.rankAssignments(Domain.visibleAssignments(data)), id: \.id) { task in
-                            VStack(alignment: .leading) { Text(task.title).font(.headline); Text("\(task.course) · Due \(task.dueDate) \(task.dueTime)"); Text(task.status).font(.caption) }
-                        }
+                    case .school: EmptyView()
                     case .food:
                         ForEach(data.recipes, id: \.id) { recipe in
                             NavigationLink(recipe.name) {
@@ -167,6 +170,8 @@ struct RecipeDetailView: View {
 }
 
 struct StudyPreviewView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var confirmApply = false
     let data: AppData
     @State private var startDate: String
     @State private var preview: StudyPreview?
@@ -196,8 +201,131 @@ struct StudyPreviewView: View {
                         Text("\(block.date) · \(block.startTime)–\(block.endTime)")
                     }
                 }
-                Text("Preview only. Locked, completed and adjusted study blocks are retained; this does not replace your calendar.").font(.footnote)
+                Button("Apply study plan") { confirmApply = true }
+                Text("Applying replaces unprotected study blocks. Locked, completed and adjusted blocks stay unchanged.").font(.footnote)
             }
         }.navigationTitle("Study preview")
+        .onChange(of: startDate) { _, _ in preview = nil }
+        .confirmationDialog("Replace unprotected study blocks?", isPresented: $confirmApply, titleVisibility: .visible) {
+            Button("Apply plan") {
+                do {
+                    guard let preview else { return }
+                    try model.commit { current in
+                        guard current == data else { throw SchoolError.staleDraft }
+                        return try SchoolCommands.apply(preview, startDate: startDate, to: current)
+                    }
+                    self.preview = nil; error = "Study plan saved on this device."
+                } catch { self.error = "The plan could not be saved or your data changed. Reopen this screen to preview the current data." }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+    }
+}
+
+
+private struct HomeworkEditorRequest: Identifiable {
+    let id = UUID()
+    let assignment: HomeworkAssignment?
+}
+
+struct SchoolView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var editor: HomeworkEditorRequest?
+    @State private var showCompleted = false
+    var body: some View {
+        List {
+            if let data = model.backup?.data {
+                NavigationLink("Plan study time") { StudyPreviewView(data: data) }
+                Toggle("Show completed homework", isOn: $showCompleted)
+                let visible = Domain.visibleAssignments(data)
+                let tasks = showCompleted ? visible.filter { $0.status == "complete" }.sorted { $0.dueDate < $1.dueDate } : Domain.rankAssignments(visible)
+                ForEach(tasks, id: \.id) { task in
+                    Button { editor = HomeworkEditorRequest(assignment: task) } label: {
+                        VStack(alignment: .leading) {
+                            Text(task.title).font(.headline)
+                            Text("\(task.course) · Due \(task.dueDate) \(task.dueTime)")
+                            Text(task.status).font(.caption)
+                        }.foregroundStyle(.primary)
+                    }.accessibilityHint("Edit homework details and subtasks")
+                }
+                if tasks.isEmpty { Text(showCompleted ? "No completed homework." : "Homework is clear.") }
+            }
+        }
+        .toolbar { Button("Add homework", systemImage: "plus") { editor = HomeworkEditorRequest(assignment: nil) } }
+        .sheet(item: $editor) { request in
+            NavigationStack { HomeworkEditor(assignment: request.assignment, timeZone: model.backup?.data.settings.calendarTimeZone ?? "UTC") }
+        }
+    }
+}
+
+struct HomeworkEditor: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    let assignment: HomeworkAssignment?
+    @State private var draft: HomeworkDraft
+    @State private var subtaskTitle = ""
+    @State private var message: String?
+    @State private var confirmDelete = false
+    init(assignment: HomeworkAssignment?, timeZone: String) {
+        self.assignment = assignment
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: timeZone) ?? .current
+        let formatter = DateFormatter()
+        formatter.calendar = calendar; formatter.timeZone = calendar.timeZone
+        formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.dateFormat = "yyyy-MM-dd"
+        let due = calendar.date(byAdding: .day, value: 2, to: Date()) ?? Date()
+        _draft = State(initialValue: HomeworkDraft(assignment: assignment, dueDate: formatter.string(from: due)))
+    }
+    var body: some View {
+        Form {
+            TextField("Assignment title", text: $draft.title)
+            TextField("Course", text: $draft.course)
+            TextField("Due date (YYYY-MM-DD)", text: $draft.dueDate).autocorrectionDisabled()
+            TextField("Due time (HH:MM)", text: $draft.dueTime).autocorrectionDisabled()
+            Picker("Priority", selection: $draft.priority) {
+                Text("Low").tag("low"); Text("Medium").tag("medium"); Text("High").tag("high")
+            }
+            TextField("Estimated minutes", value: $draft.estimatedMinutes, format: .number).keyboardType(.numberPad)
+            Picker("Status", selection: $draft.status) {
+                Text("Not started").tag("not-started"); Text("In progress").tag("in-progress"); Text("Complete").tag("complete")
+            }
+            TextField("Progress percent", value: $draft.progress, format: .number).keyboardType(.numberPad)
+            TextField("Notes", text: $draft.notes, axis: .vertical)
+            TextField("Source label", text: $draft.sourceLabel)
+            TextField("Source URL", text: $draft.sourceUrl).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
+            if assignment?.source == "imported" { Text("Imported identity and provenance are retained.").font(.footnote) }
+            ForEach($draft.subtasks, id: \.id) { $subtask in
+                VStack {
+                    TextField("Subtask title", text: $subtask.title)
+                    Toggle("Completed", isOn: $subtask.completed).accessibilityLabel("Completed: \(subtask.title)")
+                    Button("Remove subtask", role: .destructive) { draft.subtasks.removeAll { $0.id == subtask.id } }
+                }
+            }
+            TextField("New subtask", text: $subtaskTitle)
+            Button("Add subtask") { draft.addSubtask(title: subtaskTitle); subtaskTitle = "" }
+                .disabled(subtaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            if assignment != nil { Button("Delete homework", role: .destructive) { confirmDelete = true } }
+            if let message { Text(message) }
+        }
+        .navigationTitle(assignment == nil ? "Add homework" : "Edit homework")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") {
+                do {
+                    try model.commit { try SchoolCommands.save(draft, original: assignment, in: $0) }
+                    dismiss()
+                } catch SchoolError.staleDraft { message = "This homework changed. Cancel and reopen it before saving." }
+                catch { message = "Could not save. Check the title, course, date/time, minutes and progress. Existing data was retained." }
+            } }
+        }
+        .confirmationDialog("Delete homework and its linked study blocks?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete homework", role: .destructive) {
+                do {
+                    guard let assignment else { return }
+                    try model.commit { try SchoolCommands.delete(assignment, in: $0) }; dismiss()
+                } catch { message = "Could not delete. Cancel and reopen the current homework before retrying." }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
     }
 }

@@ -61,3 +61,5 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - Running progress document: `docs/WORK_LOG.md` (requested September 29). Includes the exact failed CI cases and subsequent corrections/evidence.
 
 - Native calculation increment: added scaling/fractions, consumption-only nutrition, source visibility/ranking and study previews with shared golden tests. Recipe scaling and School study preview are non-destructive; full feature-port checkboxes remain open pending implementation and validation. See `docs/WORK_LOG.md`.
+
+- Native School editing increment: homework drafts/subtasks, confirmed deletion and study-plan application implemented after baseline approval. Regression tests cover provenance, stale drafts, protected blocks and history. Full School/calendar/dashboard task remains open; see work log for validation scope.
