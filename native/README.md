@@ -9,14 +9,14 @@ xcodebuild -project native/MyHub.xcodeproj -scheme MyHub -sdk iphonesimulator -d
 
 Run these from the repository root. CI repeats both on macOS. This Linux continuation environment cannot itself run Swift or Xcode.
 
-Implemented source: responsive native navigation, versioned Codable transport models, schema-checked backup decoding, explicit import confirmation, plaintext export, atomic local persistence with iOS file protection, and read-only event/homework/recipe screens. No fixture is preloaded into the app. No network, capability enrollment, integration permissions or synchronization are implemented.
+Implemented source: responsive native navigation, versioned Codable transport models, schema-checked backup decoding, explicit import confirmation, plaintext export, atomic local persistence with iOS file protection, event/recipe viewing, scaling previews, homework editing and study previews/application. No fixture is preloaded into the app. No network, capability enrollment, integration permissions or synchronization are implemented.
 
 Generated Swift models, schema resources and synthetic fixtures come from `npm run contract:generate`; `npm run contract:check` prevents drift. Keep unknown imported IDs as strings. `Backup.decode` rejects unsupported data without overwriting the current file. Version 1 must first pass through the web migrator. Tests compare full web-export/native-reencode JSON, historical snapshot independence and local-date validity.
 
-This is not the completed native feature set. See `../docs/NATIVE_DECISIONS.md` for the acceptance gate and remaining tests. Editing, deterministic Swift calculations, migration/reconciliation parity, accessible device acceptance, integrations and sync are still unchecked in TODO.
+This is not the completed native feature set. See `../docs/NATIVE_DECISIONS.md` for the acceptance gate and remaining tests. Full editing/calculation parity, migration/reconciliation parity, accessible device acceptance, integrations and sync are still unchecked in TODO.
 
 Validated at `ce707bf` by macOS workflow `36507350376`: 3 Swift tests passed; standalone iPhone/iPad simulator build succeeded. Device interaction and accessibility acceptance remain open.
 
-Native calculation work in progress: scaling/fractions, consumption-only nutrition, source visibility, homework ranking and study previews now have Swift tests. Recipe serving controls and School study preview do not persist edits. Grocery/batch calculation parity and full editing remain open; consult the running work log for the exact tested commit.
+Native calculation work in progress: scaling/fractions, consumption-only nutrition, source visibility, homework ranking and study previews now have Swift tests. Recipe serving controls remain previews. School now supports explicit confirmed application of generated study plans. Grocery/batch calculation parity and full editing remain open; consult the running work log for the exact tested commit.
 
 September 29 increment: the owner approved web behavior as the baseline. Native School now includes homework forms/subtasks, confirmation before deletion, completed-item reopening, and confirmed study-preview application. Commands reject stale drafts and preserve provenance; saving precedes UI publication. This increment requires its own Mac CI result; see `../docs/WORK_LOG.md`. Study-block editing and full feature/device acceptance remain open.

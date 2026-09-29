@@ -2,7 +2,7 @@
 
 ## Ready for review
 
-The versioned schema, synthetic backup and golden web behavior tests are in `contracts/v2`. The standalone Xcode project is `native/MyHub.xcodeproj`; `MyHubCore` implements Codable transport, shape validation, atomic offline storage and contract tests. SwiftUI uses phone tabs/navigation stacks and an iPad split view. Current feature screens are **read-only backup viewers**, not completed workflow ports. A macOS CI job tests the core and builds the simulator target without signing. Device accessibility and distribution remain unverified.
+The versioned schema, synthetic backup and golden web behavior tests are in `contracts/v2`. The standalone Xcode project is `native/MyHub.xcodeproj`; `MyHubCore` implements Codable transport, shape validation, atomic offline storage and contract tests. SwiftUI uses phone tabs/navigation stacks and an iPad split view. School now has offline homework editing and study-plan application; other feature ports are partial. No full workflow/device acceptance is claimed. A macOS CI job tests the core and builds the simulator target without signing. Device accessibility and distribution remain unverified.
 
 ## Decision 1 — behavioral acceptance gate
 
@@ -38,7 +38,7 @@ Recommendation for evaluation: retain Supabase interoperability if continued web
 
 ## Remaining validation/access
 
-The Mac/Xcode simulator build and 3 Swift tests passed at `ce707bf`; real iPhone/iPad accessibility review is still required. A successful simulator build alone does not prove usable Dynamic Type, VoiceOver, import dialogs or provisioning. Native v1 backups currently require web migration then v2 export. Local atomic JSON is the implemented foundation; adopting SwiftData is a later indexed-storage decision, not a claim made by this branch.
+The Mac/Xcode simulator build and nine Swift tests passed at `97e484f`; the School-editing increment has its own CI gate. real iPhone/iPad accessibility review is still required. A successful simulator build alone does not prove usable Dynamic Type, VoiceOver, import dialogs or provisioning. Native v1 backups currently require web migration then v2 export. Local atomic JSON is the implemented foundation; adopting SwiftData is a later indexed-storage decision, not a claim made by this branch.
 
 ## Primary references checked for the decision
 

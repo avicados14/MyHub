@@ -38,7 +38,7 @@ This is the running implementation record for Phase 2. Dates use America/Denver 
 ## Open dependencies and decisions
 
 - Live Phase 1 proof still needs the original linked browser and a fresh private-link session. Do not replace/revoke a capability merely to test it.
-- The native acceptance gate in `MYHUB_IOS_PLAN.md` still requires a choice: port existing web behavior as the baseline, or revise specified workflows first. The schema/fixtures and working native foundation are available for that review.
+- Workflow choice resolved September 29: the owner approved existing web behavior. Feature implementation, shared-fixture parity and device acceptance remain separate gates.
 - Full native editing and calculation parity, integrations, selected sync/access model, device accessibility and distribution are not complete. See `NATIVE_DECISIONS.md` and TODO for their dependency order.
 - A task stalled for 30 minutes must be stopped, documented and narrowed before resuming. No blind workflow reruns; inspect the exact failure first.
 
@@ -77,3 +77,11 @@ Next increment: native homework create/edit/delete and study-plan application wi
 After the evidence/decision checkpoint `25bad0e`, traced `SchoolPage` save/status/subtask/delete/generate behavior and implemented native draft commands plus SwiftUI forms. Homework can be created, edited, completed, reopened, and deleted with confirmation; subtasks can be added/edited/toggled/removed. Imported identity, timestamps and provenance survive edits. Study previews can be applied with confirmation, preserving locked/completed/adjusted study blocks and other events. Stale drafts/previews are rejected. The local document is saved atomically before UI state changes.
 
 Added core tests for create/edit/reload, imported provenance, malformed/stale drafts, protected block regeneration and deletion scope, retaining immutable food/trip history. Mac CI must validate this increment before it is reported as passed. Full School/calendar/dashboard acceptance remains open (study block editing, settings, device interaction and accessibility are still incomplete).
+
+**Published School increment:** `ec4f664`, draft PR #18. Local `npm run check` passed contract drift, formatting, lint, types, all 121 unit tests and production build. Native workflow `36596491185` is validating the new Swift commands/forms. No web production source changed in this increment; the previous full 132-case browser pass remains dated to `97e484f`.
+
+### September 29 — School increment validated
+
+At `ec4f664`, native workflow `36596491185`, job `109502621590`, passed **13 Swift tests** (3 contract/storage, 6 domain, 4 School command tests) and the standalone iPhone/iPad simulator build. Local full web checks also passed. The earlier full browser result remains 132/132 at `97e484f`; automatic browser reruns on subsequent native/documentation commits do not change that evidence scope.
+
+Corrected current native descriptions to include working homework editing and confirmed study application. Remaining work: study block editing/settings, full dashboard/calendar and food workflow parity, native legacy migration, native device/accessibility checks, integration models, selected enrollment/sync model and distribution. The original linked-browser status and a fresh private-link browser's School count remain the exact Phase 1 acceptance observations still unavailable. No secrets or personal fixtures were committed.

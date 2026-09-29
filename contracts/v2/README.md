@@ -1,6 +1,6 @@
 # MyHub portable contract v2
 
-Implementation baseline: `3472b5513012ddb0481550334d40d58e1fba1953`. This is a versioned compatibility candidate, pending the owner's workflow acceptance. Fixtures are entirely invented; none came from the private handoff, calendar feeds, or a personal backup.
+Implementation baseline: `3472b5513012ddb0481550334d40d58e1fba1953`. The owner approved current web behavior as the native baseline on September 29, 2026. Fixtures are entirely invented; none came from the private handoff, calendar feeds, or a personal backup.
 
 ## Wire shape and versions
 
@@ -26,7 +26,7 @@ The generated schema is the exhaustive field/type inventory. IDs are opaque **st
 - Local dates are `YYYY-MM-DD`, wall times `HH:mm`; preserve them as calendar components, never parse a meal date as a UTC instant. `calendarTimeZone` is an IANA zone used by ICS conversion. The original ICS source wall time drives recurrence across DST. Timestamps such as createdAt, updatedAt, capturedAt, importedAt and exportedAt describe instants and remain ISO strings in transport.
 - Quantities are JSON numbers. Unknown ingredient quantity is explicit `null`, not zero. Native transport uses Decimal; display rounding is separate. Missing legacy sugar/saturatedFat contributes zero to totals, without inventing provenance.
 - Scaling starts from original yield; exact-yield recipe display overrides and grocery override calculations currently differ in their applicability. Preserve the implemented rules until reviewed.
-- A batch's prepared amount is shared; planning a later day does not create more food or consumption. The web reconciler handles narrowly defined legacy links. Native read-only import preserves stored links; native edit/reconciliation parity is not implemented yet.
+- A batch's prepared amount is shared; planning a later day does not create more food or consumption. The web reconciler handles narrowly defined legacy links. Native import and School commands preserve stored meal links; native meal editing/reconciliation parity is not implemented yet.
 - Recipe/package edits must not rewrite meal, food-log or completed-trip snapshots. Fixtures mutate a recipe and a copied trip to prove snapshot independence.
 
 ## Privacy boundary

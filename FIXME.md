@@ -4,6 +4,8 @@ This file distinguishes a confirmed correction from an unverified condition. At 
 
 ## Immediate verification — remote counts confirmed; browser gate open
 
+- [x] **Independently retrieve Supabase counts.** September 29 stateless resolve/decrypt returned revision 60 with 3,361 events and 168 assignments; only counts/status were emitted. See the continuation report for scope.
+
 - [ ] **Confirm cross-device propagation of the latest Canvas assignments.** The connected Calendar imported an encrypted snapshot with 3,332 events and 168 assignments, and School rendered assignment cards. The handoff did not recheck whether that newly imported state reached the Supabase encrypted `AppData` document or a fresh private-link browser. First check the existing linked browser's sync state; then check aggregate counts in a separate fresh profile. Do not print the link, key, token, passphrase, raw ICS, or decrypted assignments. If there is a mismatch, inspect revision/sync-queue metadata and reproduce the exact path before editing code. Source: `HANDOFF_CONTINUATION_GUIDE.md` §§6 and 8.
 
 ## Documentation corrections — status: confirmed

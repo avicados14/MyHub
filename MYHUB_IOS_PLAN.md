@@ -2,7 +2,7 @@
 
 ## Status
 
-A standalone SwiftUI foundation now exists in `native/MyHub.xcodeproj`, with versioned Codable import/export and read-only backup viewing. The owner approved current web behavior as the native implementation baseline on September 29, 2026. Full native editing is in progress; integrations and synchronization retain their separate data/privacy/access dependencies. See `docs/NATIVE_DECISIONS.md` for concrete approval options and `TODO.md` for implementation/validation status.
+A standalone SwiftUI foundation now exists in `native/MyHub.xcodeproj`, with versioned Codable import/export, backup viewing, homework editing and study-plan application. The owner approved current web behavior as the native implementation baseline on September 29, 2026. Full native editing is in progress; integrations and synchronization retain their separate data/privacy/access dependencies. See `docs/NATIVE_DECISIONS.md` for concrete approval options and `TODO.md` for implementation/validation status.
 
 ## Product Objective
 

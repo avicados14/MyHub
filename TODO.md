@@ -4,6 +4,8 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 
 ## 0. Close the Phase 1 handoff gate
 
+- [x] Independently retrieve the encrypted Supabase document and verify privacy-safe counts: September 29 stateless resolve/decrypt returned revision 60, 3,361 events and 168 assignments. This is remote retrieval proof, not browser UI acceptance.
+
 - [ ] Verify that the September 28 encrypted calendar import reached Supabase: the linked browser should settle at a current sync state, and a separate fresh private-link browser should show the same aggregate assignment count in School. The connected browser showed 3,332 events and 168 assignments; fresh-device propagation was not independently checked. Use counts and revision metadata only, without exposing private content or capabilities. See `FIXME.md`.
 - [ ] If the counts disagree, trace the Supabase document revision, local hydration, and serialized push/refresh path before changing the deployed Canvas UID parser. Add a focused regression only for the reproduced failure.
 - [ ] Record the verified baseline (source commit, data-repository commit, counts, timezone, test results) and reconcile the older counts in `README.md` and `REQUIREMENTS_AUDIT.md`.
@@ -63,3 +65,5 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - Native calculation increment: added scaling/fractions, consumption-only nutrition, source visibility/ranking and study previews with shared golden tests. Recipe scaling and School study preview are non-destructive; full feature-port checkboxes remain open pending implementation and validation. See `docs/WORK_LOG.md`.
 
 - Native School editing increment: homework drafts/subtasks, confirmed deletion and study-plan application implemented after baseline approval. Regression tests cover provenance, stale drafts, protected blocks and history. Full School/calendar/dashboard task remains open; see work log for validation scope.
+
+- School increment validation at `ec4f664`: 13 Swift tests and iPhone/iPad simulator build passed in workflow `36596491185`. Full feature/device gates remain open.
