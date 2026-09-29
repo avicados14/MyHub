@@ -4,7 +4,7 @@
 
 - Public MyHub main at investigation: `3472b5513012ddb0481550334d40d58e1fba1953`, including TODO and FIXME.
 - Current private-repository workflow and producer were read through the GitHub connector. Latest commit returned: `fee85564064e159127ad0f23e40b6a1bccf05a09`, timestamp September 28 23:54:13 UTC. This is newer than the archive's `4a0b91d`. No ciphertext or feed contents were retrieved. A successful run at this newer commit has not been independently established.
-- Connected MyHub Supabase project: ACTIVE_HEALTHY; broker ACTIVE, deployed version 3. Five migrations were listed. Remote migration timestamps differ from the source filenames; names correspond. No schema/deployment changes were made.
+- Connected MyHub Supabase project: ACTIVE_HEALTHY; broker ACTIVE, deployed version 3. Five migrations were listed. Remote migration timestamps differ from the source filenames; names correspond. A read-only check also confirmed RLS enabled and no direct SELECT/INSERT/UPDATE/DELETE privilege for anon or authenticated. No schema/deployment changes were made.
 - Aggregate-only SQL: four broker records, one active; active revision **60**, data updated **2026-09-28 22:53:52.106 UTC**, last resolved **23:07:54.411 UTC**. The query selected no row IDs, capabilities, hashes or encrypted payloads.
 
 ## Phase 1 verification remains blocked, not failed
@@ -32,3 +32,5 @@ A synthetic v2 backup with `recipes: [{}]` passed the old shallow importer. A fo
 The native contract/foundation is a compatibility candidate. Full editing, business-calculation parity, EventKit, capture, sharing and synchronization are not claimed complete. See `NATIVE_DECISIONS.md` for the choices needed before those dependencies proceed. No stalled operation was allowed to run for 30 minutes; failed private git access was replaced by authorized connector source reads.
 
 Test results for this branch are recorded in FIXME and the draft PR. Historical test totals elsewhere remain historical evidence, not results of this continuation.
+
+Native validation at `ce707bf`: macOS workflow `36507350376` passed 3 Swift tests and the standalone simulator build. Local web `npm run check` passed 121 tests in 23 files plus all static/build gates. Local Chromium download was an invalid ZIP; the remote browser gate is the authoritative browser result.

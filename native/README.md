@@ -14,3 +14,5 @@ Implemented source: responsive native navigation, versioned Codable transport mo
 Generated Swift models, schema resources and synthetic fixtures come from `npm run contract:generate`; `npm run contract:check` prevents drift. Keep unknown imported IDs as strings. `Backup.decode` rejects unsupported data without overwriting the current file. Version 1 must first pass through the web migrator. Tests compare full web-export/native-reencode JSON, historical snapshot independence and local-date validity.
 
 This is not the completed native feature set. See `../docs/NATIVE_DECISIONS.md` for the acceptance gate and remaining tests. Editing, deterministic Swift calculations, migration/reconciliation parity, accessible device acceptance, integrations and sync are still unchecked in TODO.
+
+Validated at `ce707bf` by macOS workflow `36507350376`: 3 Swift tests passed; standalone iPhone/iPad simulator build succeeded. Device interaction and accessibility acceptance remain open.

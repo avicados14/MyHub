@@ -28,7 +28,7 @@ Before a fix, establish where the authoritative data resides (IndexedDB, encrypt
 - **Live propagation: blocked, not a reproduced defect.** Current main was `3472b55`. One active Supabase record is at revision 60, updated September 28 22:53:52.106 UTC and last resolved 23:07:54.411 UTC. Only aggregate status/revision information was queried. The available browser had only a blank tab. The exact missing observation is the original session's settled status and an independent fresh-profile restore/count comparison. The 168-assignment claim has not been upgraded to remote verification.
 - **Documentation scope corrected:** README distinguishes September 23 historical counts from the September 28 connected-browser import. Audit totals are explicitly historical. Direct browser refresh, scheduled encrypted snapshot and reviewed local ICS import are separate paths. No new baseline deployment is claimed.
 - [x] **Malformed nested backup accepted — reproduced and fixed.** A v2 backup with `recipes: [{}]` passed `parseBackup` before this change. `src/storage/backup-validation.test.ts` failed on that exact case; generated nested shape validation now rejects it before replacement. Future versions and unknown AppData fields are rejected. Validation errors contain no record values.
-- **Native work remains partial:** Codable/atomic persistence tests and simulator build gate are added, but this Linux environment has neither Swift nor Xcode. CI results and owner/device acceptance must be recorded before checking working-native acceptance items. Read-only viewers do not complete the requested feature ports.
+- **Native work remains partial:** Codable/atomic persistence tests and simulator build gate are added, and macOS CI now passes both. This Linux environment has neither Swift nor Xcode; owner/device acceptance is still required before checking full working-native acceptance items. Read-only viewers do not complete the requested feature ports.
 - **Archive/source mismatch recorded, not patched speculatively:** current startup still awaits private GitHub repository verification before hydration; only snapshot backup sync is queued. The archived blanket claim that all GitHub verification is non-blocking overstates the code. No related outage was reproduced.
 
 See `docs/CONTINUATION_2026-09-28.md` for source tracing and `docs/NATIVE_DECISIONS.md` for reviewable pending choices. Neither production data, broker deployment nor Canvas parser changed.
@@ -37,4 +37,12 @@ See `docs/CONTINUATION_2026-09-28.md` for source tracing and `docs/NATIVE_DECISI
 
 - `npm run check` passed: generated contract drift check, formatting, ESLint, strict TypeScript, **121 tests in 23 files**, and production build.
 - Local Chromium installation failed because the download was not a valid ZIP; no local browser acceptance result is claimed. The existing PR workflow remains the full desktop/tablet/mobile gate. This is an environment blocker, not a reproduced application failure.
-- Swift tests and Xcode simulator build are delegated to the new macOS CI gate; their outcome is not inferred from the web tests.
+- Native workflow `36507350376` at `ce707bf` passed: 3 Swift contract/storage tests, 0 failures, and `BUILD SUCCEEDED` for the iPhone/iPad simulator target. This is separate from on-device/accessibility acceptance.
+
+- Production dependency audit: `npm audit --omit=dev` reported 0 vulnerabilities. The seven golden tests also passed with `TZ=America/Denver`, preserving local-date expectations.
+
+### September 29 CI follow-up
+
+- Web run `36507350281` at `ce707bf`: 125 browser cases passed, six failed, one passed on retry. The six failures are two existing food tests repeated across three viewports. Their seeded/asserted September 22 week differed from the real browser date. Both now explicitly pin September 22 noon; production date and meal logic are unchanged. Focused regression CI must pass before calling this resolved.
+- The direct Canvas refresh test's one retry is recorded separately. No parser change is justified by this observation. It is included in the focused rerun.
+- Running implementation notes are in `docs/WORK_LOG.md`; update them at each checkpoint.

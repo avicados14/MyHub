@@ -18,7 +18,7 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 
 ## 2. Build the native foundation
 
-- [ ] Create a standalone Swift/SwiftUI iPhone and iPad project; do not wrap the website in a WebView.
+- [x] Create a standalone Swift/SwiftUI iPhone and iPad project; do not wrap the website in a WebView.
 - [ ] Implement native navigation and accessible layouts: iPhone `TabView`/`NavigationStack`, iPad `NavigationSplitView`, sheets, confirmation dialogs, Dynamic Type, VoiceOver labels, and non-gesture alternatives.
 - [ ] Implement the local persistence and backup-import foundation with versioned `Codable` models, stable IDs, explicit local dates, and tests against the frozen fixtures.
 - [ ] Rebuild and validate Dashboard, Calendar, School/homework, and deterministic study planning against the approved web behavior.
@@ -55,3 +55,7 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - Native v2 import validation and round-trip tests are implemented. Direct v1 migration is not: use the web migrator then export v2. Do not check the combined import/migration task until the agreed migration scope and native tests are verified.
 - Live Phase 1 gate remains blocked: no original linked browser or usable private-link session is available. Supabase revision 60 is metadata evidence only, not proof of 168 assignments. Exact observation and baseline: `docs/CONTINUATION_2026-09-28.md`.
 - Owner decisions are prepared in `docs/NATIVE_DECISIONS.md`: approve existing web behavior or identify workflow changes; choose a sync direction/access model before native synchronization. Integrations and full workflow ports retain these dependencies.
+
+- Native validation at `ce707bf`: macOS workflow `36507350376`, job `109211657010`, passed all 3 Swift tests and the standalone iPhone/iPad simulator build. This checks project creation, not accessibility/device acceptance or full feature parity.
+
+- Running progress document: `docs/WORK_LOG.md` (requested September 29). Includes the exact failed CI cases and subsequent corrections/evidence.

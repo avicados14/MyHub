@@ -17,14 +17,14 @@ The explicit choice is needed because the existing native plan calls for owner a
 
 This is an architectural comparison, not a verified current pricing/provisioning quote. Refresh provider documentation and costs at implementation/distribution time.
 
-| Area                 | Existing encrypted Supabase broker                                     | CloudKit private database                                                       | Identity-backed encrypted shared API                               |
-| -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Web interoperability | Reuses current encrypted document and revision                         | Requires a separate web bridge/migration strategy                               | Supports web/native, requires backend upgrade                      |
-| Device setup         | Existing bearer capability imported explicitly; not an Apple session   | Apple account/container setup                                                   | Explicit account enrollment and device authorization               |
-| Privacy              | Client encryption; bearer grants all document access                   | Must specify CloudKit encryption/key/recovery assumptions before implementation | Client encryption plus per-device authorization/key design         |
-| Offline/conflicts    | Atomic local document; stale writes rejected; recovery UX still needed | Native record synchronization; conflicts and history need explicit model        | Revision/merge policy must be designed                             |
-| Revocation/recovery  | Current whole-link revocation; no individual device identity           | Account/container recovery dependencies                                         | Can support device revocation; additional key recovery work        |
-| Maintenance/cost     | Retains two existing services and current backup; verify quotas        | Apple platform/container/distribution constraints; verify quotas                | Highest implementation and operations burden; verify hosting costs |
+| Area                 | Existing encrypted Supabase broker                                     | CloudKit private database                                                                           | Identity-backed encrypted shared API                               |
+| -------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Web interoperability | Reuses current encrypted document and revision                         | CloudKit JS can share its containers with web; current Supabase data/access still require migration | Supports web/native, requires backend upgrade                      |
+| Device setup         | Existing bearer capability imported explicitly; not an Apple session   | Apple account/container setup                                                                       | Explicit account enrollment and device authorization               |
+| Privacy              | Client encryption; bearer grants all document access                   | Must specify CloudKit encryption/key/recovery assumptions before implementation                     | Client encryption plus per-device authorization/key design         |
+| Offline/conflicts    | Atomic local document; stale writes rejected; recovery UX still needed | Native record synchronization; conflicts and history need explicit model                            | Revision/merge policy must be designed                             |
+| Revocation/recovery  | Current whole-link revocation; no individual device identity           | Account/container recovery dependencies                                                             | Can support device revocation; additional key recovery work        |
+| Maintenance/cost     | Retains two existing services and current backup; verify quotas        | Apple platform/container/distribution constraints; verify quotas                                    | Highest implementation and operations burden; verify hosting costs |
 
 Recommendation for evaluation: retain Supabase interoperability if continued web access is required, but first approve a capability-to-Keychain enrollment design and non-destructive conflict recovery. Do not auto-merge an entire stale document, silently reopen a link over unsynced changes, or treat a bearer link as authenticated identity. If individual device revocation is required, choose the identity-backed upgrade before implementing native sync. No production broker changes are included.
 
@@ -38,4 +38,12 @@ Recommendation for evaluation: retain Supabase interoperability if continued web
 
 ## Remaining validation/access
 
-A Mac/Xcode build and real iPhone/iPad accessibility review are required. A successful simulator build alone does not prove usable Dynamic Type, VoiceOver, import dialogs or provisioning. Native v1 backups currently require web migration then v2 export. Local atomic JSON is the implemented foundation; adopting SwiftData is a later indexed-storage decision, not a claim made by this branch.
+The Mac/Xcode simulator build and 3 Swift tests passed at `ce707bf`; real iPhone/iPad accessibility review is still required. A successful simulator build alone does not prove usable Dynamic Type, VoiceOver, import dialogs or provisioning. Native v1 backups currently require web migration then v2 export. Local atomic JSON is the implemented foundation; adopting SwiftData is a later indexed-storage decision, not a claim made by this branch.
+
+## Primary references checked for the decision
+
+- [Apple CloudKit JS](https://developer.apple.com/documentation/cloudkitjs): web clients can access the same public/private databases as native CloudKit apps. CloudKit is not inherently native-only; adapting this existing Supabase web application would still be additional work.
+- [Apple Keychain services](https://developer.apple.com/documentation/security/keychain-services): encrypted storage for small secrets; native enrollment/accessibility/recovery policy remains to be designed.
+- [Swift PackageDescription](https://docs.swift.org/package-manager/PackageDescription/PackageDescription.html): package and test-target structure used by the foundation.
+
+The existing Supabase comparison is based on this repository's broker implementation and read-only checks of the connected deployment. No new Supabase API behavior or cost claim is assumed.
