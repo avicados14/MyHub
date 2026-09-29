@@ -101,3 +101,13 @@ Plan in dependency order:
 Implemented native event creation/editing/deletion, study locking/completion/reopening, and study settings with weekday avoid ranges. Edits preserve provenance; changed study blocks become protected on regeneration. Overlaps require explicit review; stale drafts and invalid ranges fail before persistence. Imported multi-day bounds are preserved; moving their range remains unsupported and is disabled in the editor. Manual single-day and all-day events are supported. Added five focused test cases for regeneration protection, completion semantics, overlap validation, imported bounds and settings.
 
 The new source requires Mac CI before a passing implementation checkpoint can be claimed. No private archive contents, production calendar parser or backend were changed. Full native calendar/dashboard/device acceptance remains open.
+
+### Calendar validation recovery and legacy bridge fixtures
+
+GitHub's branch ref advanced to `338a02c`, but PR #18 retained `0c312bd` and no new checks were created. Verified both refs before changing anything. Closing/reopening the same draft refreshed its head and triggered web run `36622161689` and native run `36622161736`; the PR remains draft. Native core tests passed, simulator build pending at this observation.
+
+Added a dedicated synthetic v1 backup and reviewed migrated-v2 golden in `contracts/v1`. The actual web parser matches the complete golden; explicit assertions cover demo/dependent cleanup, stable IDs/dates, planned/prepared/consumed amounts, missing provenance, nutrition, and completed-trip history. A Swift test imports/re-encodes the same migrated file. This proves the supported bridge when both suites pass; it is not direct Swift migration or exhaustive legacy cleanup coverage. Fourteen focused web contract/import tests passed locally.
+
+**Calendar increment verified:** native workflow `36622161736`, job `109589992915`, passed 18 Swift tests and the iPhone/iPad simulator build at `338a02c`. The checklist now checks this bounded implementation increment and the previously verified v2 local persistence foundation; full calendar/dashboard/accessibility tasks remain open.
+
+**Legacy bridge web gates:** `npm run check` passed all 124 tests in 24 files, formatting, lint, types, contract drift and production build. The additional Swift bridge test still requires the next commit's Mac run. No web production behavior changed.

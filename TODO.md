@@ -22,7 +22,7 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 
 - [x] Create a standalone Swift/SwiftUI iPhone and iPad project; do not wrap the website in a WebView.
 - [ ] Implement native navigation and accessible layouts: iPhone `TabView`/`NavigationStack`, iPad `NavigationSplitView`, sheets, confirmation dialogs, Dynamic Type, VoiceOver labels, and non-gesture alternatives.
-- [ ] Implement the local persistence and backup-import foundation with versioned `Codable` models, stable IDs, explicit local dates, and tests against the frozen fixtures.
+- [x] Implement the local persistence and backup-import foundation with versioned `Codable` models, stable IDs, explicit local dates, and tests against the frozen fixtures.
 - [ ] Rebuild and validate Dashboard, Calendar, School/homework, and deterministic study planning against the approved web behavior.
 - [ ] Rebuild and validate recipes, packaged foods, meal planning, nutrition logs, leftovers, pantry, grocery planning/check, and completed-trip history. Keep planning, preparation, and consumption separate; preserve immutable historical snapshots.
 
@@ -67,3 +67,9 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - Native School editing increment: homework drafts/subtasks, confirmed deletion and study-plan application implemented after baseline approval. Regression tests cover provenance, stale drafts, protected blocks and history. Full School/calendar/dashboard task remains open; see work log for validation scope.
 
 - School increment validation at `ec4f664`: 13 Swift tests and iPhone/iPad simulator build passed in workflow `36596491185`. Full feature/device gates remain open.
+
+## September 29 calendar/study continuation
+
+- [x] V2 native persistence foundation validated: complete JSON round trip, rejected malformed/future imports without overwrite, atomic local saves and persisted homework edits (`ec4f664`, 13 Swift tests). This does not include direct v1 migration or cloud synchronization.
+- [x] Calendar/study increment `338a02c`: manual event forms, protected study edits, complete/reopen/lock actions, overlap review and study/avoid-time settings. Mac workflow `36622161736` passed 18 Swift tests and the iPhone/iPad simulator build. Full presentation/device acceptance remains separate.
+- Next dependencies: dedicated synthetic v1 migration fixtures, dashboard/calendar presentation, food calculation/editing parity, then reviewed integration/access models. No renewed owner workflow approval is needed; current web behavior remains the approved baseline.

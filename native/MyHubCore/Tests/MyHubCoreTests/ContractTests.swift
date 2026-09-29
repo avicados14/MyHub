@@ -31,6 +31,15 @@ final class ContractTests: XCTestCase {
             XCTAssertEqual(try store.load(), original)
         }
     }
+    func testWebMigratedLegacyBackupRoundTrip() throws {
+        let bytes = try Data(contentsOf: Bundle.module.url(forResource: "migrated-backup", withExtension: "json")!)
+        let backup = try Backup.decode(bytes)
+        XCTAssertEqual(try JSONSerialization.jsonObject(with: bytes) as? NSDictionary,
+                       try JSONSerialization.jsonObject(with: backup.encoded()) as? NSDictionary)
+        XCTAssertFalse(backup.data.recipes.contains { $0.id == "legacy-demo-recipe" })
+        XCTAssertFalse(backup.data.events.contains { $0.id == "legacy-demo-study" })
+        XCTAssertEqual(backup.data.settings.groceryStaples.first?.name, "Synthetic oats")
+    }
     func testLocalDateAndSnapshots() throws {
         XCTAssertEqual(try LocalDate("2026-03-08").value, "2026-03-08")
         XCTAssertThrowsError(try LocalDate("2026-02-30"))
