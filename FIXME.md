@@ -50,3 +50,9 @@ See `docs/CONTINUATION_2026-09-28.md` for source tracing and `docs/NATIVE_DECISI
 - Running implementation notes are in `docs/WORK_LOG.md`; update them at each checkpoint.
 
 - Focused verification at `8e5e910`: workflow `36580422648` passed the meal-date and Canvas regression step across all three viewports with zero retries. The confirmed test-clock defect is corrected. A single successful targeted rerun does not establish that all possible Canvas timing flakes are eliminated.
+
+### September 29 native calendar/legacy checkpoint
+
+- `338a02c`: 18 Swift tests and iPhone/iPad simulator build passed for calendar forms, study protection/completion and study settings.
+- `56ec15d`: 19 Swift tests and simulator build passed, including the synthetic web-v1-migration/native-v2-import bridge. Local full web checks passed 124 tests in 24 files. Direct native v1 migration remains unsupported.
+- GitHub temporarily kept the draft PR head behind the updated branch ref, so checks did not start. Verified the mismatch and reopened the same draft to refresh its head; checks then ran successfully. This is not evidence of an application defect.

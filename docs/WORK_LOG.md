@@ -111,3 +111,11 @@ Added a dedicated synthetic v1 backup and reviewed migrated-v2 golden in `contra
 **Calendar increment verified:** native workflow `36622161736`, job `109589992915`, passed 18 Swift tests and the iPhone/iPad simulator build at `338a02c`. The checklist now checks this bounded implementation increment and the previously verified v2 local persistence foundation; full calendar/dashboard/accessibility tasks remain open.
 
 **Legacy bridge web gates:** `npm run check` passed all 124 tests in 24 files, formatting, lint, types, contract drift and production build. The additional Swift bridge test still requires the next commit's Mac run. No web production behavior changed.
+
+### Verified checkpoint — legacy bridge and calendar controls
+
+At `56ec15d`, native workflow `36622604118`, job `109591508483`, passed **19 Swift tests** and the standalone iPhone/iPad simulator build. This includes the full migrated-v2 native JSON round trip. Local `npm run check` passed 124 tests in 24 files plus all static/build gates; the three legacy bridge tests also passed with `TZ=America/Denver`. New automated browser runs are separate from the previously recorded full browser pass; no new browser UI acceptance is claimed for native work.
+
+Current implementation commits: `338a02c` (calendar/study controls) and `56ec15d` (legacy fixtures/bridge tests). PR #18 remains draft. The ref/head lag recurred on the second push; reopening the same draft again brought it to the actual branch head and triggered the expected checks. No test failure was hidden by this refresh.
+
+Next work is direct legacy migration coverage/implementation, native dashboard/calendar presentation and food workflow parity. Full native device/accessibility acceptance, integration models and synchronization remain separate open gates. Existing Phase 1 fresh-browser observations remain unavailable. No new owner decision was needed for these offline increments.
