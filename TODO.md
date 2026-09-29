@@ -75,3 +75,5 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - Next dependencies: dedicated synthetic v1 migration fixtures, dashboard/calendar presentation, food calculation/editing parity, then reviewed integration/access models. No renewed owner workflow approval is needed; current web behavior remains the approved baseline.
 
 - [x] Establish a synthetic legacy migration bridge fixture and verify web migration plus native v2 import/re-encode. At `56ec15d`, all 19 Swift tests and simulator build passed (`36622604118`); local web gates passed 124 tests. Direct Swift v1 migration and broader legacy repair coverage remain unchecked.
+
+- Daily Home dashboard increment: configured-zone clock, visible daily agenda, due homework, explicit meal amounts and eight-field consumption totals implemented with synthetic boundary tests. Mac CI validation pending; full dashboard parity and device acceptance stay open.

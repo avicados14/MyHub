@@ -67,6 +67,7 @@ struct SectionView: View {
     var body: some View {
         Group {
             if section == .settings { SettingsView() }
+            else if section == .home, model.backup != nil { DashboardView() }
             else if section == .school, model.backup != nil { SchoolView() }
             else if section == .calendar, model.backup != nil { CalendarView() }
             else if let data = model.backup?.data {
@@ -327,5 +328,63 @@ struct HomeworkEditor: View {
             }
             Button("Cancel", role: .cancel) { }
         }
+    }
+}
+
+
+struct DashboardView: View {
+    @EnvironmentObject private var model: AppModel
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { clock in
+            if let data = model.backup?.data,
+               let summary = try? Domain.dailySummary(data, now: clock.date) {
+                List {
+                    Text(summary.date).font(.headline)
+                    SwiftUI.Section("Today's agenda") {
+                        ForEach(summary.events, id: \.id) { event in
+                            VStack(alignment: .leading) {
+                                Text(event.title).font(.headline)
+                                Text(event.allDay == true ? "All day" : "\(event.startTime)–\(event.endTime)")
+                                if let end = event.endDate, end != event.date { Text("\(event.date) through \(end)").font(.caption) }
+                            }
+                        }
+                        if summary.events.isEmpty { Text("No events today.") }
+                        NavigationLink("Open calendar") { CalendarView() }
+                    }
+                    SwiftUI.Section("Upcoming homework") {
+                        ForEach(summary.assignments, id: \.id) { task in
+                            VStack(alignment: .leading) {
+                                Text(task.title).font(.headline)
+                                Text("Due \(task.dueDate) \(task.dueTime)")
+                            }
+                        }
+                        if summary.assignments.isEmpty { Text("Homework is clear.") }
+                        NavigationLink("Open School") { SchoolView() }
+                    }
+                    SwiftUI.Section("Today's meals") {
+                        ForEach(summary.meals, id: \.id) { meal in
+                            VStack(alignment: .leading) {
+                                Text(meal.sourceSnapshot.name).font(.headline)
+                                Text("\(meal.slot.capitalized): \(Domain.formatQuantity(meal.servings)) planned · \(Domain.formatQuantity(meal.preparedServings)) prepared · \(Domain.formatQuantity(meal.consumedServings)) consumed")
+                            }
+                        }
+                        if summary.meals.isEmpty { Text("No meals planned today.") }
+                    }
+                    SwiftUI.Section("Consumed nutrition") {
+                        metric("Calories", summary.nutrition.calories, "kcal")
+                        metric("Protein", summary.nutrition.protein, "g")
+                        metric("Carbohydrates", summary.nutrition.carbs, "g")
+                        metric("Fat", summary.nutrition.fat, "g")
+                        metric("Sugar", summary.nutrition.sugar ?? 0, "g")
+                        metric("Saturated fat", summary.nutrition.saturatedFat ?? 0, "g")
+                        metric("Fiber", summary.nutrition.fiber, "g")
+                        metric("Sodium", summary.nutrition.sodium, "mg")
+                    }
+                }
+            } else { Text("Check the calendar time zone in your backup.") }
+        }
+    }
+    private func metric(_ name: String, _ value: Decimal, _ unit: String) -> some View {
+        LabeledContent(name, value: "\(NSDecimalNumber(decimal: value).stringValue) \(unit)")
     }
 }

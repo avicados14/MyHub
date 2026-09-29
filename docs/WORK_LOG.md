@@ -119,3 +119,11 @@ At `56ec15d`, native workflow `36622604118`, job `109591508483`, passed **19 Swi
 Current implementation commits: `338a02c` (calendar/study controls) and `56ec15d` (legacy fixtures/bridge tests). PR #18 remains draft. The ref/head lag recurred on the second push; reopening the same draft again brought it to the actual branch head and triggered the expected checks. No test failure was hidden by this refresh.
 
 Next work is direct legacy migration coverage/implementation, native dashboard/calendar presentation and food workflow parity. Full native device/accessibility acceptance, integration models and synchronization remain separate open gates. Existing Phase 1 fresh-browser observations remain unavailable. No new owner decision was needed for these offline increments.
+
+## September 29 — regression review and daily dashboard
+
+Rechecked PR #18 at c9c01d2: web workflow 36623013235 and native workflow 36623013239 both completed successfully. Reran the local web gate before editing. No production sync/parser defect was reproduced.
+
+Implemented a native daily Home dashboard with visible multi-day agenda, the web dashboard's first three incomplete assignments ordered by due time, meal snapshot names and separate planned/prepared/consumed amounts, and all eight consumption-only nutrition metrics. Calendar and School links open existing controls. A 30-second clock refresh uses the configured calendar time zone. New synthetic core tests cover local midnight, inclusive multi-day dates, hidden feeds, completed assignments and invalid zones. This bounded increment does not complete dashboard parity (schedule window, grocery progress and weekly overview remain), food editing, device/accessibility acceptance or direct v1 migration.
+
+Validation: existing head's remote gates passed; local npm run check rerun passed 124 tests and static/build checks. New Swift tests and SwiftUI source require Mac CI; no local Swift/Xcode toolchain is installed. No personal archive or production backend was read or changed. Continue with food workflows and remaining presentation after validation; native sync still requires the documented access/backend decision.
