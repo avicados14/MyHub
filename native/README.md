@@ -16,3 +16,5 @@ Generated Swift models, schema resources and synthetic fixtures come from `npm r
 This is not the completed native feature set. See `../docs/NATIVE_DECISIONS.md` for the acceptance gate and remaining tests. Editing, deterministic Swift calculations, migration/reconciliation parity, accessible device acceptance, integrations and sync are still unchecked in TODO.
 
 Validated at `ce707bf` by macOS workflow `36507350376`: 3 Swift tests passed; standalone iPhone/iPad simulator build succeeded. Device interaction and accessibility acceptance remain open.
+
+Native calculation work in progress: scaling/fractions, consumption-only nutrition, source visibility, homework ranking and study previews now have Swift tests. Recipe serving controls and School study preview do not persist edits. Grocery/batch calculation parity and full editing remain open; consult the running work log for the exact tested commit.

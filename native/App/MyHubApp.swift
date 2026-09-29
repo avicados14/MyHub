@@ -70,24 +70,18 @@ struct SectionView: View {
                         LabeledContent("Recipes", value: String(data.recipes.count))
                         Text("This native foundation provides offline backup viewing. Editing and integrations await workflow acceptance.")
                     case .calendar:
-                        ForEach(data.events.sorted { ($0.date, $0.startTime, $0.id) < ($1.date, $1.startTime, $1.id) }, id: \.id) { event in
+                        ForEach(Domain.visibleEvents(data).sorted { ($0.date, $0.startTime, $0.id) < ($1.date, $1.startTime, $1.id) }, id: \.id) { event in
                             VStack(alignment: .leading) { Text(event.title).font(.headline); Text("\(event.date) · \(event.startTime)–\(event.endTime)").font(.subheadline) }
                         }
                     case .school:
-                        ForEach(data.assignments.sorted { ($0.dueDate, $0.dueTime, $0.id) < ($1.dueDate, $1.dueTime, $1.id) }, id: \.id) { task in
+                        NavigationLink("Preview study plan") { StudyPreviewView(data: data) }
+                        ForEach(Domain.rankAssignments(Domain.visibleAssignments(data)), id: \.id) { task in
                             VStack(alignment: .leading) { Text(task.title).font(.headline); Text("\(task.course) · Due \(task.dueDate) \(task.dueTime)"); Text(task.status).font(.caption) }
                         }
                     case .food:
                         ForEach(data.recipes, id: \.id) { recipe in
                             NavigationLink(recipe.name) {
-                                List {
-                                    Text(recipe.description)
-                                    Text("Original yield: \(NSDecimalNumber(decimal: recipe.originalYield).stringValue)")
-                                    ForEach(recipe.ingredients, id: \.id) { ingredient in
-                                        Text("\(ingredient.quantity.map { NSDecimalNumber(decimal: $0).stringValue } ?? "To taste") \(ingredient.unit) \(ingredient.name)")
-                                    }
-                                    ForEach(recipe.steps, id: \.id) { Text($0.text) }
-                                }.navigationTitle(recipe.name)
+                                RecipeDetailView(recipe: recipe)
                             }
                         }
                     case .settings: EmptyView()
@@ -146,5 +140,64 @@ struct SettingsView: View {
         .fileExporter(isPresented: $exporting, document: document, contentType: .json, defaultFilename: "myhub-backup") { result in
             if case .failure = result { model.message = "Export was not completed." }
         }
+    }
+}
+
+
+struct RecipeDetailView: View {
+    let recipe: Recipe
+    @State private var servings: Double
+    init(recipe: Recipe) {
+        self.recipe = recipe
+        _servings = State(initialValue: NSDecimalNumber(decimal: recipe.currentYield ?? recipe.originalYield).doubleValue)
+    }
+    var body: some View {
+        List {
+            Text(recipe.description)
+            Stepper("Servings: \(Domain.formatQuantity(Decimal(servings)))", value: $servings, in: 0.5...100, step: 0.5)
+            if let ingredients = try? Domain.scaledIngredients(recipe, servings: Decimal(servings)) {
+                ForEach(ingredients, id: \.id) { ingredient in
+                    Text("\(ingredient.quantity.map(Domain.formatQuantity) ?? "To taste") \(ingredient.unit) \(ingredient.name)")
+                }
+            } else { Text("This recipe needs a valid original yield before it can be scaled.") }
+            ForEach(recipe.steps, id: \.id) { Text($0.text) }
+            Text("Scaling is a preview. Original quantities and historical meals stay unchanged.").font(.footnote)
+        }.navigationTitle(recipe.name)
+    }
+}
+
+struct StudyPreviewView: View {
+    let data: AppData
+    @State private var startDate: String
+    @State private var preview: StudyPreview?
+    @State private var error: String?
+    init(data: AppData) {
+        self.data = data
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: data.settings.calendarTimeZone ?? "UTC")
+        formatter.dateFormat = "yyyy-MM-dd"
+        _startDate = State(initialValue: formatter.string(from: Date()))
+    }
+    var body: some View {
+        Form {
+            TextField("Start date (YYYY-MM-DD)", text: $startDate)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+            Button("Generate preview") {
+                do { preview = try Domain.studyPreview(data, startDate: startDate); error = nil }
+                catch { preview = nil; self.error = "Check the date, time zone and study settings. Nothing was saved." }
+            }
+            if let error { Text(error) }
+            if let preview {
+                LabeledContent("Unscheduled minutes", value: String(preview.unscheduledMinutes))
+                ForEach(Array(preview.blocks.enumerated()), id: \.offset) { _, block in
+                    VStack(alignment: .leading) {
+                        Text(data.assignments.first { $0.id == block.assignmentId }?.title ?? "Homework").font(.headline)
+                        Text("\(block.date) · \(block.startTime)–\(block.endTime)")
+                    }
+                }
+                Text("Preview only. Locked, completed and adjusted study blocks are retained; this does not replace your calendar.").font(.footnote)
+            }
+        }.navigationTitle("Study preview")
     }
 }

@@ -47,3 +47,11 @@ Append each implementation checkpoint with changed files/behavior, commit, comma
 ### September 29 — validation approach corrected
 
 A narrower local headless Chromium download also failed with an invalid ZIP. Further local browser-download retries were stopped. The existing PR workflow now runs the two date regressions and the Canvas path across all three viewports with zero retries before its full browser matrix. This gives focused evidence and prevents masking a repeated failure with retries. Native source is unchanged from its successful build.
+
+### September 29 — native calculations added for verification
+
+After publishing the clock/log checkpoint as `8e5e910`, continued independent native work against the synthetic contract: ingredient scaling and cooking fractions, eight-field consumption-only nutrition totals, source visibility, homework ranking, and deterministic study-plan previews. Added Swift golden tests plus invalid-duration, locked-block and disabled-feed cases. The native recipe view now offers non-destructive serving previews, and School offers a study-plan preview; neither writes a schedule or changes historical data. This is a partial workflow port, not completed feature parity. Native CI must validate this new source before it is reported as working.
+
+### September 29 — focused clock/Canvas gate passed
+
+At `8e5e910`, web workflow `36580422648`, job `109446821494`, completed the focused meal-date/Canvas regression step successfully across desktop, tablet and mobile with retries disabled (nine selected cases). The full matrix was still running at this observation; no full-suite pass is claimed yet. Native workflow `36580422782` also passed for the earlier foundation source. The next commit contains additional native calculations and therefore needs a new native validation result.

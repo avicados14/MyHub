@@ -59,3 +59,5 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - Native validation at `ce707bf`: macOS workflow `36507350376`, job `109211657010`, passed all 3 Swift tests and the standalone iPhone/iPad simulator build. This checks project creation, not accessibility/device acceptance or full feature parity.
 
 - Running progress document: `docs/WORK_LOG.md` (requested September 29). Includes the exact failed CI cases and subsequent corrections/evidence.
+
+- Native calculation increment: added scaling/fractions, consumption-only nutrition, source visibility/ranking and study previews with shared golden tests. Recipe scaling and School study preview are non-destructive; full feature-port checkboxes remain open pending implementation and validation. See `docs/WORK_LOG.md`.

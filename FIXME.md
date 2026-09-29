@@ -46,3 +46,5 @@ See `docs/CONTINUATION_2026-09-28.md` for source tracing and `docs/NATIVE_DECISI
 - Web run `36507350281` at `ce707bf`: 125 browser cases passed, six failed, one passed on retry. The six failures are two existing food tests repeated across three viewports. Their seeded/asserted September 22 week differed from the real browser date. Both now explicitly pin September 22 noon; production date and meal logic are unchanged. Focused regression CI must pass before calling this resolved.
 - The direct Canvas refresh test's one retry is recorded separately. No parser change is justified by this observation. It is included in the focused rerun.
 - Running implementation notes are in `docs/WORK_LOG.md`; update them at each checkpoint.
+
+- Focused verification at `8e5e910`: workflow `36580422648` passed the meal-date and Canvas regression step across all three viewports with zero retries. The confirmed test-clock defect is corrected. A single successful targeted rerun does not establish that all possible Canvas timing flakes are eliminated.
