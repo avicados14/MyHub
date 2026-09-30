@@ -23,3 +23,23 @@ Core tests cover the golden shared balance, nutrition snapshot independence, rep
 ## Reproduced depletion/correction defect
 
 The synthetic web regression failed before the fix: depleting a custom-ID batch removed its identity; correcting consumption recreated a different ID and missed consumption by a linked meal. Preserve existing depleted batch records at zero so undo keeps the original identity. Available-leftover lists/defaults filter depleted batches. Explicit removal remains unchanged. The native port follows the corrected rule. Focused regression plus 11 existing meal lifecycle tests passed; full gates are required before release. This is an additional narrow web correction after the original-functionality comparison above, not a removed workflow.
+
+## Verified native checkpoint and broker review
+
+`5214070`: native workflow `36657003252` passed **24 Swift tests** and the iPhone/iPad simulator build. Local full web gate passed **125 tests**, static checks and build. Full browser workflow `36657003116` was still running at this checkpoint.
+
+Live read-only checks confirmed the broker is active, the table has RLS with no direct client grants and a deny policy, and the security advisor returned no findings. Preflight returned 204; an invalid synthetic resolve ID returned 400. Reviewed deployed conditional revision/write-token/revocation checks. No live credentials or user document were changed. These observations are not a live fresh-browser restoration or end-to-end write test.
+
+Reproduced a broker ordering defect using the actual source handler with mocked Supabase/GitHub dependencies: an authenticated malformed create request revoked existing access before returning 400. The regression failed (one mutation instead of zero), then passed after moving create-payload validation before revocation. This fix is source-only and awaits deployment review; the deployed function has not changed. Link replacement remains non-atomic if the subsequent insert fails; that is a separate unresolved recovery risk. Checked current Supabase changelog; this correction changes request validation ordering without changing SDK/API usage.
+
+## Remaining checklist
+
+- [x] Audit original web feature/source preservation and rerun baseline gates.
+- [x] Native meal-consumption editor and golden batch/history tests, Mac build verified.
+- [x] Reproduce and correct custom batch depletion/undo; full browser gate still pending.
+- [x] Reproduce malformed broker creation revocation and add source fix/regression.
+- [ ] Validate current full browser gate and final source gates.
+- [ ] Review/deploy broker fix and address atomic link replacement separately.
+- [ ] Observe original linked-session settled state and fresh-browser restore.
+- [ ] Complete native recipes/packages, meal planning, pantry/groceries, direct leftover consumption and history workflows.
+- [ ] Finish dashboard/calendar parity, direct legacy migration, device/accessibility acceptance, integration models and approved native sync/access model.

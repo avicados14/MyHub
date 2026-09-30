@@ -142,6 +142,17 @@ Deno.serve(async (request: Request) => {
     return response(request, { error: 'The GitHub credential cannot manage the private MyHub data repository.' }, 403)
   }
 
+  const creationWriteToken = typeof body.writeToken === 'string' ? body.writeToken : ''
+  if (
+    body.action === 'create' &&
+    (!isEncryptedEnvelope(body.encryptedPayload, 16_000) ||
+      !isEncryptedEnvelope(body.encryptedData, 10_000_000) ||
+      creationWriteToken.length < 32 ||
+      creationWriteToken.length > 200)
+  ) {
+    return response(request, { error: 'The encrypted private access package is invalid.' }, 400)
+  }
+
   const now = new Date().toISOString()
   const { error: revokeError } = await supabase
     .from('myhub_private_access')
@@ -150,22 +161,12 @@ Deno.serve(async (request: Request) => {
   if (revokeError) return response(request, { error: 'Existing private links could not be revoked.' }, 503)
   if (body.action === 'revoke') return response(request, { revoked: true })
 
-  if (
-    !isEncryptedEnvelope(body.encryptedPayload, 16_000) ||
-    !isEncryptedEnvelope(body.encryptedData, 10_000_000) ||
-    typeof body.writeToken !== 'string' ||
-    body.writeToken.length < 32 ||
-    body.writeToken.length > 200
-  ) {
-    return response(request, { error: 'The encrypted private access package is invalid.' }, 400)
-  }
-
   const { data, error } = await supabase
     .from('myhub_private_access')
     .insert({
       encrypted_payload: body.encryptedPayload,
       encrypted_data: body.encryptedData,
-      write_token_hash: await hashWriteToken(body.writeToken),
+      write_token_hash: await hashWriteToken(creationWriteToken),
     })
     .select('id, data_version, data_updated_at')
     .single()
