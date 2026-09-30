@@ -399,6 +399,7 @@ private struct MealConsumptionRequest: Identifiable {
 struct MealConsumptionView: View {
     @EnvironmentObject private var model: AppModel
     @State private var editor: MealConsumptionRequest?
+    @State private var planEditor: MealPlanRequest?
     var body: some View {
         List {
             if let data = model.backup?.data {
@@ -411,8 +412,11 @@ struct MealConsumptionView: View {
                                 Text("\(Domain.formatQuantity(meal.servings)) planned · \(Domain.formatQuantity(meal.preparedServings)) prepared · \(Domain.formatQuantity(meal.consumedServings)) consumed")
                             }.foregroundStyle(.primary)
                         }.accessibilityHint("Edit total consumed servings")
+                        Button("Edit plan: \(meal.sourceSnapshot.name)") {
+                            planEditor = MealPlanRequest(meal: meal, data: data)
+                        }.disabled(!FoodCommands.canEditPlan(meal, in: data))
                     }
-                    if data.meals.isEmpty { Text("No imported meals yet.") }
+                    if data.meals.isEmpty { Text("No meals planned yet.") }
                 }
                 SwiftUI.Section("Shared leftovers") {
                     ForEach(data.leftovers, id: \.id) { leftover in
@@ -422,6 +426,10 @@ struct MealConsumptionView: View {
                 }
             }
         }.navigationTitle("Meals and consumption")
+        .toolbar { Button("Plan a meal", systemImage: "plus") {
+            if let data = model.backup?.data { planEditor = MealPlanRequest(meal: nil, data: data) }
+        } }
+        .sheet(item: $planEditor) { request in NavigationStack { MealPlanEditor(meal: request.meal, data: request.data) } }
         .sheet(item: $editor) { request in NavigationStack { MealConsumptionEditor(meal: request.meal) } }
     }
 }
@@ -450,6 +458,79 @@ struct MealConsumptionEditor: View {
                 catch FoodError.staleDraft { message = "This meal changed. Cancel and reopen it before saving." }
                 catch { message = "Could not save. Enter a nonnegative serving amount. Existing data was retained." }
             } }
+        }
+    }
+}
+
+
+private struct MealPlanRequest: Identifiable {
+    let id = UUID()
+    let meal: MealEntry?
+    let data: AppData
+}
+
+struct MealPlanEditor: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    let meal: MealEntry?
+    let data: AppData
+    @State private var date: String
+    @State private var slot: String
+    @State private var servings: Decimal
+    @State private var selection = ""
+    @State private var message: String?
+    @State private var confirmDelete = false
+    init(meal: MealEntry?, data: AppData) {
+        self.meal = meal; self.data = data
+        _date = State(initialValue: meal?.date ?? (try? Domain.dailySummary(data, now: Date()).date) ?? "")
+        _slot = State(initialValue: meal?.slot ?? "dinner")
+        _servings = State(initialValue: meal?.servings ?? 1)
+    }
+    private var source: MealPlanSource? {
+        if let recipe = data.recipes.first(where: { "recipe:" + $0.id == selection }) { return .recipe(recipe) }
+        if let food = data.packagedFoods.first(where: { "packaged:" + $0.id == selection }) { return .packaged(food) }
+        return nil
+    }
+    var body: some View {
+        Form {
+            if let meal { Text(meal.sourceSnapshot.name).font(.headline) }
+            else {
+                Picker("Food", selection: $selection) {
+                    Text("Choose a food").tag("")
+                    ForEach(data.recipes, id: \.id) { Text("Recipe: \($0.name)").tag("recipe:" + $0.id) }
+                    ForEach(data.packagedFoods, id: \.id) { Text("Packaged: \($0.name)").tag("packaged:" + $0.id) }
+                }
+                if data.recipes.isEmpty && data.packagedFoods.isEmpty { Text("Import a backup containing recipes or packaged foods to plan meals.") }
+            }
+            TextField("Date (YYYY-MM-DD)", text: $date).autocorrectionDisabled()
+            Picker("Meal", selection: $slot) {
+                ForEach(["breakfast", "lunch", "dinner", "snack"], id: \.self) { Text($0.capitalized).tag($0) }
+            }
+            TextField("Planned servings", value: $servings, format: .number).keyboardType(.decimalPad)
+            Text("Planning does not prepare food or log nutrition. Only untouched plans can be moved, resized or deleted here. Occupied meal slots are preserved.")
+            if meal != nil { Button("Delete plan", role: .destructive) { confirmDelete = true } }
+            if let message { Text(message) }
+        }.navigationTitle(meal == nil ? "Plan a meal" : "Edit plan")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") {
+                do {
+                    try model.commit { try FoodCommands.savePlan(original: meal, source: source,
+                        date: date, slot: slot, servings: servings, in: $0) }
+                    dismiss()
+                } catch MealPlanError.occupiedSlot { message = "That date and meal already have a plan. Choose another slot." }
+                catch MealPlanError.staleSource { message = "This food changed. Cancel and reopen the planner before saving." }
+                catch FoodError.staleDraft { message = "This meal changed. Cancel and reopen it before saving." }
+                catch MealPlanError.protectedMeal { message = "This meal has preparation, consumption or batch history and cannot be changed here." }
+                catch { message = "Could not save. Check the date and positive serving amount. Existing data was retained." }
+            }.disabled(meal == nil && source == nil) }
+        }
+        .confirmationDialog("Delete this untouched meal plan?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete plan", role: .destructive) {
+                do { if let meal { try model.commit { try FoodCommands.deletePlan(meal, in: $0) } }; dismiss() }
+                catch { message = "This plan changed or has food history. Cancel and reopen it before retrying." }
+            }
+            Button("Cancel", role: .cancel) { }
         }
     }
 }
