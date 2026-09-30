@@ -38,8 +38,25 @@ Reproduced a broker ordering defect using the actual source handler with mocked 
 - [x] Native meal-consumption editor and golden batch/history tests, Mac build verified.
 - [x] Reproduce and correct custom batch depletion/undo; full browser gate still pending.
 - [x] Reproduce malformed broker creation revocation and add source fix/regression.
-- [ ] Validate current full browser gate and final source gates.
+- [x] Validate full food browser gate and final local source gates; see final checkpoint.
 - [ ] Review/deploy broker fix and address atomic link replacement separately.
 - [ ] Observe original linked-session settled state and fresh-browser restore.
 - [ ] Complete native recipes/packages, meal planning, pantry/groceries, direct leftover consumption and history workflows.
 - [ ] Finish dashboard/calendar parity, direct legacy migration, device/accessibility acceptance, integration models and approved native sync/access model.
+
+## Preservation matrix and final local gate
+
+| Original area                                       | Change scope                                                                | Evidence/limit                                                                                 |
+| --------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Web dashboard, Calendar, School, study planner      | No feature source changes                                                   | Existing unit/browser regression gates retained                                                |
+| Recipes, packages, meal planning, pantry, groceries | Existing workflows retained; depleted leftover choices filtered             | Narrow batch undo regression and existing lifecycle tests pass                                 |
+| Historical meal/nutrition/trip snapshots            | Preserved; a consumption correction only replaces that meal's generated log | Native snapshot/history and full backup round-trip tests pass                                  |
+| IndexedDB and backups                               | Nested import validation added after migration                              | Valid v1/v2 import fixtures pass; malformed records rejected                                   |
+| Encryption, revision sync and access client         | Unchanged                                                                   | Existing mocked phone/focus/reload/conflict tests retained; live browser acceptance still open |
+| Broker and database                                 | Source request-validation order corrected; deployment/schema unchanged      | Actual handler regression uses synthetic credentials and mocked dependencies                   |
+
+Final local `npm run check` passed **126 tests in 26 files**, contract drift, formatting, lint, strict TypeScript and production build. The full food browser CI must finish before its result is claimed. Main TODO/FIXME remain historical checkpoints; the current remaining checklist in this document supersedes their pending status for this bounded increment without retransmitting private historical details.
+
+## Final checkpoint
+
+Food commit `5214070` passed the complete web workflow `36657003116`, including 132/132 full browser cases, nine focused regressions and production build, and native workflow `36657003252`. Broker fix `5566fc2` is separately reviewable in draft PR #19, based on PR #18's continuation branch; separating it avoided cancelling the food run. Its actual-handler regression and final local 126-test/static/build gate pass. It is not deployed. On-device/native UI acceptance, live private-browser sync proof and atomic link-replacement recovery remain open.
