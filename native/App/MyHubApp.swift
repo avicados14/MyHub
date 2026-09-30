@@ -81,6 +81,7 @@ struct SectionView: View {
                     case .calendar: EmptyView()
                     case .school: EmptyView()
                     case .food:
+                        NavigationLink("Meals and consumption") { MealConsumptionView() }
                         ForEach(data.recipes, id: \.id) { recipe in
                             NavigationLink(recipe.name) {
                                 RecipeDetailView(recipe: recipe)
@@ -386,5 +387,69 @@ struct DashboardView: View {
     }
     private func metric(_ name: String, _ value: Decimal, _ unit: String) -> some View {
         LabeledContent(name, value: "\(NSDecimalNumber(decimal: value).stringValue) \(unit)")
+    }
+}
+
+
+private struct MealConsumptionRequest: Identifiable {
+    let id = UUID()
+    let meal: MealEntry
+}
+
+struct MealConsumptionView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var editor: MealConsumptionRequest?
+    var body: some View {
+        List {
+            if let data = model.backup?.data {
+                SwiftUI.Section("Meals") {
+                    ForEach(data.meals.sorted { ($0.date, $0.slot, $0.id) < ($1.date, $1.slot, $1.id) }, id: \.id) { meal in
+                        Button { editor = MealConsumptionRequest(meal: meal) } label: {
+                            VStack(alignment: .leading) {
+                                Text(meal.sourceSnapshot.name).font(.headline)
+                                Text("\(meal.date) · \(meal.slot.capitalized)")
+                                Text("\(Domain.formatQuantity(meal.servings)) planned · \(Domain.formatQuantity(meal.preparedServings)) prepared · \(Domain.formatQuantity(meal.consumedServings)) consumed")
+                            }.foregroundStyle(.primary)
+                        }.accessibilityHint("Edit total consumed servings")
+                    }
+                    if data.meals.isEmpty { Text("No imported meals yet.") }
+                }
+                SwiftUI.Section("Shared leftovers") {
+                    ForEach(data.leftovers, id: \.id) { leftover in
+                        LabeledContent(leftover.sourceSnapshot.name, value: "\(Domain.formatQuantity(FoodCommands.remaining(leftover, in: data))) servings")
+                    }
+                    if data.leftovers.isEmpty { Text("No leftovers.") }
+                }
+            }
+        }.navigationTitle("Meals and consumption")
+        .sheet(item: $editor) { request in NavigationStack { MealConsumptionEditor(meal: request.meal) } }
+    }
+}
+
+struct MealConsumptionEditor: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    let meal: MealEntry
+    @State private var servings: Decimal
+    @State private var message: String?
+    init(meal: MealEntry) {
+        self.meal = meal; _servings = State(initialValue: meal.consumedServings)
+    }
+    var body: some View {
+        Form {
+            Text(meal.sourceSnapshot.name).font(.headline)
+            Text("\(meal.date) · \(meal.slot.capitalized)")
+            TextField("Total consumed servings", value: $servings, format: .number).keyboardType(.decimalPad)
+            Text("This replaces the total consumed for this meal. Zero clears its nutrition log. Planned and prepared amounts stay unchanged.")
+            if let message { Text(message) }
+        }.navigationTitle("Record consumption")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") {
+                do { try model.commit { try FoodCommands.consume(meal, servings: servings, in: $0) }; dismiss() }
+                catch FoodError.staleDraft { message = "This meal changed. Cancel and reopen it before saving." }
+                catch { message = "Could not save. Enter a nonnegative serving amount. Existing data was retained." }
+            } }
+        }
     }
 }

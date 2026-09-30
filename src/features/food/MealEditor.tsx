@@ -39,7 +39,7 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
         ? 'recipe'
         : data.packagedFoods.length
           ? 'packaged'
-          : data.leftovers.length
+          : data.leftovers.some((item) => item.servingsRemaining > 0)
             ? 'leftover'
             : 'custom')
     setSourceType(initialType)
@@ -53,7 +53,7 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
           : initialType === 'packaged'
             ? data.packagedFoods[0]?.id
             : initialType === 'leftover'
-              ? data.leftovers[0]?.id
+              ? data.leftovers.find((item) => item.servingsRemaining > 0)?.id
               : '') ??
         '',
     )
@@ -73,7 +73,7 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
         : type === 'packaged'
           ? (data.packagedFoods[0]?.id ?? '')
           : type === 'leftover'
-            ? (data.leftovers[0]?.id ?? '')
+            ? (data.leftovers.find((item) => item.servingsRemaining > 0)?.id ?? '')
             : '',
     )
   }
