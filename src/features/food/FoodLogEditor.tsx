@@ -49,7 +49,7 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
       ? 'recipe'
       : data.packagedFoods.length
         ? 'packaged'
-        : data.leftovers.length
+        : data.leftovers.some((item) => item.servingsRemaining > 0)
           ? 'leftover'
           : 'custom'
     setSource(initial)
@@ -59,7 +59,7 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
         : initial === 'packaged'
           ? (data.packagedFoods[0]?.id ?? '')
           : initial === 'leftover'
-            ? (data.leftovers[0]?.id ?? '')
+            ? (data.leftovers.find((item) => item.servingsRemaining > 0)?.id ?? '')
             : '',
     )
     setQuery('')
@@ -86,7 +86,7 @@ export default function FoodLogEditor({ open, data, onClose, onSave, onCreatePac
         : value === 'packaged'
           ? (data.packagedFoods[0]?.id ?? '')
           : value === 'leftover'
-            ? (data.leftovers[0]?.id ?? '')
+            ? (data.leftovers.find((item) => item.servingsRemaining > 0)?.id ?? '')
             : '',
     )
   }

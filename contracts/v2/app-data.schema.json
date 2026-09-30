@@ -1,0 +1,717 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MyHub AppData v2",
+  "$ref": "#/$defs/AppData",
+  "$defs": {
+    "AppData": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": { "const": 2 },
+        "initializedAt": { "type": "string" },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/CalendarEvent" } },
+        "assignments": { "type": "array", "items": { "$ref": "#/$defs/HomeworkAssignment" } },
+        "recipes": { "type": "array", "items": { "$ref": "#/$defs/Recipe" } },
+        "packagedFoods": { "type": "array", "items": { "$ref": "#/$defs/PackagedFood" } },
+        "meals": { "type": "array", "items": { "$ref": "#/$defs/MealEntry" } },
+        "leftovers": { "type": "array", "items": { "$ref": "#/$defs/Leftover" } },
+        "foodLog": { "type": "array", "items": { "$ref": "#/$defs/FoodLogEntry" } },
+        "pantry": { "type": "array", "items": { "$ref": "#/$defs/PantryItem" } },
+        "activeGroceryList": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/GroceryList" }] },
+        "groceryHistory": { "type": "array", "items": { "$ref": "#/$defs/GroceryHistoryEntry" } },
+        "settings": { "$ref": "#/$defs/UserSettings" }
+      },
+      "required": [
+        "schemaVersion",
+        "initializedAt",
+        "events",
+        "assignments",
+        "recipes",
+        "packagedFoods",
+        "meals",
+        "leftovers",
+        "foodLog",
+        "pantry",
+        "activeGroceryList",
+        "groceryHistory",
+        "settings"
+      ],
+      "additionalProperties": false
+    },
+    "CalendarEvent": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "endDate": { "anyOf": [{ "type": "string" }] },
+        "allDay": { "anyOf": [{ "const": false }, { "const": true }] },
+        "kind": { "anyOf": [{ "const": "event" }, { "const": "study" }, { "const": "meal-prep" }] },
+        "course": { "anyOf": [{ "type": "string" }] },
+        "description": { "anyOf": [{ "type": "string" }] },
+        "location": { "anyOf": [{ "type": "string" }] },
+        "categories": { "anyOf": [{ "type": "array", "items": { "type": "string" } }] },
+        "sourceUrl": { "anyOf": [{ "type": "string" }] },
+        "uid": { "anyOf": [{ "type": "string" }] },
+        "sourceFeedId": { "anyOf": [{ "type": "string" }] },
+        "sourceType": { "anyOf": [{ "const": "canvas" }, { "const": "google" }, { "const": "ics" }] },
+        "importedAt": { "anyOf": [{ "type": "string" }] },
+        "assignmentId": { "anyOf": [{ "type": "string" }] },
+        "locked": { "anyOf": [{ "const": false }, { "const": true }] },
+        "userAdjusted": { "anyOf": [{ "const": false }, { "const": true }] },
+        "completed": { "anyOf": [{ "const": false }, { "const": true }] },
+        "sourceLabel": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": ["title", "date", "startTime", "endTime", "kind", "id", "createdAt", "updatedAt", "source"],
+      "additionalProperties": false
+    },
+    "HomeworkAssignment": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "course": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "dueTime": { "type": "string" },
+        "priority": { "anyOf": [{ "const": "low" }, { "const": "medium" }, { "const": "high" }] },
+        "estimatedMinutes": { "type": "number" },
+        "progress": { "type": "number" },
+        "status": { "anyOf": [{ "const": "not-started" }, { "const": "in-progress" }, { "const": "complete" }] },
+        "notes": { "type": "string" },
+        "subtasks": { "type": "array", "items": { "$ref": "#/$defs/HomeworkSubtask" } },
+        "sourceLabel": { "anyOf": [{ "type": "string" }] },
+        "sourceUrl": { "anyOf": [{ "type": "string" }] },
+        "sourceFeedId": { "anyOf": [{ "type": "string" }] },
+        "sourceType": { "anyOf": [{ "const": "canvas" }, { "const": "google" }, { "const": "ics" }] },
+        "externalId": { "anyOf": [{ "type": "string" }] },
+        "importedAt": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "title",
+        "course",
+        "dueDate",
+        "dueTime",
+        "priority",
+        "estimatedMinutes",
+        "progress",
+        "status",
+        "notes",
+        "subtasks",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "HomeworkSubtask": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "completed": { "anyOf": [{ "const": false }, { "const": true }] }
+      },
+      "required": ["id", "title", "completed"],
+      "additionalProperties": false
+    },
+    "Recipe": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "notes": { "anyOf": [{ "type": "string" }] },
+        "image": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "favorite": { "anyOf": [{ "const": false }, { "const": true }] },
+        "originalYield": { "type": "number" },
+        "currentYield": { "anyOf": [{ "type": "number" }] },
+        "prepMinutes": { "type": "number" },
+        "cookMinutes": { "type": "number" },
+        "ingredients": { "type": "array", "items": { "$ref": "#/$defs/RecipeIngredient" } },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/RecipeStep" } },
+        "nutritionPerServing": { "$ref": "#/$defs/Nutrition" },
+        "nutritionProvenance": { "$ref": "#/$defs/NutritionProvenance" },
+        "sourceLabel": { "type": "string" },
+        "sourceUrl": { "anyOf": [{ "type": "string" }] },
+        "needsReview": { "anyOf": [{ "const": false }, { "const": true }] },
+        "reviewedAt": { "anyOf": [{ "type": "string" }] },
+        "reviewNotes": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "image",
+        "category",
+        "tags",
+        "favorite",
+        "originalYield",
+        "prepMinutes",
+        "cookMinutes",
+        "ingredients",
+        "steps",
+        "nutritionPerServing",
+        "nutritionProvenance",
+        "sourceLabel",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "RecipeIngredient": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "canonicalName": { "type": "string" },
+        "quantity": { "anyOf": [{ "type": "null" }, { "type": "number" }] },
+        "unit": { "type": "string" },
+        "category": {
+          "anyOf": [
+            { "const": "Produce" },
+            { "const": "Meat & Seafood" },
+            { "const": "Dairy" },
+            { "const": "Bakery" },
+            { "const": "Frozen" },
+            { "const": "Pantry" },
+            { "const": "Snacks" },
+            { "const": "Household" },
+            { "const": "Other" },
+            { "type": "string" }
+          ]
+        },
+        "note": { "anyOf": [{ "type": "string" }] },
+        "scaledOverride": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "yield": { "type": "number" },
+                "quantity": { "anyOf": [{ "type": "null" }, { "type": "number" }] },
+                "unit": { "type": "string" }
+              },
+              "required": ["yield", "quantity", "unit"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["id", "name", "canonicalName", "quantity", "unit", "category"],
+      "additionalProperties": false
+    },
+    "RecipeStep": {
+      "type": "object",
+      "properties": { "id": { "type": "string" }, "text": { "type": "string" } },
+      "required": ["id", "text"],
+      "additionalProperties": false
+    },
+    "Nutrition": {
+      "type": "object",
+      "properties": {
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "carbs": { "type": "number" },
+        "fat": { "type": "number" },
+        "sugar": { "anyOf": [{ "type": "number" }] },
+        "saturatedFat": { "anyOf": [{ "type": "number" }] },
+        "fiber": { "type": "number" },
+        "sodium": { "type": "number" }
+      },
+      "required": ["calories", "protein", "carbs", "fat", "fiber", "sodium"],
+      "additionalProperties": false
+    },
+    "NutritionProvenance": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "anyOf": [
+            { "const": "manual" },
+            { "const": "nutrition-label" },
+            { "const": "database" },
+            { "const": "recipe-calculation" },
+            { "const": "estimated" },
+            { "const": "unknown" }
+          ]
+        },
+        "capturedAt": { "type": "string" },
+        "estimated": { "anyOf": [{ "const": false }, { "const": true }] },
+        "sourceLabel": { "anyOf": [{ "type": "string" }] },
+        "sourceUrl": { "anyOf": [{ "type": "string" }] }
+      },
+      "required": ["kind", "capturedAt", "estimated"],
+      "additionalProperties": false
+    },
+    "PackagedFood": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "brand": { "anyOf": [{ "type": "string" }] },
+        "barcode": { "anyOf": [{ "type": "string" }] },
+        "servingSize": {
+          "type": "object",
+          "properties": { "quantity": { "type": "number" }, "unit": { "type": "string" } },
+          "required": ["quantity", "unit"],
+          "additionalProperties": false
+        },
+        "servingsPerContainer": { "anyOf": [{ "type": "number" }] },
+        "nutritionPerServing": { "$ref": "#/$defs/Nutrition" },
+        "nutritionProvenance": { "$ref": "#/$defs/NutritionProvenance" },
+        "image": { "anyOf": [{ "type": "string" }] },
+        "notes": { "anyOf": [{ "type": "string" }] },
+        "needsReview": { "anyOf": [{ "const": false }, { "const": true }] },
+        "reviewedAt": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "name",
+        "servingSize",
+        "nutritionPerServing",
+        "nutritionProvenance",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "MealEntry": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "slot": {
+          "anyOf": [{ "const": "breakfast" }, { "const": "lunch" }, { "const": "dinner" }, { "const": "snack" }]
+        },
+        "recipeId": { "anyOf": [{ "type": "string" }] },
+        "packagedFoodId": { "anyOf": [{ "type": "string" }] },
+        "leftoverId": { "anyOf": [{ "type": "string" }] },
+        "autoPlannedFromMealId": { "anyOf": [{ "type": "string" }] },
+        "customName": { "anyOf": [{ "type": "string" }] },
+        "servings": { "type": "number" },
+        "preparedServings": { "type": "number" },
+        "consumedServings": { "type": "number" },
+        "sourceSnapshot": { "$ref": "#/$defs/MealSourceSnapshot" },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "date",
+        "slot",
+        "servings",
+        "preparedServings",
+        "consumedServings",
+        "sourceSnapshot",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "MealSourceSnapshot": {
+      "type": "object",
+      "properties": {
+        "sourceType": {
+          "anyOf": [{ "const": "recipe" }, { "const": "packaged" }, { "const": "custom" }, { "const": "leftover" }]
+        },
+        "sourceId": { "anyOf": [{ "type": "string" }] },
+        "name": { "type": "string" },
+        "image": { "anyOf": [{ "type": "string" }] },
+        "nutritionPerServing": { "$ref": "#/$defs/Nutrition" },
+        "nutritionProvenance": { "$ref": "#/$defs/NutritionProvenance" },
+        "capturedAt": { "type": "string" }
+      },
+      "required": ["sourceType", "name", "nutritionPerServing", "nutritionProvenance", "capturedAt"],
+      "additionalProperties": false
+    },
+    "Leftover": {
+      "type": "object",
+      "properties": {
+        "sourceMealId": { "type": "string" },
+        "sourceSnapshot": { "$ref": "#/$defs/MealSourceSnapshot" },
+        "preparedOn": { "type": "string" },
+        "servingsRemaining": { "type": "number" },
+        "storageLocation": { "anyOf": [{ "const": "Refrigerator" }, { "const": "Freezer" }] },
+        "useByDate": { "anyOf": [{ "type": "string" }] },
+        "notes": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "sourceMealId",
+        "sourceSnapshot",
+        "preparedOn",
+        "servingsRemaining",
+        "storageLocation",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "FoodLogEntry": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "name": { "type": "string" },
+        "servings": { "type": "number" },
+        "nutritionSnapshot": { "$ref": "#/$defs/Nutrition" },
+        "provenanceSnapshot": { "$ref": "#/$defs/NutritionProvenance" },
+        "sourceSnapshot": { "$ref": "#/$defs/MealSourceSnapshot" },
+        "origin": {
+          "anyOf": [{ "const": "recipe" }, { "const": "packaged" }, { "const": "custom" }, { "const": "leftover" }]
+        },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "date",
+        "name",
+        "servings",
+        "nutritionSnapshot",
+        "provenanceSnapshot",
+        "sourceSnapshot",
+        "origin",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "PantryItem": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "canonicalName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "category": {
+          "anyOf": [
+            { "const": "Produce" },
+            { "const": "Meat & Seafood" },
+            { "const": "Dairy" },
+            { "const": "Bakery" },
+            { "const": "Frozen" },
+            { "const": "Pantry" },
+            { "const": "Snacks" },
+            { "const": "Household" },
+            { "const": "Other" },
+            { "type": "string" }
+          ]
+        },
+        "location": { "anyOf": [{ "const": "Pantry" }, { "const": "Refrigerator" }, { "const": "Freezer" }] },
+        "expirationDate": { "anyOf": [{ "type": "string" }] },
+        "notes": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "name",
+        "canonicalName",
+        "quantity",
+        "unit",
+        "category",
+        "location",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "GroceryList": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/GroceryItem" } },
+        "status": { "anyOf": [{ "const": "draft" }, { "const": "shopping" }, { "const": "completed" }] },
+        "sourceStartDate": { "anyOf": [{ "type": "string" }] },
+        "sourceEndDate": { "anyOf": [{ "type": "string" }] },
+        "sourceMealIds": { "anyOf": [{ "type": "array", "items": { "type": "string" } }] },
+        "completedAt": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": ["name", "items", "status", "id", "createdAt", "updatedAt", "source"],
+      "additionalProperties": false
+    },
+    "GroceryItem": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "canonicalName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "category": {
+          "anyOf": [
+            { "const": "Produce" },
+            { "const": "Meat & Seafood" },
+            { "const": "Dairy" },
+            { "const": "Bakery" },
+            { "const": "Frozen" },
+            { "const": "Pantry" },
+            { "const": "Snacks" },
+            { "const": "Household" },
+            { "const": "Other" },
+            { "type": "string" }
+          ]
+        },
+        "checked": { "anyOf": [{ "const": false }, { "const": true }] },
+        "note": { "anyOf": [{ "type": "string" }] },
+        "sourceRecipeIds": { "type": "array", "items": { "type": "string" } },
+        "pantryQuantity": { "type": "number" },
+        "pantryDecision": {
+          "anyOf": [
+            { "const": "custom" },
+            { "const": "unreviewed" },
+            { "const": "none" },
+            { "const": "saved" },
+            { "const": "enough" }
+          ]
+        },
+        "pantryCustomQuantity": { "anyOf": [{ "type": "number" }] },
+        "needsReview": { "anyOf": [{ "const": false }, { "const": true }] },
+        "reviewReason": { "anyOf": [{ "type": "string" }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": [
+        "name",
+        "canonicalName",
+        "quantity",
+        "unit",
+        "category",
+        "checked",
+        "sourceRecipeIds",
+        "pantryQuantity",
+        "pantryDecision",
+        "id",
+        "createdAt",
+        "updatedAt",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "GroceryHistoryEntry": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "completedAt": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/GroceryItem" } },
+        "sourceStartDate": { "anyOf": [{ "type": "string" }] },
+        "sourceEndDate": { "anyOf": [{ "type": "string" }] },
+        "sourceMealIds": { "anyOf": [{ "type": "array", "items": { "type": "string" } }] },
+        "id": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "source": {
+          "anyOf": [{ "const": "demo" }, { "const": "manual" }, { "const": "imported" }, { "const": "generated" }]
+        }
+      },
+      "required": ["name", "completedAt", "items", "id", "createdAt", "updatedAt", "source"],
+      "additionalProperties": false
+    },
+    "UserSettings": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "measurementSystem": { "anyOf": [{ "const": "us" }, { "const": "metric" }] },
+        "appearance": { "anyOf": [{ "const": "light" }, { "const": "dark" }, { "const": "system" }] },
+        "calendarTimeZone": { "anyOf": [{ "type": "string" }] },
+        "nutritionTargets": { "$ref": "#/$defs/Nutrition" },
+        "study": { "$ref": "#/$defs/StudySettings" },
+        "mealPlanning": { "$ref": "#/$defs/MealPlanningPreferences" },
+        "groceryCategories": { "type": "array", "items": { "$ref": "#/$defs/GroceryCategorySetting" } },
+        "groceryStaples": { "type": "array", "items": { "$ref": "#/$defs/GroceryStaple" } },
+        "calendarFeeds": { "type": "array", "items": { "$ref": "#/$defs/CalendarFeed" } }
+      },
+      "required": [
+        "name",
+        "measurementSystem",
+        "appearance",
+        "nutritionTargets",
+        "study",
+        "mealPlanning",
+        "groceryCategories",
+        "groceryStaples",
+        "calendarFeeds"
+      ],
+      "additionalProperties": false
+    },
+    "StudySettings": {
+      "type": "object",
+      "properties": {
+        "earliestTime": { "type": "string" },
+        "latestTime": { "type": "string" },
+        "defaultBlockMinutes": { "type": "number" },
+        "breakMinutes": { "type": "number" },
+        "maxBlockMinutes": { "type": "number" },
+        "avoidTimes": { "type": "array", "items": { "$ref": "#/$defs/AvoidTimeRange" } }
+      },
+      "required": [
+        "earliestTime",
+        "latestTime",
+        "defaultBlockMinutes",
+        "breakMinutes",
+        "maxBlockMinutes",
+        "avoidTimes"
+      ],
+      "additionalProperties": false
+    },
+    "AvoidTimeRange": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "days": { "type": "array", "items": { "type": "number" } },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" }
+      },
+      "required": ["id", "label", "days", "startTime", "endTime"],
+      "additionalProperties": false
+    },
+    "MealPlanningPreferences": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "anyOf": [
+            { "const": "meal-prep" },
+            { "const": "balanced" },
+            { "const": "variety" },
+            { "const": "favor-leftovers" },
+            { "const": "minimize-waste" },
+            { "const": "minimize-unique-ingredients" }
+          ]
+        },
+        "preferredSlots": {
+          "type": "array",
+          "items": {
+            "anyOf": [{ "const": "breakfast" }, { "const": "lunch" }, { "const": "dinner" }, { "const": "snack" }]
+          }
+        },
+        "targetPrepServings": { "type": "number" },
+        "favorAvailablePantry": { "anyOf": [{ "const": false }, { "const": true }] },
+        "lateDayNutritionBias": { "anyOf": [{ "const": false }, { "const": true }] }
+      },
+      "required": ["mode", "preferredSlots", "targetPrepServings", "favorAvailablePantry"],
+      "additionalProperties": false
+    },
+    "GroceryCategorySetting": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": {
+          "anyOf": [
+            { "const": "Produce" },
+            { "const": "Meat & Seafood" },
+            { "const": "Dairy" },
+            { "const": "Bakery" },
+            { "const": "Frozen" },
+            { "const": "Pantry" },
+            { "const": "Snacks" },
+            { "const": "Household" },
+            { "const": "Other" },
+            { "type": "string" }
+          ]
+        },
+        "sortOrder": { "type": "number" },
+        "enabled": { "anyOf": [{ "const": false }, { "const": true }] }
+      },
+      "required": ["id", "name", "sortOrder", "enabled"],
+      "additionalProperties": false
+    },
+    "GroceryStaple": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "canonicalName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "category": {
+          "anyOf": [
+            { "const": "Produce" },
+            { "const": "Meat & Seafood" },
+            { "const": "Dairy" },
+            { "const": "Bakery" },
+            { "const": "Frozen" },
+            { "const": "Pantry" },
+            { "const": "Snacks" },
+            { "const": "Household" },
+            { "const": "Other" },
+            { "type": "string" }
+          ]
+        },
+        "enabled": { "anyOf": [{ "const": false }, { "const": true }] }
+      },
+      "required": ["id", "name", "canonicalName", "quantity", "unit", "category", "enabled"],
+      "additionalProperties": false
+    },
+    "CalendarFeed": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "kind": { "anyOf": [{ "const": "canvas" }, { "const": "google" }, { "const": "ics" }] },
+        "importMode": { "anyOf": [{ "const": "file" }, { "const": "url" }, { "const": "private-snapshot" }] },
+        "url": { "anyOf": [{ "type": "string" }] },
+        "enabled": { "anyOf": [{ "const": false }, { "const": true }] },
+        "status": { "anyOf": [{ "const": "not-configured" }, { "const": "connected" }, { "const": "error" }] },
+        "lastRefresh": { "anyOf": [{ "type": "string" }] },
+        "lastImportCount": { "anyOf": [{ "type": "number" }] },
+        "lastAssignmentCount": { "anyOf": [{ "type": "number" }] }
+      },
+      "required": ["id", "name", "kind", "enabled", "status"],
+      "additionalProperties": false
+    }
+  }
+}

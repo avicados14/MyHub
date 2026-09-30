@@ -874,6 +874,7 @@ function Leftovers({
   onPlan: (id: string) => void
   updateData: ReturnType<typeof useApp>['updateData']
 }) {
+  const availableLeftovers = data.leftovers.filter((item) => remainingServingsForLeftover(data, item) > 0)
   return (
     <Card className="leftover-card">
       <div className="library-intro">
@@ -881,11 +882,11 @@ function Leftovers({
           <h2>Leftovers</h2>
           <p>Batch servings stay linked across planned days and decrease together when you record what you ate.</p>
         </div>
-        <StatusBadge tone="lilac">{data.leftovers.length} available</StatusBadge>
+        <StatusBadge tone="lilac">{availableLeftovers.length} available</StatusBadge>
       </div>
-      {data.leftovers.length ? (
+      {availableLeftovers.length ? (
         <div className="leftover-list">
-          {data.leftovers.map((leftover) => {
+          {availableLeftovers.map((leftover) => {
             const servingsRemaining = remainingServingsForLeftover(data, leftover)
             const scheduledDays = data.meals.filter(
               (meal) => meal.leftoverId === leftover.id && meal.consumedServings < meal.servings,

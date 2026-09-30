@@ -1,3 +1,4 @@
+import { validatePortableData } from './validatePortableData'
 import { createEmptyData } from '../domain/defaults'
 import { isCurrentAppData, migrateAppData } from '../domain/migrations'
 import type { AppData, MyHubBackup } from '../domain/types'
@@ -138,6 +139,7 @@ export const parseBackup = (text: string): MyHubBackup => {
     throw new Error('This file is not a supported MyHub backup. Choose a MyHub JSON export.')
   }
   const data = migrateAppData(value.data)
+  validatePortableData(data)
   if (!isCurrentAppData(data)) throw new Error('The backup data is incomplete or unsupported.')
   return {
     format: 'myhub-backup',

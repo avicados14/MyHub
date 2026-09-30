@@ -16,7 +16,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "node scripts/run-playwright.mjs",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
+    "check": "npm run contract:check && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
+    "contract:generate": "node scripts/generate-contract.mjs",
+    "contract:check": "node scripts/generate-contract.mjs --check"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.2.6",
