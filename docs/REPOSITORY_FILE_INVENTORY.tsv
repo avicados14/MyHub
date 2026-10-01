@@ -1,0 +1,125 @@
+path	bytes	role	action
+.github/workflows/pages.yml	1858	build/configuration/license	keep
+.gitignore	161	build/configuration/license	keep
+.prettierignore	118	build/configuration/license	keep
+.prettierrc.json	90	build/configuration/license	keep
+ACCESS_ARCHITECTURE.md	4328	documentation	keep
+ARCHITECTURE.md	20107	documentation	keep
+CHANGELOG.md	13877	documentation	keep
+FIXME.md	3749	documentation	keep
+LICENSE	7048	build/configuration/license	keep
+MYHUB_IOS_PLAN.md	4612	documentation	keep
+MYHUB_WEB_SETUP.md	10206	documentation	keep
+README.md	16828	documentation	keep
+REQUIREMENTS_AUDIT.md	27086	documentation	keep
+TODO.md	5859	documentation	keep
+docs/screenshots/dashboard-desktop.png	311099	reference screenshot	keep
+docs/screenshots/grocery-mobile.png	82187	reference screenshot	keep
+docs/screenshots/meal-planner-mobile.png	108356	reference screenshot	keep
+eslint.config.js	811	build/configuration/license	keep
+index.html	545	build/configuration/license	keep
+package-lock.json	191347	build/configuration/license	keep
+package.json	1799	build/configuration/license	keep
+playwright.config.ts	914	build/configuration/license	keep
+public/recipes/breakfast-sandwich.jpg	4639142	recipe asset	encode as JPEG; preserve path and dimensions
+public/recipes/chicken-burrito-bowls.jpg	5488221	recipe asset	encode as JPEG; preserve path and dimensions
+public/recipes/overnight-oats.jpg	5064187	recipe asset	encode as JPEG; preserve path and dimensions
+public/recipes/teriyaki-steak-bowls.jpg	5669735	recipe asset	encode as JPEG; preserve path and dimensions
+public/recipes/weekday-pasta.jpg	4942351	recipe asset	encode as JPEG; preserve path and dimensions
+scripts/run-playwright.mjs	1364	build/configuration/license	keep
+src/app/App.tsx	2304	application source	keep
+src/app/AppContext.tsx	3440	application source	keep
+src/app/AppShell.tsx	11495	application source	keep
+src/components/ui.tsx	4612	application source	keep
+src/domain/calendar.test.ts	2382	regression test	keep
+src/domain/calendar.ts	1684	application source	keep
+src/domain/dashboardSchedule.test.ts	1496	regression test	keep
+src/domain/dashboardSchedule.ts	1406	application source	keep
+src/domain/defaults.ts	2346	application source	keep
+src/domain/grocery.test.ts	11032	regression test	keep
+src/domain/grocery.ts	14592	application source	keep
+src/domain/ics.test.ts	9340	regression test	keep
+src/domain/ics.ts	22292	application source	keep
+src/domain/mealSuggestions.test.ts	5830	regression test	keep
+src/domain/mealSuggestions.ts	9373	application source	keep
+src/domain/mealWorkflow.test.ts	13787	regression test	keep
+src/domain/mealWorkflow.ts	16772	application source	keep
+src/domain/measurements.test.ts	1428	regression test	keep
+src/domain/measurements.ts	6860	application source	keep
+src/domain/migrations.test.ts	6041	regression test	keep
+src/domain/migrations.ts	14948	application source	keep
+src/domain/nutrition.ts	1077	application source	keep
+src/domain/recipe.test.ts	1624	regression test	keep
+src/domain/recipe.ts	2755	application source	keep
+src/domain/recipeNutrition.test.ts	2320	regression test	keep
+src/domain/recipeNutrition.ts	4395	application source	keep
+src/domain/selectors.ts	1428	application source	keep
+src/domain/study.test.ts	5727	regression test	keep
+src/domain/study.ts	5828	application source	keep
+src/domain/types.ts	7730	application source	keep
+src/features/calendar/CalendarPage.tsx	39879	application source	keep
+src/features/dashboard/DashboardPage.tsx	16976	application source	keep
+src/features/food/FoodLogEditor.tsx	16864	application source	keep
+src/features/food/FoodPage.tsx	38940	application source	keep
+src/features/food/MealEditor.tsx	11026	application source	keep
+src/features/food/PackagedFoodEditor.tsx	19804	application source	keep
+src/features/food/RecipeEditor.tsx	33418	application source	keep
+src/features/food/RecipeImporter.tsx	14006	application source	keep
+src/features/food/RecipePage.tsx	12668	application source	keep
+src/features/food/fileImages.ts	1434	application source	keep
+src/features/food/nutritionLabel.test.ts	1091	regression test	keep
+src/features/food/nutritionLabel.ts	2260	application source	keep
+src/features/food/ocrService.ts	2641	application source	keep
+src/features/food/openFoodFacts.test.ts	2778	regression test	keep
+src/features/food/openFoodFacts.ts	7396	application source	keep
+src/features/food/recipeImport.test.ts	2669	regression test	keep
+src/features/food/recipeImport.ts	11943	application source	keep
+src/features/grocery/GroceryPage.tsx	40018	application source	keep
+src/features/pantry/PantryPage.tsx	12023	application source	keep
+src/features/school/SchoolPage.tsx	26398	application source	keep
+src/features/settings/PrivateAccessPage.tsx	3751	application source	keep
+src/features/settings/SettingsPage.tsx	61955	application source	keep
+src/main.tsx	613	application source	keep
+src/storage/database.test.ts	4806	regression test	keep
+src/storage/database.ts	6782	application source	keep
+src/styles/crosscut-v2.css	12953	application source	keep
+src/styles/food-v2.css	17217	application source	keep
+src/styles/global.css	54688	application source	keep
+src/styles/grocery-v2.css	9260	application source	keep
+src/styles/school-v2.css	16506	application source	keep
+src/sync/GitHubSyncContext.tsx	24449	application source	keep
+src/sync/calendarSnapshot.test.ts	2448	regression test	keep
+src/sync/calendarSnapshot.ts	3440	application source	keep
+src/sync/conflict.test.ts	956	regression test	keep
+src/sync/conflict.ts	656	application source	keep
+src/sync/crypto.test.ts	1547	regression test	keep
+src/sync/crypto.ts	4956	application source	keep
+src/sync/githubClient.test.ts	2756	regression test	keep
+src/sync/githubClient.ts	6469	application source	keep
+src/sync/privateAccess.test.ts	4748	regression test	keep
+src/sync/privateAccess.ts	6211	application source	keep
+src/sync/privateAccessCors.test.ts	919	regression test	keep
+src/test/fixtures.ts	6854	application source	keep
+src/test/setup.ts	71	application source	keep
+src/utilities/assets.ts	160	application source	keep
+src/utilities/date.ts	2941	application source	keep
+supabase/functions/myhub-private-access/http.ts	851	database/backend source	keep
+supabase/functions/myhub-private-access/index.ts	7588	database/backend source	keep
+supabase/migrations/20260923115800_create_myhub_private_access.sql	738	database/backend source	keep
+supabase/migrations/20260923120200_add_encrypted_primary_data.sql	929	database/backend source	keep
+supabase/migrations/20260923120400_add_data_updated_at.sql	244	database/backend source	keep
+supabase/migrations/20260923121900_explicitly_deny_direct_access.sql	339	database/backend source	keep
+supabase/migrations/20260923122300_revoke_direct_access_grants.sql	280	database/backend source	keep
+tests/accessibility.spec.ts	3395	regression test	keep
+tests/crosscut-helpers.ts	9998	regression test	keep
+tests/crosscut.spec.ts	7222	regression test	keep
+tests/food-v2.spec.ts	19374	regression test	keep
+tests/github-sync.spec.ts	17827	regression test	keep
+tests/grocery-workflows.spec.ts	13981	regression test	keep
+tests/myhub.spec.ts	18585	regression test	keep
+tests/school-calendar-v2.spec.ts	15716	regression test	keep
+tests/visual_review.py	2344	regression test	remove obsolete one-off script
+tsconfig.app.json	687	build/configuration/license	keep
+tsconfig.json	107	build/configuration/license	keep
+tsconfig.node.json	480	build/configuration/license	keep
+vite.config.ts	449	build/configuration/license	keep
