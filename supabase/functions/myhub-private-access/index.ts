@@ -153,22 +153,22 @@ Deno.serve(async (request: Request) => {
     return response(request, { error: 'The encrypted private access package is invalid.' }, 400)
   }
 
-  const now = new Date().toISOString()
-  const { error: revokeError } = await supabase
-    .from('myhub_private_access')
-    .update({ revoked_at: now })
-    .is('revoked_at', null)
-  if (revokeError) return response(request, { error: 'Existing private links could not be revoked.' }, 503)
-  if (body.action === 'revoke') return response(request, { revoked: true })
+  if (body.action === 'revoke') {
+    const { error } = await supabase
+      .from('myhub_private_access')
+      .update({ revoked_at: new Date().toISOString() })
+      .is('revoked_at', null)
+    if (error) return response(request, { error: 'Existing private links could not be revoked.' }, 503)
+    return response(request, { revoked: true })
+  }
 
+  // A single database transaction preserves existing links if insertion fails.
   const { data, error } = await supabase
-    .from('myhub_private_access')
-    .insert({
-      encrypted_payload: body.encryptedPayload,
-      encrypted_data: body.encryptedData,
-      write_token_hash: await hashWriteToken(creationWriteToken),
+    .rpc('replace_myhub_private_access', {
+      new_encrypted_payload: body.encryptedPayload,
+      new_encrypted_data: body.encryptedData,
+      new_write_token_hash: await hashWriteToken(creationWriteToken),
     })
-    .select('id, data_version, data_updated_at')
     .single()
   if (error || !data) return response(request, { error: 'A private access link could not be created.' }, 503)
   return response(request, { id: data.id, version: data.data_version, updatedAt: data.data_updated_at }, 201)
