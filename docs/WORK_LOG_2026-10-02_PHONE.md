@@ -34,4 +34,4 @@ Do not clear credentials on a network error. Do not rotate private links to pair
 
 - All 135 browser tests passed, including device-code login and outage recovery; all 9 focused meal/Canvas regressions passed.
 - The separate installed-app test found an offline startup failure after successful online startup. The static asset cache now ignores Origin-based Vary headers for its exact public build-file allowlist; broker and other API requests remain outside the cache. Production smoke testing runs before the longer browser suite to catch installation failures earlier.
-- Final offline verification and release remain gated on CI.
+- Production Chromium offline verification now passes after the cache fix. Added Safari-engine coverage for the iPhone installation/offline and device-code flows. Final cross-browser verification and release remain gated on CI.
