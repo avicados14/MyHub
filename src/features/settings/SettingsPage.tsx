@@ -283,7 +283,7 @@ export default function SettingsPage() {
   }
 
   const refreshFeed = async (feed: CalendarFeed) => {
-    const url = feed.url.trim()
+    const url = feed.url?.trim() ?? ''
     if (!url) {
       announce('Add a calendar feed URL first, or import an ICS file.')
       return

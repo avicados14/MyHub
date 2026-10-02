@@ -28,8 +28,8 @@ describe('device pairing', () => {
     expect(body.codeHash).toBe(await sha256Digest(code))
     expect(body.encryptedPayload).not.toContain(key)
     expect(JSON.stringify(body)).not.toContain(code)
-    expect(await decryptJson(body.encryptedPayload, code)).toEqual({ id: 'synthetic-id', key })
-    await expect(decryptJson(body.encryptedPayload, 'wrong-code')).rejects.toThrow()
+    expect(await decryptJson(body.encryptedPayload!, code)).toEqual({ id: 'synthetic-id', key })
+    await expect(decryptJson(body.encryptedPayload!, 'wrong-code')).rejects.toThrow()
   })
   it('reports expired, reused, and unavailable codes without leaking a capability', async () => {
     vi.stubGlobal(
