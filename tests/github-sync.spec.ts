@@ -454,7 +454,12 @@ test('device code connects a fresh phone and retains sign-in through a broker ou
   await page.goto('/#/devices')
   await page.getByRole('button', { name: 'Generate sign-in code' }).click()
   const code = await page.locator('[role="status"] strong').innerText()
-  const phone = await browser.newContext({ baseURL: new URL(page.url()).origin })
+  const phone = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  })
   try {
     const phonePage = await phone.newPage()
     await installGitHubMock(phonePage, state)
