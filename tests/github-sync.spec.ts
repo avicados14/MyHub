@@ -36,6 +36,8 @@ interface PrivateAccessState {
   version: number
   writes: number
   resolveDelayMs: number
+  pairing?: { hash: string; payload: string }
+  unavailable?: boolean
 }
 
 const json = (route: Route, body: unknown, status = 200) =>
@@ -94,6 +96,25 @@ const installGitHubMock = async (page: Page, state: RemoteState) => {
 const installPrivateAccessMock = async (page: Page, state: PrivateAccessState) => {
   await page.route(privateAccessBrokerUrl, async (route) => {
     const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>
+    if (state.unavailable) {
+      await route.abort('failed')
+      return
+    }
+    if (body.action === 'pair-create') {
+      state.pairing = { hash: String(body.codeHash), payload: String(body.encryptedPayload) }
+      await json(route, { expiresAt: new Date(Date.now() + 600_000).toISOString() })
+      return
+    }
+    if (body.action === 'pair-redeem') {
+      const pairing = state.pairing
+      if (!pairing || pairing.hash !== body.codeHash) {
+        await json(route, {}, 404)
+        return
+      }
+      state.pairing = undefined
+      await json(route, { encryptedPayload: pairing.payload })
+      return
+    }
     if (body.action === 'create') {
       state.encryptedPayload = String(body.encryptedPayload)
       state.encryptedData = String(body.encryptedData)
@@ -413,4 +434,50 @@ test('delete remote snapshot sends the current SHA and pauses sync without unlin
       return { paused: credential?.paused, currentSha: credential?.currentSha }
     })
     .toEqual({ paused: true, currentSha: undefined })
+})
+
+test('device code connects a fresh phone and retains sign-in through a broker outage', async ({ browser, page }) => {
+  const state = freshRemoteState()
+  const access: PrivateAccessState = {
+    encryptedPayload: '',
+    encryptedData: '',
+    version: 0,
+    writes: 0,
+    resolveDelayMs: 0,
+  }
+  await installGitHubMock(page, state)
+  await installPrivateAccessMock(page, access)
+  await connect(page, createTestKeyMaterial())
+  await expect(page.locator('#github-sync').getByText('current')).toBeVisible()
+  await page.getByRole('button', { name: 'Create private access link' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click()
+  await page.goto('/#/devices')
+  await page.getByRole('button', { name: 'Generate sign-in code' }).click()
+  const code = await page.locator('[role="status"] strong').innerText()
+  const phone = await browser.newContext({ baseURL: new URL(page.url()).origin })
+  try {
+    const phonePage = await phone.newPage()
+    await installGitHubMock(phonePage, state)
+    await installPrivateAccessMock(phonePage, access)
+    await phonePage.goto('/#/devices')
+    await phonePage.getByLabel('Sign-in code', { exact: true }).fill(code)
+    await expect(phonePage.getByRole('button', { name: 'Connect this device' })).toBeDisabled()
+    await phonePage.getByRole('checkbox').check()
+    await phonePage.getByRole('button', { name: 'Connect this device' }).click()
+    await expect(
+      phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
+    ).toBeVisible()
+    expect(access.pairing).toBeUndefined()
+    access.unavailable = true
+    await phonePage.reload()
+    await expect(
+      phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
+    ).toBeVisible()
+    access.unavailable = false
+    await phonePage.reload()
+    await phonePage.goto('/#/devices')
+    await expect(phonePage.getByRole('button', { name: 'Generate sign-in code' })).toBeEnabled()
+  } finally {
+    await phone.close()
+  }
 })

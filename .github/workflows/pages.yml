@@ -45,6 +45,8 @@ jobs:
         run: npm run test:e2e
       - name: Build production site
         run: npm run build
+      - name: Verify installed phone app offline
+        run: npx playwright test --config=playwright.pwa.config.ts
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6

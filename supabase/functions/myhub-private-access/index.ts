@@ -64,12 +64,45 @@ Deno.serve(async (request: Request) => {
     return response(request, { error: 'Invalid JSON request.' }, 400)
   }
 
+  if (!body || typeof body !== 'object' || Array.isArray(body))
+    return response(request, { error: 'Invalid request.' }, 400)
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseUrl || !serviceRoleKey) return response(request, { error: 'Broker configuration is unavailable.' }, 503)
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
+
+  if (body.action === 'pair-redeem' || body.action === 'pair-create' || body.action === 'pair-cancel') {
+    const validHash = typeof body.codeHash === 'string' && /^[A-Za-z0-9+/]{43}=$/u.test(body.codeHash)
+    if (body.action === 'pair-redeem') {
+      if (!validHash) return response(request, { error: 'Invalid sign-in code.' }, 400)
+      const { data, error } = await supabase.rpc('redeem_myhub_device_pairing', { p_code_hash: body.codeHash })
+      if (error) return response(request, { error: 'Device sign-in is temporarily unavailable.' }, 503)
+      if (!data?.[0]) return response(request, { error: 'This sign-in code is unavailable.' }, 404)
+      return response(request, { encryptedPayload: data[0].encrypted_payload })
+    }
+    if (
+      typeof body.id !== 'string' ||
+      !UUID_PATTERN.test(body.id) ||
+      typeof body.writeToken !== 'string' ||
+      body.writeToken.length < 32 ||
+      body.writeToken.length > 200 ||
+      (body.action === 'pair-create' && (!validHash || !isEncryptedEnvelope(body.encryptedPayload, 16_000)))
+    ) {
+      return response(request, { error: 'Invalid device pairing request.' }, 400)
+    }
+    const { data, error } = await supabase.rpc('manage_myhub_device_pairing', {
+      p_access_id: body.id,
+      p_write_hash: await hashWriteToken(body.writeToken),
+      p_code_hash: body.action === 'pair-create' ? body.codeHash : null,
+      p_payload: body.action === 'pair-create' ? body.encryptedPayload : null,
+    })
+    if (error) return response(request, { error: 'Device pairing is temporarily unavailable.' }, 503)
+    if (!data) return response(request, { error: 'This device cannot manage sign-in codes.' }, 403)
+    return response(request, { expiresAt: data })
+  }
 
   if (body.action === 'resolve') {
     if (typeof body.id !== 'string' || !UUID_PATTERN.test(body.id)) {

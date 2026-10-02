@@ -1,0 +1,27 @@
+# Phone installation and device pairing — 2026-10-02
+
+## Scope
+
+Implement the selected free Home Screen web-app path, retain existing web functionality and the native calendar increment, add temporary single-use device sign-in, and verify before merging.
+
+## Implementation
+
+- Added installation manifest, deterministic icons, and production service-worker generation. Cache only shipped same-origin shell assets; never cache broker/API responses. Updates wait for existing windows to close.
+- Added a device setup page and Settings entry. Explicit consent precedes replacement of local data.
+- Pairing uses a random 80-bit code, client-encrypted access package, a server-held code hash, 10-minute expiry, and atomic single-use redemption. Existing private access is not rotated when pairing.
+- Added service-only pairing table/functions with RLS and revoked direct client permissions. Cancellation/replacement authenticates the existing write capability.
+- Preserved saved private access through temporary reconnect failures. Explicit unlink still clears device credentials.
+- Added phone guide and regression coverage for encryption, malformed/expired codes, fresh-device connection, outages, and the built production app offline.
+
+## Verification checkpoint
+
+- Original 128 unit tests passed before adding new coverage.
+- 131 unit tests, formatting, lint, contract checks and production build passed locally.
+- Deployed additive pairing migration and broker version 5.
+- Transactional synthetic database checks passed: wrong token, successful redemption, reuse, expiry, replacement, cancellation and parent revocation. Fixtures rolled back.
+- Security advisor reports only informational RLS-without-policy for the new service-only table; no direct client grants exist. The absence of policies intentionally denies access.
+- Browser and production PWA tests, live HTTP pairing, full regression CI, and merge remain pending at this checkpoint.
+
+## Avoid repeating mistakes
+
+Do not clear credentials on a network error. Do not rotate private links to pair each new device. Do not use a guessable numeric PIN without a separate approval/rate-limit design. Do not deploy a merge before browser checks pass. Never log private credentials, pairing codes, decrypted records, or private access URLs.

@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "MyHub",
+  "short_name": "MyHub",
+  "description": "Your private college command center",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#12233d",
+  "theme_color": "#12233d",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
