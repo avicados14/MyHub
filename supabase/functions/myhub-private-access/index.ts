@@ -142,32 +142,33 @@ Deno.serve(async (request: Request) => {
     return response(request, { error: 'The GitHub credential cannot manage the private MyHub data repository.' }, 403)
   }
 
-  const now = new Date().toISOString()
-  const { error: revokeError } = await supabase
-    .from('myhub_private_access')
-    .update({ revoked_at: now })
-    .is('revoked_at', null)
-  if (revokeError) return response(request, { error: 'Existing private links could not be revoked.' }, 503)
-  if (body.action === 'revoke') return response(request, { revoked: true })
-
+  const creationWriteToken = typeof body.writeToken === 'string' ? body.writeToken : ''
   if (
-    !isEncryptedEnvelope(body.encryptedPayload, 16_000) ||
-    !isEncryptedEnvelope(body.encryptedData, 10_000_000) ||
-    typeof body.writeToken !== 'string' ||
-    body.writeToken.length < 32 ||
-    body.writeToken.length > 200
+    body.action === 'create' &&
+    (!isEncryptedEnvelope(body.encryptedPayload, 16_000) ||
+      !isEncryptedEnvelope(body.encryptedData, 10_000_000) ||
+      creationWriteToken.length < 32 ||
+      creationWriteToken.length > 200)
   ) {
     return response(request, { error: 'The encrypted private access package is invalid.' }, 400)
   }
 
+  if (body.action === 'revoke') {
+    const { error } = await supabase
+      .from('myhub_private_access')
+      .update({ revoked_at: new Date().toISOString() })
+      .is('revoked_at', null)
+    if (error) return response(request, { error: 'Existing private links could not be revoked.' }, 503)
+    return response(request, { revoked: true })
+  }
+
+  // A single database transaction preserves existing links if insertion fails.
   const { data, error } = await supabase
-    .from('myhub_private_access')
-    .insert({
-      encrypted_payload: body.encryptedPayload,
-      encrypted_data: body.encryptedData,
-      write_token_hash: await hashWriteToken(body.writeToken),
+    .rpc('replace_myhub_private_access', {
+      new_encrypted_payload: body.encryptedPayload,
+      new_encrypted_data: body.encryptedData,
+      new_write_token_hash: await hashWriteToken(creationWriteToken),
     })
-    .select('id, data_version, data_updated_at')
     .single()
   if (error || !data) return response(request, { error: 'A private access link could not be created.' }, 503)
   return response(request, { id: data.id, version: data.data_version, updatedAt: data.data_updated_at }, 201)

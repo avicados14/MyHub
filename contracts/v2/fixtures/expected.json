@@ -1,0 +1,72 @@
+{
+  "fixtureVersion": 1,
+  "scaling": {
+    "servings": 6,
+    "quantities": [1.5, 12, null],
+    "formatted": ["1\u00bd", "12"]
+  },
+  "grocery": [
+    {
+      "canonicalName": "beans",
+      "quantity": 1.5,
+      "unit": "lb"
+    }
+  ],
+  "nutrition": {
+    "calories": 400,
+    "protein": 20,
+    "carbs": 60,
+    "fat": 8,
+    "sugar": 6,
+    "saturatedFat": 2,
+    "fiber": 10,
+    "sodium": 200
+  },
+  "batchRemaining": 8,
+  "assignmentOrder": ["task-high", "task-low"],
+  "study": {
+    "blocks": [
+      {
+        "assignmentId": "task-high",
+        "date": "2026-01-05",
+        "startTime": "08:45",
+        "endTime": "09:15"
+      },
+      {
+        "assignmentId": "task-low",
+        "date": "2026-01-05",
+        "startTime": "09:30",
+        "endTime": "10:00"
+      }
+    ],
+    "unscheduledMinutes": 0
+  },
+  "history": {
+    "id": "trip-completed",
+    "createdAt": "2026-01-05T12:00:00.000Z",
+    "updatedAt": "2026-01-05T12:00:00.000Z",
+    "source": "manual",
+    "name": "Synthetic trip",
+    "completedAt": "2026-01-05T12:00:00.000Z",
+    "items": [
+      {
+        "id": "grocery-item",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "name": "Beans",
+        "canonicalName": "beans",
+        "quantity": 1.5,
+        "unit": "lb",
+        "category": "Pantry",
+        "checked": true,
+        "sourceRecipeIds": ["recipe-synthetic"],
+        "pantryQuantity": 0,
+        "pantryDecision": "none"
+      }
+    ],
+    "sourceStartDate": "2026-01-04",
+    "sourceEndDate": "2026-01-10",
+    "sourceMealIds": ["meal-batch"]
+  }
+}

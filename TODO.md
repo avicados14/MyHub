@@ -1,26 +1,28 @@
 # MyHub Phase 2 TODO
 
-Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the native iPhone and iPad application described in `MYHUB_IOS_PLAN.md`, with any web refinements needed to establish a reliable shared contract. This is a working checklist, not a claim that native work has started.
+Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the native iPhone and iPad application described in `MYHUB_IOS_PLAN.md`, with any web refinements needed to establish a reliable shared contract. This is a working checklist. The native foundation is now implemented on the continuation branch; full feature parity and acceptance remain open.
 
 ## 0. Close the Phase 1 handoff gate
+
+- [x] Independently retrieve the encrypted Supabase document and verify privacy-safe counts: September 29 stateless resolve/decrypt returned revision 60, 3,361 events and 168 assignments. This is remote retrieval proof, not browser UI acceptance.
 
 - [ ] Verify that the September 28 encrypted calendar import reached Supabase: the linked browser should settle at a current sync state, and a separate fresh private-link browser should show the same aggregate assignment count in School. The connected browser showed 3,332 events and 168 assignments; fresh-device propagation was not independently checked. Use counts and revision metadata only, without exposing private content or capabilities. See `FIXME.md`.
 - [ ] If the counts disagree, trace the Supabase document revision, local hydration, and serialized push/refresh path before changing the deployed Canvas UID parser. Add a focused regression only for the reproduced failure.
 - [ ] Record the verified baseline (source commit, data-repository commit, counts, timezone, test results) and reconcile the older counts in `README.md` and `REQUIREMENTS_AUDIT.md`.
-- [ ] Review the Phase 1 dashboard, calendar/homework, study planner, food, nutrition, pantry/grocery, and backup workflows with the owner. Record approved behavior and requested changes before freezing the native contract.
+- [x] Review the Phase 1 dashboard, calendar/homework, study planner, food, nutrition, pantry/grocery, and backup workflows with the owner. Record approved behavior and requested changes before freezing the native contract.
 
 ## 1. Freeze the portable data and behavior contract
 
-- [ ] Document `AppData` schema version 2, its IDs, source/provenance fields, local dates, timestamps, immutable snapshots, and migration rules. Identify which fields transfer to native storage and which browser-only credentials must never enter a portable backup.
-- [ ] Save representative, non-personal JSON fixtures and golden expected results for recipe scaling/fractions, unit-compatible grocery aggregation, eight-field nutrition totals, prepared/consumed/leftover balances, homework priority, study scheduling, and completed-trip history.
+- [x] Document `AppData` schema version 2, its IDs, source/provenance fields, local dates, timestamps, immutable snapshots, and migration rules. Identify which fields transfer to native storage and which browser-only credentials must never enter a portable backup.
+- [x] Save representative, non-personal JSON fixtures and golden expected results for recipe scaling/fractions, unit-compatible grocery aggregation, eight-field nutrition totals, prepared/consumed/leftover balances, homework priority, study scheduling, and completed-trip history.
 - [ ] Decide how native import/export will validate and migrate MyHub backups, reject unknown future versions, and preserve user records. Test a web-export-to-native-import round trip with non-personal fixtures.
-- [ ] Define the native storage model (for example SwiftData after review), explicit local-date/time-zone behavior, offline writes, and migration strategy. Preserve web history and current source provenance.
+- [x] Define the native storage model (for example SwiftData after review), explicit local-date/time-zone behavior, offline writes, and migration strategy. Preserve web history and current source provenance.
 
 ## 2. Build the native foundation
 
-- [ ] Create a standalone Swift/SwiftUI iPhone and iPad project; do not wrap the website in a WebView.
+- [x] Create a standalone Swift/SwiftUI iPhone and iPad project; do not wrap the website in a WebView.
 - [ ] Implement native navigation and accessible layouts: iPhone `TabView`/`NavigationStack`, iPad `NavigationSplitView`, sheets, confirmation dialogs, Dynamic Type, VoiceOver labels, and non-gesture alternatives.
-- [ ] Implement the local persistence and backup-import foundation with versioned `Codable` models, stable IDs, explicit local dates, and tests against the frozen fixtures.
+- [x] Implement the local persistence and backup-import foundation with versioned `Codable` models, stable IDs, explicit local dates, and tests against the frozen fixtures.
 - [ ] Rebuild and validate Dashboard, Calendar, School/homework, and deterministic study planning against the approved web behavior.
 - [ ] Rebuild and validate recipes, packaged foods, meal planning, nutrition logs, leftovers, pantry, grocery planning/check, and completed-trip history. Keep planning, preparation, and consumption separate; preserve immutable historical snapshots.
 
@@ -46,3 +48,32 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 ## Source of this plan
 
 `README.md` roadmap; `MYHUB_IOS_PLAN.md` acceptance gate and native adapters; `ARCHITECTURE.md` data contract; `REQUIREMENTS_AUDIT.md` Phase 1 coverage; and `HANDOFF_CONTINUATION_GUIDE.md` from the private September 28 handoff. Update this checklist as decisions and evidence change.
+
+## September 28 continuation checkpoint
+
+- Contract/schema documentation and seven executable golden behavior fixtures: `contracts/v2/README.md`, `src/domain/portableContract.test.ts`. Owner selected current web behavior as the native baseline on September 29; implementations must still pass the shared fixtures and device acceptance.
+- Native storage decision implemented for the foundation: atomic versioned Codable JSON in Application Support, preserving IDs/local dates/snapshots; iOS file protection. SwiftData deferred. See `native/README.md`.
+- Native foundation source exists: standalone SwiftUI Xcode project, iPhone tabs/iPad split view, offline backup import/export with replacement confirmation, and read-only Home/Calendar/School/recipe viewing. Navigation accessibility/device validation, complete editing and calculation parity remain unchecked.
+- Native v2 import validation and round-trip tests are implemented. Direct v1 migration is not: use the web migrator then export v2. Do not check the combined import/migration task until the agreed migration scope and native tests are verified.
+- Phase 1 remote retrieval verified September 29: a fresh stateless client decrypted revision 60 with 3,361 events / 168 assignments. Original-session settled status and fresh-browser School rendering remain unobserved. Exact observation and baseline: `docs/CONTINUATION_2026-09-28.md`.
+- Owner approved existing web behavior on September 29. The remaining sync direction/access decision is prepared in `docs/NATIVE_DECISIONS.md`; integration privacy models and native device acceptance remain open.
+
+- Native validation at `ce707bf`: macOS workflow `36507350376`, job `109211657010`, passed all 3 Swift tests and the standalone iPhone/iPad simulator build. This checks project creation, not accessibility/device acceptance or full feature parity.
+
+- Running progress document: `docs/WORK_LOG.md` (requested September 29). Includes the exact failed CI cases and subsequent corrections/evidence.
+
+- Native calculation increment: added scaling/fractions, consumption-only nutrition, source visibility/ranking and study previews with shared golden tests. Recipe scaling and School study preview are non-destructive; full feature-port checkboxes remain open pending implementation and validation. See `docs/WORK_LOG.md`.
+
+- Native School editing increment: homework drafts/subtasks, confirmed deletion and study-plan application implemented after baseline approval. Regression tests cover provenance, stale drafts, protected blocks and history. Full School/calendar/dashboard task remains open; see work log for validation scope.
+
+- School increment validation at `ec4f664`: 13 Swift tests and iPhone/iPad simulator build passed in workflow `36596491185`. Full feature/device gates remain open.
+
+## September 29 calendar/study continuation
+
+- [x] V2 native persistence foundation validated: complete JSON round trip, rejected malformed/future imports without overwrite, atomic local saves and persisted homework edits (`ec4f664`, 13 Swift tests). This does not include direct v1 migration or cloud synchronization.
+- [x] Calendar/study increment `338a02c`: manual event forms, protected study edits, complete/reopen/lock actions, overlap review and study/avoid-time settings. Mac workflow `36622161736` passed 18 Swift tests and the iPhone/iPad simulator build. Full presentation/device acceptance remains separate.
+- Next dependencies: dedicated synthetic v1 migration fixtures, dashboard/calendar presentation, food calculation/editing parity, then reviewed integration/access models. No renewed owner workflow approval is needed; current web behavior remains the approved baseline.
+
+- [x] Establish a synthetic legacy migration bridge fixture and verify web migration plus native v2 import/re-encode. At `56ec15d`, all 19 Swift tests and simulator build passed (`36622604118`); local web gates passed 124 tests. Direct Swift v1 migration and broader legacy repair coverage remain unchecked.
+
+- Daily Home dashboard increment: configured-zone clock, visible daily agenda, due homework, explicit meal amounts and eight-field consumption totals implemented with synthetic boundary tests. Mac CI validation pending; full dashboard parity and device acceptance stay open.

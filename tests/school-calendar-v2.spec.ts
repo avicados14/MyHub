@@ -30,7 +30,9 @@ const waitForStoredRecord = async (
             get.onerror = () => reject(get.error)
           })
           database.close()
-          const records = state?.[collection]
+          const records = collection.split('.').reduce<unknown>((value, key) => {
+            return typeof value === 'object' && value !== null ? (value as Record<string, unknown>)[key] : undefined
+          }, state)
           return (
             Array.isArray(records) &&
             records.some(
@@ -187,6 +189,7 @@ END:VCALENDAR`,
   await feed.getByLabel('Feed URL').fill('https://calendar.example/canvas.ics')
   await feed.getByRole('button', { name: 'Refresh feed' }).click()
   await expect(feed.getByText('2 events · 1 homework')).toBeVisible()
+  await waitForStoredRecord(page, 'assignments', { title: 'Direct feed assignment' })
 
   await page.goto('/#/school')
   await expect(page.getByRole('heading', { name: 'Direct feed assignment' })).toBeVisible()
@@ -197,10 +200,12 @@ END:VCALENDAR`,
   const savedFeed = page.locator('.calendar-feed-record').filter({ hasText: 'Canvas direct' })
   await savedFeed.getByRole('checkbox').uncheck()
   await expect(savedFeed.getByText(/hidden from Calendar, Home, School, search/)).toBeVisible()
+  await waitForStoredRecord(page, 'settings.calendarFeeds', { name: 'Canvas direct', enabled: false })
   await page.goto('/#/school')
   await expect(page.getByRole('heading', { name: 'Direct feed assignment' })).toHaveCount(0)
   await page.goto('/#/settings')
   await page.locator('.calendar-feed-record').filter({ hasText: 'Canvas direct' }).getByRole('checkbox').check()
+  await waitForStoredRecord(page, 'settings.calendarFeeds', { name: 'Canvas direct', enabled: true })
   await page.goto('/#/school')
   await expect(page.getByRole('heading', { name: 'Direct feed assignment' })).toBeVisible()
 })

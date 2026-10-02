@@ -14,3 +14,9 @@ artifacts/
 .vscode/
 .idea/
 *.tsbuildinfo
+
+# Native build products and developer-specific signing state
+.build/
+DerivedData/
+xcuserdata/
+*.xcuserstate

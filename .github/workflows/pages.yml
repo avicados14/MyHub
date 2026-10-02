@@ -29,6 +29,8 @@ jobs:
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Check portable contract
+        run: npm run contract:check
       - name: Check formatting
         run: npm run format:check
       - name: Lint
@@ -37,6 +39,8 @@ jobs:
         run: npm run typecheck
       - name: Run unit tests
         run: npm run test
+      - name: Verify meal-date and Canvas regressions
+        run: npm run test:e2e -- tests/food-v2.spec.ts tests/school-calendar-v2.spec.ts --grep 'prepared batches populate|planner meal editor schedules|direct Canvas refresh' --retries=0
       - name: Run browser tests
         run: npm run test:e2e
       - name: Build production site
