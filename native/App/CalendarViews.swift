@@ -1,5 +1,7 @@
 import SwiftUI
 import MyHubCore
+import EventKit
+import EventKitUI
 
 private struct EventEditorRequest: Identifiable {
     let id = UUID()
@@ -10,6 +12,9 @@ struct CalendarView: View {
     @EnvironmentObject private var model: AppModel
     var studyOnly = false
     @State private var editor: EventEditorRequest?
+    @State private var exportEvent: CalendarEvent?
+    @State private var confirmExport = false
+    @State private var exportRequest: CalendarExportRequest?
     @State private var message: String?
     var body: some View {
         List {
@@ -25,6 +30,9 @@ struct CalendarView: View {
                                 if let end = event.endDate, end != event.date { Text("Through \(end)") }
                             }.foregroundStyle(.primary)
                         }.accessibilityHint("Edit event details")
+                        Button("Save to Apple Calendar", systemImage: "calendar.badge.plus") {
+                            exportEvent = event; confirmExport = true
+                        }.accessibilityLabel("Save \(event.title) to Apple Calendar")
                         if event.kind == "study" {
                             Button(event.locked == true ? "Unlock study block" : "Lock study block") {
                                 change { try CalendarCommands.setStudyState(event, locked: event.locked != true, in: $0) }
@@ -46,6 +54,30 @@ struct CalendarView: View {
         }
         .sheet(item: $editor) { request in
             NavigationStack { EventEditor(event: request.event, timeZone: model.backup?.data.settings.calendarTimeZone ?? "UTC") }
+        }
+        .confirmationDialog("Create an Apple Calendar copy?", isPresented: $confirmExport, titleVisibility: .visible) {
+            Button("Review in Apple Calendar") { prepareExport() }
+            Button("Cancel", role: .cancel) { exportEvent = nil }
+        } message: {
+            Text("This copies the title, dates, location and description into an event you review before saving. It is a separate copy, not a linked event. Saving again can create a duplicate, including events already imported from a calendar. Check the dates and destination calendar before tapping Add.")
+        }
+        .sheet(item: $exportRequest) { request in
+            AppleCalendarEditor(draft: request.draft) { saved in
+                exportRequest = nil
+                message = saved ? "Copy saved to Apple Calendar. Later changes in either app are independent." : "Calendar export cancelled."
+            }
+        }
+    }
+    private func prepareExport() {
+        defer { exportEvent = nil }
+        guard let event = exportEvent, let data = model.backup?.data,
+              data.events.first(where: { $0.id == event.id }) == event else {
+            message = "This event changed. Reopen it before exporting."; return
+        }
+        do {
+            exportRequest = CalendarExportRequest(draft: try CalendarExport(event: event, timeZone: data.settings.calendarTimeZone ?? "UTC"))
+        } catch {
+            message = "Could not prepare this event. Check its title, calendar time zone, and date/time range. Times skipped by daylight saving cannot be exported."
         }
     }
     private func change(_ update: (AppData) throws -> AppData) {
@@ -157,6 +189,43 @@ private struct AvoidRangeEditor: View {
                     if selected { range.days.append(Decimal(index)); range.days.sort() }
                 }))
             }
+        }
+    }
+}
+
+private struct CalendarExportRequest: Identifiable {
+    let id = UUID()
+    let draft: CalendarExport
+}
+
+/// EventKitUI owns the final save and calendar selection. No calendar access request or direct save is made.
+private struct AppleCalendarEditor: UIViewControllerRepresentable {
+    let draft: CalendarExport
+    let finished: (Bool) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(finished: finished) }
+    func makeUIViewController(context: Context) -> EKEventEditViewController {
+        let controller = EKEventEditViewController()
+        let store = context.coordinator.store
+        controller.eventStore = store
+        let event = EKEvent(eventStore: store)
+        event.title = draft.title
+        event.startDate = draft.start; event.endDate = draft.end
+        event.isAllDay = draft.allDay
+        event.timeZone = draft.allDay ? nil : draft.timeZone
+        event.location = draft.location; event.notes = draft.notes
+        controller.event = event
+        controller.editViewDelegate = context.coordinator
+        return controller
+    }
+    func updateUIViewController(_ controller: EKEventEditViewController, context: Context) { }
+
+    final class Coordinator: NSObject, EKEventEditViewDelegate {
+        let store = EKEventStore()
+        let finished: (Bool) -> Void
+        init(finished: @escaping (Bool) -> Void) { self.finished = finished }
+        func eventEditViewController(_ controller: EKEventEditViewController, didCompleteWith action: EKEventEditViewAction) {
+            finished(action == .saved)
         }
     }
 }

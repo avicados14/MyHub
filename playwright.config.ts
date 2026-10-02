@@ -22,6 +22,12 @@ export default defineConfig({
     reuseExistingServer: false,
   },
   projects: [
+    {
+      name: 'iphone-pairing',
+      testMatch: '**/github-sync.spec.ts',
+      grep: /device code/u,
+      use: { ...devices['iPhone 13'], browserName: 'webkit' },
+    },
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } } },
     { name: 'tablet', use: { ...devices['Desktop Chrome'], viewport: { width: 1024, height: 900 } } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },

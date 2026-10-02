@@ -90,3 +90,32 @@ it.each([false, true])('uses one atomic replacement call (database failure: %s)'
       : { id: 'synthetic-id', version: 1, updatedAt: '2026-10-01T00:00:00Z' },
   )
 })
+
+it.each([null, [], 'invalid', { action: 'pair-redeem', codeHash: '123456' }, { action: 'pair-create' }])(
+  'rejects malformed device requests before database mutation: %j',
+  async (body) => {
+    const source = readFileSync('supabase/functions/myhub-private-access/index.ts', 'utf8').replace(
+      /^import .*\n/gm,
+      '',
+    )
+    let handler: (request: Request) => Promise<Response> = () => Promise.reject(new Error('Handler missing'))
+    const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+    vm.runInNewContext(compiled, {
+      TextEncoder,
+      crypto,
+      Response,
+      btoa,
+      Deno: { env: { get: () => 'synthetic-test-config' }, serve: (value: typeof handler) => (handler = value) },
+      response: (_request: Request, value: unknown, status = 200) => Response.json(value, { status }),
+      createClient: () => ({
+        rpc: () => {
+          throw new Error('Malformed request reached database')
+        },
+      }),
+    })
+    const result = await handler(
+      new Request('https://example.invalid/broker', { method: 'POST', body: JSON.stringify(body) }),
+    )
+    expect(result.status).toBe(400)
+  },
+)

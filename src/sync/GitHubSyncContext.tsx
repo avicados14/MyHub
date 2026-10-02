@@ -13,6 +13,7 @@ import {
   savePrivateAccessCredential,
   type StoredGitHubCredential,
 } from '../storage/database'
+import { createDevicePairing, cancelDevicePairing } from './devicePairing'
 import { decideSyncAction } from './conflict'
 import { decryptJson, decryptText, encryptJson, encryptText, sha256Digest } from './crypto'
 import {
@@ -61,6 +62,8 @@ interface GitHubSyncContextValue {
   privateAccessActive: boolean
   lastSupabaseSyncedAt?: string
   createPrivateAccessLink: (baseUrl: string) => Promise<PrivateAccessLink>
+  createPairing: () => Promise<{ code: string; expiresAt: string }>
+  cancelPairing: () => Promise<void>
   connectPrivateAccess: (access: ResolvedPrivateAccess) => Promise<void>
   setPaused: (paused: boolean) => Promise<void>
   unlink: () => Promise<void>
@@ -358,6 +361,19 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
     [privateAccessMaterial],
   )
 
+  const createPairing = useCallback(async () => {
+    privateAccessMaterial()
+    const session = privateAccessRef.current
+    if (!session) throw new Error('Create a private access link in Settings before pairing a device.')
+    return createDevicePairing(session.id, session.key)
+  }, [privateAccessMaterial])
+
+  const cancelPairing = useCallback(async () => {
+    const session = privateAccessRef.current
+    if (!session) throw new Error('Reconnect this device before cancelling its code.')
+    await cancelDevicePairing(session.id, session.key)
+  }, [])
+
   const connectPrivateAccess = useCallback(
     async (access: ResolvedPrivateAccess) =>
       withSerializedOperation(async () => {
@@ -409,7 +425,8 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
         await connectPrivateAccess(access)
       })
       .catch(async (error: unknown) => {
-        await clearPrivateAccessCredential()
+        // Keep saved access through offline starts and temporary service failures.
+        // Explicit unlink remains the operation that removes this device credential.
         setErrorMessage(
           error instanceof Error
             ? `The saved private access link could not reconnect: ${error.message}`
@@ -611,6 +628,8 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       resolveUseDevice,
       resolveUseGitHub,
       createPrivateAccessLink: createPrivateAccessLinkForCurrentData,
+      createPairing,
+      cancelPairing,
       connectPrivateAccess,
       setPaused,
       unlink,
@@ -621,6 +640,8 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
       calendarAccess,
       clearRemoteSnapshot,
       connect,
+      createPairing,
+      cancelPairing,
       connectPrivateAccess,
       createPrivateAccessLinkForCurrentData,
       credential,

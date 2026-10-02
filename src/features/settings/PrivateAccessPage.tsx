@@ -66,7 +66,7 @@ export default function PrivateAccessPage() {
                 : 'MyHub is loading the current encrypted Supabase document and enabling the GitHub backup before Home opens.'}
             </p>
           </div>
-          <StatusBadge tone={errorMessage ? 'danger' : 'info'}>
+          <StatusBadge tone={errorMessage ? 'danger' : 'neutral'}>
             {errorMessage ? 'Unavailable' : 'Connecting'}
           </StatusBadge>
         </div>
