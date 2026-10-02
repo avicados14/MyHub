@@ -13,3 +13,11 @@ User authorized merging all pending work and resolving conflicts. This integrati
 ## Verification status
 
 Local static/unit/build checks and combined web/native CI are pending at this initial checkpoint. Deployment and live backend checks will be recorded after completion. Previous audit documents describe their historical branch state, not this release. No private handoff data is committed.
+
+## First combined run and correction
+
+- Local gate passed: 128 unit tests, contract drift, formatting, lint, types, build.
+- Native CI 36948455389 passed tests and iPhone/iPad simulator build.
+- Browser gate 36948455388 reproduced a Canvas persistence timing failure on desktop before navigation; eight other focused cases passed. The test now awaits IndexedDB persistence after import and feed enable/disable. It does not change runtime behavior or weaken assertions.
+- Live Supabase atomic rollback/success assertions passed; all test changes rolled back. Synthetic encrypted read/write, wrong-token rejection, stale-version conflict and independent read-back passed. Synthetic row removed.
+- Existing personal private link and encrypted GitHub backup/calendar resolve/decrypt checks passed without printing private contents. Security advisors returned no findings; broker version 4 remains active.
