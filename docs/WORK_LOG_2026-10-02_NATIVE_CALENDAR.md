@@ -42,3 +42,7 @@ Seven core regression cases cover configured zones, overnight bounds, inclusive 
 - [TN3152: Calendar access levels](https://developer.apple.com/documentation/technotes/tn3152-migrating-to-the-latest-calendar-access-levels)
 
 Apple documents the iOS 17+ EventKitUI editor flow without requesting event-store access. No usage-description permission key is added because this increment makes no calendar authorization request.
+
+## CI correction checkpoint
+
+Initial native run 37048439102 passed all 35 Swift tests, then the simulator build found that AppSettings.calendarTimeZone is optional for older backups. The UI adapter now applies the same UTC fallback as the existing dashboard, homework and event editors. This is a compile-time integration correction; invalid explicit zones still fail validation. Repeat the macOS build on the corrected commit before marking this increment verified.

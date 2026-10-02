@@ -75,7 +75,7 @@ struct CalendarView: View {
             message = "This event changed. Reopen it before exporting."; return
         }
         do {
-            exportRequest = CalendarExportRequest(draft: try CalendarExport(event: event, timeZone: data.settings.calendarTimeZone))
+            exportRequest = CalendarExportRequest(draft: try CalendarExport(event: event, timeZone: data.settings.calendarTimeZone ?? "UTC"))
         } catch {
             message = "Could not prepare this event. Check its title, calendar time zone, and date/time range. Times skipped by daylight saving cannot be exported."
         }
