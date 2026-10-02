@@ -1,5 +1,7 @@
 # MyHub Requirements Audit
 
+> Historical release audit: the counts and test matrix below describe prior release runs, not this continuation. The September 28 connected browser later imported 3,332 events and 168 assignments; a September 29 stateless resolve/decrypt check independently retrieved revision 60 with 3,361 events and 168 assignments. Fresh-browser rendering remains unverified. See `docs/CONTINUATION_2026-09-28.md` and `FIXME.md` for current evidence and exact scope.
+
 **Audit date:** 23 September 2026
 
 **Scope:** the completed web application, end-to-end encrypted Supabase persistence, encrypted GitHub backup, uploaded calendars and cookbook, automated verification, and deliberate native-only boundaries

@@ -2,7 +2,7 @@
 
 ## Status
 
-Native implementation is intentionally paused until the web application’s design and workflows are tested and approved. This document records the handoff strategy; it is not an Xcode project.
+A standalone SwiftUI foundation now exists in `native/MyHub.xcodeproj`, with versioned Codable import/export, backup viewing, homework editing and study-plan application. The owner approved current web behavior as the native implementation baseline on September 29, 2026. Full native editing is in progress; integrations and synchronization retain their separate data/privacy/access dependencies. See `docs/NATIVE_DECISIONS.md` for concrete approval options and `TODO.md` for implementation/validation status.
 
 ## Product Objective
 
@@ -26,7 +26,7 @@ Before native work begins, freeze representative JSON backups and golden test fi
 - Conflict-free study block generation
 - Completed grocery-trip snapshots
 
-Swift should use `UUID`, `Decimal`, explicit local dates, and versioned `Codable` payloads. SwiftData should not depend on browser-specific field names beyond the documented transfer schema.
+Swift should preserve imported IDs as opaque strings (new IDs may use UUID-based strings), `Decimal`, explicit local dates, and versioned `Codable` payloads. SwiftData should not depend on browser-specific field names beyond the documented transfer schema.
 
 ## Native Adapters
 

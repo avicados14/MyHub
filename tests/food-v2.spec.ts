@@ -223,6 +223,7 @@ test.describe('food v2 workflows', () => {
   })
 
   test('prepared batches populate future days and decrease together as servings are eaten', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 8, 22, 12))
     const data = createTestFixtureData(new Date(2026, 8, 22))
     data.meals = []
     data.leftovers = []
@@ -261,6 +262,7 @@ test.describe('food v2 workflows', () => {
   })
 
   test('planner meal editor schedules extra prepared portions by default', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 8, 22, 12))
     const data = createTestFixtureData(new Date(2026, 8, 22))
     data.meals = []
     data.leftovers = []

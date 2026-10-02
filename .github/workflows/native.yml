@@ -1,0 +1,16 @@
+name: Validate native foundation
+on:
+  pull_request:
+    branches: ['main']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test portable Swift contract and offline storage
+        run: swift test --package-path native/MyHubCore
+      - name: Build standalone SwiftUI app for iPhone and iPad simulator
+        run: xcodebuild -project native/MyHub.xcodeproj -scheme MyHub -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath native/DerivedData CODE_SIGNING_ALLOWED=NO build

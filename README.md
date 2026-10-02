@@ -138,13 +138,19 @@ GitHub remains the encrypted backup and calendar-ingestion source. MyHub uploads
 
 When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. Files larger than 1 MB use GitHub's authenticated raw media representation, as required by the Contents API.[3] A separate producer for that encrypted snapshot is not bundled with this static client.
 
-The configured private repository and Supabase project have been verified end to end. The current encrypted data contains the 27 uploaded cookbook recipes as the only recipe records, 3,328 events reparsed from the 2 encrypted calendar feeds in `America/Denver`, zero homework assignments, eight normalized 8 oz chicken ingredients, and researched nutrition estimates for the four recipes that previously lacked values. The personalized settings and calendar workflow remain encrypted throughout.
+Historical September 23 verification recorded 27 cookbook recipes, 3,328 calendar events, two feeds in `America/Denver`, and zero homework assignments. After the deployed Canvas UID fix, the September 28 handoff recorded an import of **3,332 events and 168 assignments in the connected browser**, with School rendering homework. On September 29, a fresh stateless client used the current application resolve/decrypt path and verified **3,361 events and 168 assignments in Supabase revision 60** (updated September 28 at 22:53:52.106 UTC). Only aggregate counts/status were emitted. This confirms remote retrieval, not fresh-browser School rendering or record-by-record identity with the earlier import; those remain unverified. See `docs/CONTINUATION_2026-09-28.md` for exact scope and blockers.
 
 The approved private access link is a revocable bearer capability. It contains only a random Supabase row ID and a high-entropy browser decryption/write key in the URL fragment—not readable user data or the GitHub token. URI fragments stay client-side rather than being sent with the page request.[6] Opening the link loads and decrypts the latest Supabase AppData automatically, configures the encrypted GitHub backup, removes the capability from the active address, and opens Home without a form, QR, code, or sign-in. Creating a replacement link revokes previous broker rows. Manual GitHub token and passphrase entry remains a recovery fallback.
 
 Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
 
 The GitHub target must be private. Browser integration tests verify private-repository enforcement, encrypted Supabase payloads, cross-device revision propagation, and ciphertext-only GitHub writes. Deleting the latest GitHub snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
+
+### Three distinct calendar refresh paths
+
+- **Settings → Refresh feed:** direct browser fetch; Canvas can reject it under provider CORS. This does not imply a parser failure.
+- **Scheduled encrypted snapshot:** the private MyHub-Data workflow fetches feeds every 30 minutes; Calendar imports its encrypted result on open, explicit check, and every 15 minutes while open with unlocked GitHub access. The workflow itself does not push AppData to Supabase.
+- **Manual ICS import:** download an export privately, preview a local file in Calendar and confirm the import. This is the reviewed fallback when direct fetch fails.
 
 ## Clearing Data
 
@@ -168,7 +174,7 @@ public/recipes/    Original local recipe photography
 
 ## Future iOS App
 
-The future Apple application will reimplement the proven workflows using SwiftUI instead of wrapping this website in a WebView. The TypeScript domain models, invariants, calculation fixtures, and JSON backup format are the initial interoperability contract. See `MYHUB_IOS_PLAN.md`.
+The future Apple application will reimplement the proven workflows using SwiftUI instead of wrapping this website in a WebView. The TypeScript domain models, invariants, calculation fixtures, and JSON backup format are the initial interoperability contract. A standalone, local-only SwiftUI foundation now lives in `native/`; feature editing and sync remain pending acceptance. See `MYHUB_IOS_PLAN.md`, `contracts/v2/README.md`, and `docs/NATIVE_DECISIONS.md`.
 
 ## Privacy
 

@@ -1,0 +1,408 @@
+{
+  "format": "myhub-backup",
+  "formatVersion": 2,
+  "appVersion": "contract-fixture",
+  "exportedAt": "2026-01-05T12:00:00.000Z",
+  "data": {
+    "schemaVersion": 2,
+    "initializedAt": "2026-01-05T12:00:00.000Z",
+    "events": [
+      {
+        "id": "event-busy",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "title": "Synthetic occupied time",
+        "date": "2026-01-05",
+        "startTime": "08:00",
+        "endTime": "08:30",
+        "kind": "event"
+      }
+    ],
+    "assignments": [
+      {
+        "id": "task-low",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "title": "Synthetic task",
+        "course": "TEST 101",
+        "dueDate": "2026-01-05",
+        "dueTime": "12:00",
+        "priority": "low",
+        "estimatedMinutes": 30,
+        "progress": 0,
+        "status": "not-started",
+        "notes": "",
+        "subtasks": []
+      },
+      {
+        "id": "task-high",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "title": "Synthetic task",
+        "course": "TEST 101",
+        "dueDate": "2026-01-05",
+        "dueTime": "12:00",
+        "priority": "high",
+        "estimatedMinutes": 30,
+        "progress": 0,
+        "status": "not-started",
+        "notes": "",
+        "subtasks": []
+      }
+    ],
+    "recipes": [
+      {
+        "id": "recipe-synthetic",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "name": "Synthetic bean bowl",
+        "description": "Contract fixture only",
+        "image": "",
+        "category": "Dinner",
+        "tags": [],
+        "favorite": false,
+        "originalYield": 4,
+        "prepMinutes": 5,
+        "cookMinutes": 10,
+        "ingredients": [
+          {
+            "id": "ingredient-a",
+            "name": "Beans",
+            "canonicalName": "beans",
+            "quantity": 1,
+            "unit": "lb",
+            "category": "Pantry"
+          },
+          {
+            "id": "ingredient-b",
+            "name": "Beans",
+            "canonicalName": "beans",
+            "quantity": 8,
+            "unit": "oz",
+            "category": "Pantry"
+          },
+          {
+            "id": "ingredient-c",
+            "name": "Seasoning",
+            "canonicalName": "seasoning",
+            "quantity": null,
+            "unit": "tsp",
+            "category": "Pantry"
+          }
+        ],
+        "steps": [
+          {
+            "id": "step-a",
+            "text": "Combine synthetic ingredients."
+          }
+        ],
+        "nutritionPerServing": {
+          "calories": 200,
+          "protein": 10,
+          "carbs": 30,
+          "fat": 4,
+          "sugar": 0,
+          "saturatedFat": 0,
+          "fiber": 5,
+          "sodium": 100
+        },
+        "sourceLabel": "Synthetic fixture",
+        "nutritionProvenance": {
+          "kind": "unknown",
+          "capturedAt": "2026-01-05T12:00:00.000Z",
+          "estimated": false,
+          "sourceLabel": "Synthetic fixture"
+        }
+      }
+    ],
+    "packagedFoods": [],
+    "meals": [
+      {
+        "id": "meal-batch",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "date": "2026-01-05",
+        "slot": "dinner",
+        "recipeId": "recipe-synthetic",
+        "servings": 2,
+        "preparedServings": 12,
+        "consumedServings": 2,
+        "sourceSnapshot": {
+          "sourceType": "recipe",
+          "sourceId": "recipe-synthetic",
+          "name": "Synthetic bean bowl",
+          "image": "",
+          "nutritionPerServing": {
+            "calories": 200,
+            "protein": 10,
+            "carbs": 30,
+            "fat": 4,
+            "sugar": 0,
+            "saturatedFat": 0,
+            "fiber": 5,
+            "sodium": 100
+          },
+          "nutritionProvenance": {
+            "kind": "unknown",
+            "capturedAt": "2026-01-05T12:00:00.000Z",
+            "estimated": false,
+            "sourceLabel": "Synthetic fixture"
+          },
+          "capturedAt": "2026-01-05T12:00:00.000Z"
+        }
+      },
+      {
+        "id": "meal-next",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "date": "2026-01-06",
+        "slot": "dinner",
+        "leftoverId": "leftover-batch",
+        "servings": 2,
+        "preparedServings": 10,
+        "consumedServings": 2,
+        "sourceSnapshot": {
+          "sourceType": "custom",
+          "name": "Custom meal",
+          "nutritionPerServing": {
+            "calories": 0,
+            "protein": 0,
+            "carbs": 0,
+            "fat": 0,
+            "sugar": 0,
+            "saturatedFat": 0,
+            "fiber": 0,
+            "sodium": 0
+          },
+          "nutritionProvenance": {
+            "kind": "unknown",
+            "capturedAt": "2026-01-05T12:00:00.000Z",
+            "estimated": false,
+            "sourceLabel": "Migrated meal"
+          },
+          "capturedAt": "2026-01-05T12:00:00.000Z"
+        }
+      }
+    ],
+    "leftovers": [
+      {
+        "id": "leftover-batch",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "generated",
+        "sourceMealId": "meal-batch",
+        "sourceSnapshot": {
+          "sourceType": "recipe",
+          "sourceId": "recipe-synthetic",
+          "name": "Synthetic bean bowl",
+          "nutritionPerServing": {
+            "calories": 200,
+            "protein": 10,
+            "carbs": 30,
+            "fat": 4,
+            "sugar": 3,
+            "saturatedFat": 1,
+            "fiber": 5,
+            "sodium": 100
+          },
+          "nutritionProvenance": {
+            "kind": "manual",
+            "capturedAt": "2026-01-05T12:00:00.000Z",
+            "estimated": false,
+            "sourceLabel": "Synthetic fixture"
+          },
+          "capturedAt": "2026-01-05T12:00:00.000Z"
+        },
+        "preparedOn": "2026-01-05",
+        "servingsRemaining": 8,
+        "storageLocation": "Refrigerator"
+      }
+    ],
+    "foodLog": [
+      {
+        "id": "log-synthetic",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "date": "2026-01-05",
+        "name": "Synthetic bean bowl",
+        "servings": 2,
+        "nutritionSnapshot": {
+          "calories": 400,
+          "protein": 20,
+          "carbs": 60,
+          "fat": 8,
+          "sugar": 6,
+          "saturatedFat": 2,
+          "fiber": 10,
+          "sodium": 200
+        },
+        "origin": "recipe",
+        "provenanceSnapshot": {
+          "kind": "unknown",
+          "capturedAt": "2026-01-05T12:00:00.000Z",
+          "estimated": false,
+          "sourceLabel": "Migrated food log"
+        },
+        "sourceSnapshot": {
+          "sourceType": "recipe",
+          "name": "Synthetic bean bowl",
+          "nutritionPerServing": {
+            "calories": 400,
+            "protein": 20,
+            "carbs": 60,
+            "fat": 8,
+            "sugar": 6,
+            "saturatedFat": 2,
+            "fiber": 10,
+            "sodium": 200
+          },
+          "nutritionProvenance": {
+            "kind": "unknown",
+            "capturedAt": "2026-01-05T12:00:00.000Z",
+            "estimated": false,
+            "sourceLabel": "Migrated food log"
+          },
+          "capturedAt": "2026-01-05T12:00:00.000Z"
+        }
+      }
+    ],
+    "pantry": [],
+    "activeGroceryList": null,
+    "groceryHistory": [
+      {
+        "id": "trip-completed",
+        "createdAt": "2026-01-05T12:00:00.000Z",
+        "updatedAt": "2026-01-05T12:00:00.000Z",
+        "source": "manual",
+        "name": "Synthetic trip",
+        "completedAt": "2026-01-05T12:00:00.000Z",
+        "items": [
+          {
+            "id": "grocery-item",
+            "createdAt": "2026-01-05T12:00:00.000Z",
+            "updatedAt": "2026-01-05T12:00:00.000Z",
+            "source": "manual",
+            "name": "Beans",
+            "canonicalName": "beans",
+            "quantity": 1.5,
+            "unit": "lb",
+            "category": "Pantry",
+            "checked": true,
+            "sourceRecipeIds": ["recipe-synthetic"],
+            "pantryQuantity": 0,
+            "pantryDecision": "none"
+          }
+        ],
+        "sourceStartDate": "2026-01-04",
+        "sourceEndDate": "2026-01-10",
+        "sourceMealIds": ["meal-batch"]
+      }
+    ],
+    "settings": {
+      "name": "",
+      "measurementSystem": "us",
+      "appearance": "system",
+      "calendarTimeZone": "America/Denver",
+      "nutritionTargets": {
+        "calories": 200,
+        "protein": 10,
+        "carbs": 30,
+        "fat": 4,
+        "sugar": 3,
+        "saturatedFat": 1,
+        "fiber": 5,
+        "sodium": 100
+      },
+      "study": {
+        "earliestTime": "08:00",
+        "latestTime": "12:00",
+        "defaultBlockMinutes": 30,
+        "breakMinutes": 15,
+        "maxBlockMinutes": 60,
+        "avoidTimes": []
+      },
+      "mealPlanning": {
+        "mode": "balanced",
+        "preferredSlots": ["breakfast", "lunch", "dinner"],
+        "targetPrepServings": 4,
+        "favorAvailablePantry": true,
+        "lateDayNutritionBias": false
+      },
+      "groceryCategories": [
+        {
+          "id": "category-produce",
+          "name": "Produce",
+          "sortOrder": 0,
+          "enabled": true
+        },
+        {
+          "id": "category-meat-seafood",
+          "name": "Meat & Seafood",
+          "sortOrder": 1,
+          "enabled": true
+        },
+        {
+          "id": "category-dairy",
+          "name": "Dairy",
+          "sortOrder": 2,
+          "enabled": true
+        },
+        {
+          "id": "category-bakery",
+          "name": "Bakery",
+          "sortOrder": 3,
+          "enabled": true
+        },
+        {
+          "id": "category-frozen",
+          "name": "Frozen",
+          "sortOrder": 4,
+          "enabled": true
+        },
+        {
+          "id": "category-pantry",
+          "name": "Pantry",
+          "sortOrder": 5,
+          "enabled": true
+        },
+        {
+          "id": "category-snacks",
+          "name": "Snacks",
+          "sortOrder": 6,
+          "enabled": true
+        },
+        {
+          "id": "category-household",
+          "name": "Household",
+          "sortOrder": 7,
+          "enabled": true
+        },
+        {
+          "id": "category-other",
+          "name": "Other",
+          "sortOrder": 8,
+          "enabled": true
+        }
+      ],
+      "groceryStaples": [
+        {
+          "id": "staple-migrated-0",
+          "name": "Synthetic oats",
+          "canonicalName": "synthetic oats",
+          "quantity": 1,
+          "unit": "each",
+          "category": "Other",
+          "enabled": true
+        }
+      ],
+      "calendarFeeds": []
+    }
+  }
+}

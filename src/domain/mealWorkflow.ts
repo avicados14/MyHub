@@ -146,7 +146,10 @@ export const syncLeftoverForMeal = (data: AppData, meal: MealEntry, timestamp: s
   const current = data.leftovers.find((leftover) => leftover.sourceMealId === meal.id)
   let leftovers: Leftover[]
   if (remaining <= 0) {
-    leftovers = data.leftovers.filter((leftover) => leftover.sourceMealId !== meal.id)
+    // Retain a depleted batch identity so later consumption corrections stay linked.
+    leftovers = data.leftovers.map((leftover) =>
+      leftover.sourceMealId === meal.id ? { ...leftover, servingsRemaining: 0, updatedAt: timestamp } : leftover,
+    )
   } else if (current) {
     leftovers = data.leftovers.map((leftover) =>
       leftover.id === current.id
