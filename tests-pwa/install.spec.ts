@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test('production phone app installs its shell and opens existing routes offline', async ({ page, context }) => {
   const browserErrors: string[] = []
+  page.on('requestfailed', (request) => console.error('PWA failed resource:', new URL(request.url()).pathname))
   page.on('pageerror', (error) => {
     browserErrors.push(error.message)
     console.error('PWA runtime error:', error.message)

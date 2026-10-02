@@ -29,3 +29,9 @@ Implement the selected free Home Screen web-app path, retain existing web functi
 ## Avoid repeating mistakes
 
 Do not clear credentials on a network error. Do not rotate private links to pair each new device. Do not use a guessable numeric PIN without a separate approval/rate-limit design. Do not deploy a merge before browser checks pass. Never log private credentials, pairing codes, decrypted records, or private access URLs.
+
+## Browser verification follow-up
+
+- All 135 browser tests passed, including device-code login and outage recovery; all 9 focused meal/Canvas regressions passed.
+- The separate installed-app test found an offline startup failure after successful online startup. The static asset cache now ignores Origin-based Vary headers for its exact public build-file allowlist; broker and other API requests remain outside the cache. Production smoke testing runs before the longer browser suite to catch installation failures earlier.
+- Final offline verification and release remain gated on CI.

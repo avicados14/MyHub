@@ -34,7 +34,8 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate' && (url.pathname === scope.pathname || url.pathname === new URL(index).pathname)) {
     event.respondWith(fetch(request).catch(() => caches.open(CACHE).then(cache => cache.match(index))));
   } else if (URLS.includes(url.href)) {
-    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(request)) || fetch(request)));
+    // Public build assets are invariant; preview servers can vary headers by Origin.
+    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(request, { ignoreVary: true })) || fetch(request)));
   }
 });
 `,
