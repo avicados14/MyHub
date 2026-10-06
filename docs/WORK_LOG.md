@@ -147,3 +147,9 @@ User explicitly authorized publishing, isolated production verification and clea
 ## Release checkpoint — CI base-path diagnosis
 
 Paused to assess the approximately 30-minute release cycle. Local full suite passed 135/135 and live production tests passed, but GitHub CI passed 132 existing cases and failed the three new closet fixtures. Reproduced with GITHUB_ACTIONS=true: the fixture navigated away from /MyHub/, triggering a reload and mock credential rejection. Corrected only test navigation to preserve the current base path; focused desktop/tablet/mobile checks pass in the reproduced CI configuration. Temporary production credentials, fixture files, obsolete patch and baseline worktree are cleaned up. Continue through normal full CI and Pages deployment; do not bypass gates or alter application auth to accommodate mocks.
+
+## Final release review — session-bound revocation
+
+PR #25 passed standard CI and merged. While its unchanged Pages deployment ran, final security review identified account-metadata refresh could defeat per-link revocation. Applied an additive private session binding migration and deployed bridge v3, binding each issued session to its original capability before returning tokens. Removed redundant account-metadata mutation. Expanded SQL tests pass for existing ownership behavior, unbound-session denial and refreshed metadata isolation. Frontend behavior remains the validated release. This is a concrete authorization correction, not a test-gate workaround.
+
+Live refresh isolation passed and test fixtures were removed. Bridge v4 additionally verifies the issued user matches the mapped owner before binding. At the release checkpoint, the frontend is merged and its Pages workflow is running; the backend correction is already deployed and verified. Continue by recording/merging the server hardening through normal CI and verifying the published frontend artifact. No frontend behavior changed during this correction.

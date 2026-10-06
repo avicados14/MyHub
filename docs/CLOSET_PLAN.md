@@ -20,3 +20,7 @@ Add a narrowly scoped server-side capability-to-Supabase Auth bridge, not a seco
 ## Verification and release
 
 Run current regression tests plus new import/duplicate tests, real transaction-based RLS/numbering/plan checks, storage policy checks, browser flow tests and a production build. Run Supabase security advisors after migration. Keep private photos, capability values and exports out of Git. Deploy only additive backend components. Document any unverified external dependency honestly.
+
+## Additive session-binding hardening plan
+
+Create a private session-to-capability table with RLS and service-only insertion, keyed to Auth session lifetime. Replace the private authorization lookup to require that binding and its original live capability; do not authorize using refreshable account-wide metadata. Deploy the bridge that registers sessions before token disclosure. Add refresh-isolation/unbound-session regression tests, run live refreshed-token denial, and rerun advisors. Existing wardrobe/history/storage rows and frontend routes remain intact.

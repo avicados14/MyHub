@@ -6,7 +6,7 @@ Base: MyHub `0efd3de98e1054bf7e5ac72f2339c7399c591565`.
 
 - `npm run check`: passed (portable contract, formatting, ESLint, full project type checking, 135 unit tests, production build).
 - `supabase/tests/closet_rls.sql`: passed against the MyHub database inside a transaction that rolled back all fixtures. Ownership insert/update/read denial, immutable garment numbering, snapshot immutability, plan persistence, repeat-plan idempotency, dirty exclusion, laundry reset, storage folder ownership and revoked-link denial.
-- Both additive closet migrations applied to MyHub. Private `wardrobe` bucket created with MIME/size restrictions.
+- All three additive closet migrations applied to MyHub. Private `wardrobe` bucket created with MIME/size restrictions.
 - `myhub-closet-session` deployed with capability authentication; existing encrypted-data broker unchanged.
 - `closet-recommend` deployed with JWT authentication and explicit disabled response; no OpenAI call made or key added by this change.
 - Supabase security advisor: table/storage policy findings resolved. Final advisor reports one Auth warning: leaked-password protection disabled. This passwordless bridge does not accept passwords. Enabling the project setting requires Dashboard access and a Pro-or-higher plan; the connector does not expose Auth configuration. See [Supabase remediation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
@@ -46,3 +46,9 @@ Cleanup review found no identical source files, copied standalone app, public ga
 ## Remaining operational points
 
 Existing ClothesPlanner account data/photos have not been moved; its Wearwise project is inactive. Import your private ZIP through the new UI. Do not copy its public starter images into MyHub. Closet photos are private access-controlled Supabase objects, not end-to-end encrypted AppData. Historical images are retained when needed by plans. A review discarded during an uncertain failure can leave a private staged object for later reconciliation. JSON exports contain paths/metadata, not image bytes.
+
+## Session revocation hardening
+
+Final review identified that account-wide metadata can change when another device signs in, and a refreshed old session could inherit it. Migration `closet_session_binding` replaces that authorization lookup with a service-only immutable mapping from the JWT session ID to its originating MyHub capability. The lookup also requires the Auth session to exist. Function v4 registers the binding before returning tokens and removes the now-redundant account-metadata update. Expanded rollback tests cover unbound Auth sessions, client binding denial and refresh carrying another active link's metadata. The initial frontend release remains unchanged by this server-side correction.
+
+Live verification passed bound-session issuance/private upload, then real Auth token refresh after capability revocation: refreshed JWTs retained the original session ID and were denied reads/uploads. The test image was removed, the Auth session signed out and the temporary capability deleted. Advisors found no database/storage findings; the documented leaked-password setting warning remains.
