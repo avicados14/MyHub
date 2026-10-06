@@ -4,6 +4,7 @@ import { AppShell } from './AppShell'
 import { useApp } from './AppContext'
 import { useGitHubSync } from '../sync/GitHubSyncContext'
 
+const ClosetPage = lazy(() => import('../features/closet/ClosetPage'))
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
 const CalendarPage = lazy(() => import('../features/calendar/CalendarPage'))
 const SchoolPage = lazy(() => import('../features/school/SchoolPage'))
@@ -36,6 +37,7 @@ export default function App() {
         >
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/closet" element={<ClosetPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/school" element={<SchoolPage />} />
             <Route path="/food" element={<FoodPage />} />

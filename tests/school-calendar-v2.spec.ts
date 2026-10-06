@@ -262,6 +262,20 @@ test('study blocks support pointer date-time moves and pointer edge resizing', a
   nextDay.setDate(nextDay.getDate() + 1)
   const targetDate = localDate(nextDay)
   const targetDay = page.locator(`[data-calendar-date="${targetDate}"]`)
+  // Align the source day before computing pointer coordinates. On narrow screens,
+  // the adjacent day's center can otherwise lie outside the visible scroll area.
+  if (testInfo.project.name === 'mobile') {
+    await blockButton.locator('xpath=ancestor::section[@data-calendar-date]').evaluate((day) => {
+      const grid = day.closest<HTMLElement>('.week-grid')!
+      grid.scrollLeft += day.getBoundingClientRect().left - grid.getBoundingClientRect().left
+    })
+    await expect
+      .poll(async () => {
+        const box = await targetDay.boundingBox()
+        return Boolean(box && box.x + box.width / 2 < page.viewportSize()!.width)
+      })
+      .toBe(true)
+  }
   const blockBox = await blockButton.boundingBox()
   const targetBox = await targetDay.boundingBox()
   expect(blockBox).not.toBeNull()
