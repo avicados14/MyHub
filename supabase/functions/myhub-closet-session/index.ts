@@ -53,9 +53,7 @@ Deno.serve(async (request: Request) => {
       const mapped = await admin.rpc('closet_identity_record', { new_user_id: userId })
       if (mapped.error) throw mapped.error
     }
-    const updated = await admin.auth.admin.updateUserById(userId, { app_metadata: { myhub_access_id: body.id } })
-    if (updated.error) throw updated.error
-    // Generate after metadata updates; account changes can invalidate earlier OTPs.
+    // Generate a fresh login token; generateLink never sends email.
     const link = await admin.auth.admin.generateLink({ type: 'magiclink', email: record.email })
     if (link.error) throw link.error
     const verificationType = link.data.properties.verification_type
@@ -65,7 +63,8 @@ Deno.serve(async (request: Request) => {
       token_hash: link.data.properties.hashed_token,
       type: verificationType,
     })
-    if (verified.error || !verified.data.session) throw verified.error ?? new Error('No session')
+    if (verified.error || !verified.data.session || verified.data.user?.id !== userId)
+      throw verified.error ?? new Error('Session identity mismatch')
     // Recheck revocation after session issuance. RLS independently checks it on every request.
     const active = await admin
       .from('myhub_private_access')
@@ -75,6 +74,17 @@ Deno.serve(async (request: Request) => {
       .maybeSingle()
     if (active.error || !active.data) return response(request, { error: 'Private link revoked' }, 403)
     const session = verified.data.session
+    // verifyOtp issued this trusted JWT. Bind its immutable session ID before exposing tokens.
+    const payload = session.access_token.split('.')[1].replaceAll('-', '+').replaceAll('_', '/')
+    const claims = JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '=')))
+    if (typeof claims.session_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(claims.session_id))
+      throw new Error('Missing Auth session')
+    const bound = await admin.rpc('closet_bind_session', {
+      new_session_id: claims.session_id,
+      new_user_id: userId,
+      new_access_id: body.id,
+    })
+    if (bound.error) throw bound.error
     return response(request, {
       access_token: session.access_token,
       refresh_token: session.refresh_token,
