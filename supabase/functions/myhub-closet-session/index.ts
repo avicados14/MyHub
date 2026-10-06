@@ -43,17 +43,28 @@ Deno.serve(async (request: Request) => {
       return response(request, { error: 'Open an active MyHub private link to access your closet.' }, 403)
     const identity = await admin.rpc('closet_identity_record').single()
     if (identity.error) throw identity.error
-    const email = (identity.data as { email: string }).email
-    // generateLink does not send email. The reserved address is a service-owned identity.
-    const link = await admin.auth.admin.generateLink({ type: 'magiclink', email })
-    if (link.error) throw link.error
-    const userId = link.data.user.id
-    const mapped = await admin.rpc('closet_identity_record', { new_user_id: userId })
-    if (mapped.error) throw mapped.error
+    const record = identity.data as { email: string; user_id: string | null }
+    let userId = record.user_id
+    if (!userId) {
+      // Provision the reserved service-owned identity without sending email.
+      const provisioned = await admin.auth.admin.generateLink({ type: 'magiclink', email: record.email })
+      if (provisioned.error) throw provisioned.error
+      userId = provisioned.data.user.id
+      const mapped = await admin.rpc('closet_identity_record', { new_user_id: userId })
+      if (mapped.error) throw mapped.error
+    }
     const updated = await admin.auth.admin.updateUserById(userId, { app_metadata: { myhub_access_id: body.id } })
     if (updated.error) throw updated.error
+    // Generate after metadata updates; account changes can invalidate earlier OTPs.
+    const link = await admin.auth.admin.generateLink({ type: 'magiclink', email: record.email })
+    if (link.error) throw link.error
+    const verificationType = link.data.properties.verification_type
+    if (verificationType !== 'magiclink' && verificationType !== 'signup') throw new Error('Unexpected OTP type')
     const verifier = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-    const verified = await verifier.auth.verifyOtp({ token_hash: link.data.properties.hashed_token, type: 'magiclink' })
+    const verified = await verifier.auth.verifyOtp({
+      token_hash: link.data.properties.hashed_token,
+      type: verificationType,
+    })
     if (verified.error || !verified.data.session) throw verified.error ?? new Error('No session')
     // Recheck revocation after session issuance. RLS independently checks it on every request.
     const active = await admin

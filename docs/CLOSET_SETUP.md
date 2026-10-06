@@ -59,4 +59,6 @@ To implement AI later, extend `closet-recommend` after server-side `getUser()` v
 - `supabase/tests/closet_rls.sql`: rollback-only live database checks using isolated fixtures. Verifies ownership, immutable numbers/snapshots, atomic planning, retry, laundry, private folders and revoked-link denial.
 - Run Supabase security advisors after migrations.
 
-Production fixture creation was rejected by automatic approval review; no persistent test access credential was added. A real authenticated upload round trip still needs verification using an already linked device, or separately approved isolated test access. Never describe mocked browser tests as a live production end-to-end test.
+An explicitly authorized live production round trip passed session issuance, private uploads, numbering, outfit persistence/retry, laundry and anonymous/revoked-access denial. Synthetic rows/images were removed and the temporary credential revoked. Browser ZIP/review coverage uses a simulated backend; it is not described as a production UI test.
+
+The final security advisor reports only leaked-password protection disabled. The current capability bridge is passwordless. Enable this project-wide setting in Supabase Dashboard Auth settings if the project plan supports it (Pro or higher); the available connector cannot change it. [Remediation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).

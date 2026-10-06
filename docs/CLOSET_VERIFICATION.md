@@ -1,4 +1,4 @@
-# Closet Planner verification — 2026-10-05
+# Closet Planner verification — 2026-10-06
 
 Base: MyHub `0efd3de98e1054bf7e5ac72f2339c7399c591565`.
 
@@ -9,7 +9,7 @@ Base: MyHub `0efd3de98e1054bf7e5ac72f2339c7399c591565`.
 - Both additive closet migrations applied to MyHub. Private `wardrobe` bucket created with MIME/size restrictions.
 - `myhub-closet-session` deployed with capability authentication; existing encrypted-data broker unchanged.
 - `closet-recommend` deployed with JWT authentication and explicit disabled response; no OpenAI call made or key added by this change.
-- Supabase security advisor: zero findings after explicit deny policies were added to service-only tables (including an existing pairing-table informational notice).
+- Supabase security advisor: table/storage policy findings resolved. Final advisor reports one Auth warning: leaked-password protection disabled. This passwordless bridge does not accept passwords. Enabling the project setting requires Dashboard access and a Pro-or-higher plan; the connector does not expose Auth configuration. See [Supabase remediation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 
 ## Browser/live verification status
 
@@ -17,11 +17,13 @@ The desktop/tablet/mobile contract test is `tests/closet.spec.ts`. It covers the
 
 Passed on desktop, tablet and mobile (3 tests), including a failed database insert followed by retry, actual image decoding through the Storage API mock, confirmed replacement with historical snapshot preservation, invalid/oversized ZIP entries, and WCAG A/AA automated checks. The normal Playwright Chromium download returned a truncated archive; verification used Chromium 138 supplied through an isolated npm browser package, without changing the project browser configuration. The usual CI browser still needs its own run before merging.
 
-The full browser regression run passed 134 of 135 tests. The one failure was reproduced on unchanged main: the existing mobile calendar drag test targeted a day outside the viewport. The test now scrolls the source day into view before calculating pointer coordinates, without weakening move/resize assertions; the focused test passed on desktop, tablet and mobile. A second full-suite run was unnecessary because only that test setup changed.
+The initial full browser regression run passed 134 of 135 tests. The mobile calendar pointer failure was reproduced on unchanged main: the test targeted a day outside the viewport. The test now scrolls the source day into view before calculating pointer coordinates, preserving all assertions; the focused test passed on all three sizes. A full rerun and GitHub's standard-browser CI are release gates in [PR #25](https://github.com/avicados14/MyHub/pull/25).
 
-Automatic approval review rejected creating a persistent production test access credential. No such fixture was created. A real sign-in/private image upload round trip requires an already linked device or explicit approval for isolated test access. The SQL checks above rolled back all data and did not need persistent credentials.
+After explicit user authorization, a temporary production capability verified real session issuance, private Storage upload, signed image access, sequential garment numbers, anonymous denial, atomic plan persistence, immutable snapshots, same-plan retry and laundry reset. Synthetic garments, plans and images were removed. Revoking the temporary capability denied both new sessions and existing-JWT row/upload access. No user data was modified.
 
-Automatic approval review also rejected pushing to `avicados14/MyHub` because it requires explicit publishing authorization. Frontend changes are prepared locally, not merged or published; backend migrations/functions described above are already applied.
+The live test caught OTP invalidation when account metadata was updated after link generation. The bridge now updates metadata first, generates a fresh token, and uses its actual verification type. Existing identities no longer repeat the provisioning/mapping operation on every login. Function version 2 is deployed.
+
+Cleanup review found no identical source files, copied standalone app, public garment photos, or unused-import lint findings. Existing shared components, native contracts and historical migrations were retained. Publishing is authorized; PR #25 carries the release through the unchanged validation/deployment workflow.
 
 ## Changed files and rationale
 
