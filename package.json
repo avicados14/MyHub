@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -23,6 +23,8 @@
   "dependencies": {
     "@fontsource-variable/manrope": "^5.2.6",
     "@fontsource-variable/newsreader": "^5.2.8",
+    "@supabase/supabase-js": "2.57.4",
+    "fflate": "0.8.2",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

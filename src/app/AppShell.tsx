@@ -8,6 +8,7 @@ import {
   Search,
   Settings,
   ShoppingBasket,
+  Shirt,
   Sparkles,
   X,
 } from 'lucide-react'
@@ -24,6 +25,7 @@ const navigation = [
   { to: '/food', label: 'Food', icon: ChefHat, section: 'main' },
   { to: '/grocery', label: 'Grocery', icon: ShoppingBasket, section: 'main' },
   { to: '/pantry', label: 'Pantry', icon: PackageOpen, section: 'main' },
+  { to: '/closet', label: 'Closet Planner', icon: Shirt, section: 'main' },
   { to: '/settings', label: 'Settings', icon: Settings, section: 'utility' },
 ]
 

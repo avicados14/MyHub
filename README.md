@@ -202,3 +202,9 @@ GitHub Pages is static hosting, so the private access link is a bearer capabilit
 [4]: https://supabase.com/docs/guides/database/postgres/row-level-security 'Supabase: Row Level Security'
 [5]: https://supabase.com/docs/guides/functions 'Supabase: Edge Functions'
 [6]: https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment 'MDN: URI fragment'
+
+## Closet Planner
+
+MyHub now includes a private **Closet Planner** at `#/closet`, integrated into its existing navigation and private-device access. Import a closet ZIP or individual photos, review exact/likely duplicates, edit garments, plan clean outfits using Fahrenheit weather, run laundry, and export wardrobe/history JSON. Photos use a private Supabase bucket and never enter the public repository. Recommendations are rule-based; OpenAI is not enabled.
+
+See [Closet setup, privacy, environment variables, redirects, imports and future AI](docs/CLOSET_SETUP.md), [architecture/migration plan](docs/CLOSET_PLAN.md), and [verification report](docs/CLOSET_VERIFICATION.md). MyHub's existing encrypted AppData and GitHub backup remain separate from the new owner-protected wardrobe tables.
