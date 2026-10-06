@@ -134,7 +134,8 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
     })
     db.close()
   })
-  await page.goto('/#/closet')
+  // Preserve the deployment base path so this is a hash navigation, not an app reload.
+  await page.goto(new URL('#/closet', page.url()).href)
   await expect(page.getByRole('heading', { name: 'Your wardrobe' })).toBeVisible()
   expect(bridgeCalls).toBe(1)
   const images = await page.evaluate(() =>
