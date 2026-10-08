@@ -19,3 +19,12 @@ createRoot(document.getElementById('root')!).render(
     </HashRouter>
   </StrictMode>,
 )
+
+// Waiting updates activate after existing app windows close, avoiding mixed releases.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
+      // Installation is optional; the online application remains usable.
+    })
+  })
+}

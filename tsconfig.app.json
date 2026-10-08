@@ -19,5 +19,5 @@
     "jsx": "react-jsx",
     "types": ["vitest/globals", "@testing-library/jest-dom", "vite/client"]
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests", "tests-pwa"]
 }

@@ -1085,6 +1085,9 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="settings-card settings-card--sync" as="section">
+            <Link className="button button--secondary" to="/devices">
+              Install MyHub / connect a device
+            </Link>
             <div className="settings-card__header" id="github-sync">
               <div>
                 <h2>Supabase sync + GitHub backup</h2>

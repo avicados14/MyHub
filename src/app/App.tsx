@@ -13,6 +13,7 @@ const RecipePage = lazy(() => import('../features/food/RecipePage'))
 const PantryPage = lazy(() => import('../features/pantry/PantryPage'))
 const GroceryPage = lazy(() => import('../features/grocery/GroceryPage'))
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'))
+const DevicesPage = lazy(() => import('../features/settings/DevicesPage'))
 const PrivateAccessPage = lazy(() => import('../features/settings/PrivateAccessPage'))
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/pantry" element={<PantryPage />} />
             <Route path="/grocery" element={<GroceryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/devices" element={<DevicesPage />} />
             <Route path="/access" element={<PrivateAccessPage />} />
             <Route path="*" element={<Navigate replace to="/" />} />
           </Routes>
