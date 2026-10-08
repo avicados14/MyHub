@@ -1,0 +1,87 @@
+.closet-page {
+  display: grid;
+  gap: 24px;
+}
+.closet-overview {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  gap: 24px;
+}
+.closet-page .card {
+  padding: 24px;
+}
+.closet-temperature {
+  font-size: 3rem;
+  margin: 10px 0;
+}
+.closet-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0;
+}
+.closet-toolbar > div:first-child {
+  margin-right: auto;
+}
+.closet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px;
+}
+.closet-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #f3f3ee;
+}
+.closet-placeholder {
+  display: grid;
+  place-items: center;
+  color: #535b59;
+}
+.closet-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 18px 0;
+}
+.closet-picks > div {
+  width: 130px;
+}
+.closet-notice {
+  padding: 12px;
+  border: 1px solid #ae7878;
+  border-radius: 8px;
+  background: #fff2ed;
+  color: #663b33;
+}
+.closet-import,
+.closet-garment {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.closet-import .field {
+  margin: 10px 0;
+}
+.closet-history {
+  border-top: 1px solid #d7dcd5;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.closet-page input[type='file'] {
+  max-width: 100%;
+}
+@media (max-width: 700px) {
+  .closet-overview {
+    grid-template-columns: 1fr;
+  }
+  .closet-page .card {
+    padding: 16px;
+  }
+  .closet-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+}

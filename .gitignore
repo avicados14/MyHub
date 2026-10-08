@@ -20,3 +20,6 @@ artifacts/
 DerivedData/
 xcuserdata/
 *.xcuserstate
+
+# Supabase CLI local cache
+supabase/.temp/
