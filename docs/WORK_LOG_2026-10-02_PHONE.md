@@ -35,3 +35,10 @@ Do not clear credentials on a network error. Do not rotate private links to pair
 - All 135 browser tests passed, including device-code login and outage recovery; all 9 focused meal/Canvas regressions passed.
 - The separate installed-app test found an offline startup failure after successful online startup. The static asset cache now ignores Origin-based Vary headers for its exact public build-file allowlist; broker and other API requests remain outside the cache. Production smoke testing runs before the longer browser suite to catch installation failures earlier.
 - Production Chromium offline verification now passes after the cache fix. Added Safari-engine coverage for the iPhone installation/offline and device-code flows. Final cross-browser verification and release remain gated on CI.
+
+## October 8 integration and offline test correction
+
+- Integrated main through PR #26, retaining Closet Planner and immutable session authorization. Local full check passes 143 unit tests plus contracts, formatting, lint, types and production build.
+- Live pairing authorization, single-use, expiry, cancellation and revocation assertions passed with rollback. Closet ownership, planning, storage and revoked-session refresh assertions passed with rollback.
+- Native CI 37807602599 passed. Web CI 37807602636 passed static/unit/build gates and Chromium offline startup, then exposed Playwright WebKit offline emulation issue [#42775](https://github.com/microsoft/playwright/issues/42775).
+- The PWA test now shuts down its real origin and verifies an uncached HTTP request fails before testing offline navigation in both engines. Chromium additionally retains offline emulation. No assertions were removed. Physical iPhone acceptance remains unverified.

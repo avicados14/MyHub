@@ -1,6 +1,33 @@
-import { expect, test } from '@playwright/test'
+import { expect, test as base } from '@playwright/test'
+import { preview } from 'vite'
 
-test('production phone app installs its shell and opens existing routes offline', async ({ page, context }) => {
+const test = base.extend<{ stopOrigin: () => Promise<void> }>({
+  stopOrigin: async ({ baseURL }, use) => {
+    const origin = new URL(baseURL!)
+    const server = await preview({ preview: { host: origin.hostname, port: Number(origin.port), strictPort: true } })
+    let stopped = false
+    const stop = async () => {
+      if (stopped) return
+      stopped = true
+      await new Promise<void>((resolve, reject) => {
+        server.httpServer.close((error) => (error ? reject(error) : resolve()))
+        if ('closeAllConnections' in server.httpServer) server.httpServer.closeAllConnections()
+      })
+    }
+    try {
+      await use(stop)
+    } finally {
+      await stop()
+    }
+  },
+})
+
+test('production phone app installs its shell and opens existing routes offline', async ({
+  page,
+  context,
+  browserName,
+  stopOrigin,
+}) => {
   const browserErrors: string[] = []
   page.on('requestfailed', (request) => console.error('PWA failed resource:', new URL(request.url()).pathname))
   page.on('pageerror', (error) => {
@@ -21,7 +48,11 @@ test('production phone app installs its shell and opens existing routes offline'
   })
   await page.reload()
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
-  await context.setOffline(true)
+  // WebKit offline emulation blocks service workers (Playwright #42775).
+  // Stop the real origin in both engines and prove uncached HTTP cannot succeed.
+  await stopOrigin()
+  await expect(page.request.get('./offline-negative-control', { timeout: 3000 })).rejects.toThrow()
+  if (browserName === 'chromium') await context.setOffline(true)
   await page.reload()
   await expect(
     page.getByRole('heading', { name: /Good (morning|afternoon|evening)/u }),
