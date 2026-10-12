@@ -1,3 +1,5 @@
+import { assetUrl } from '../../utilities/assets'
+
 export const IMAGE_WARNING_BYTES = 1024 * 1024
 export const IMAGE_LIMIT_BYTES = 3 * 1024 * 1024
 export const VIDEO_LIMIT_BYTES = 40 * 1024 * 1024
@@ -29,6 +31,5 @@ export const readFileAsDataUrl = (file: Blob): Promise<string> =>
 
 export const resolveFoodImage = (path: string | undefined): string | undefined => {
   if (!path) return undefined
-  if (/^(?:data:|blob:|https?:\/\/)/i.test(path)) return path
-  return `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
+  return assetUrl(path)
 }
