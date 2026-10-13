@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Card, PageHeader } from '../../components/ui'
+import { Card, Field, PageHeader } from '../../components/ui'
 import { useGitHubSync } from '../../sync/GitHubSyncContext'
 import { redeemDevicePairing } from '../../sync/devicePairing'
 
@@ -29,12 +29,12 @@ export default function DevicesPage() {
     }
   }
   return (
-    <div className="private-access-page">
+    <div className="private-access-page device-setup-page">
       <PageHeader
         title="MyHub on your phone"
         description="Install free, then connect using a temporary code from your signed-in device."
       />
-      <Card>
+      <Card className="private-access-card">
         <h2>1. Add MyHub to your Home Screen</h2>
         <p>
           On iPhone or iPad, open this site in Safari, tap Share, then Add to Home Screen. Keep Open as Web App enabled
@@ -46,7 +46,7 @@ export default function DevicesPage() {
           separate sign-ins.
         </p>
       </Card>
-      <Card>
+      <Card className="private-access-card">
         <h2>2. Get a code on your connected device</h2>
         <p>
           Open Settings → Install MyHub / connect a device on your signed-in computer or phone. Codes last 10 minutes,
@@ -65,6 +65,9 @@ export default function DevicesPage() {
         >
           Generate sign-in code
         </button>
+        {sync.privateAccessActive && (sync.status !== 'current' || sync.paused) && (
+          <p role="status">Resume sync in Settings and wait until it is current before generating a code.</p>
+        )}
         {pairing && (
           <div role="status">
             <p>
@@ -88,9 +91,10 @@ export default function DevicesPage() {
           </div>
         )}
       </Card>
-      <Card>
+      <Card className="private-access-card">
         <h2>3. Enter the code on your new device</h2>
         <form
+          className="device-signin-form"
           onSubmit={(event) => {
             event.preventDefault()
             if (!consent || busy) return
@@ -102,8 +106,7 @@ export default function DevicesPage() {
             })
           }}
         >
-          <label>
-            Sign-in code
+          <Field label="Sign-in code">
             <input
               value={code}
               onChange={(event) => setCode(event.target.value)}
@@ -111,16 +114,19 @@ export default function DevicesPage() {
               autoCapitalize="characters"
               spellCheck={false}
               maxLength={40}
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              aria-describedby="device-code-hint"
               required
             />
-          </label>
+          </Field>
+          <p id="device-code-hint">Enter all 16 characters. Spaces and hyphens are optional.</p>
           <p>
             Connecting loads the synced MyHub copy and replaces this device’s local data. Export a backup in Settings
             first if you have local work to keep.
           </p>
-          <label>
-            <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /> I want to
-            load my synced data on this device.
+          <label className="device-signin-consent">
+            <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
+            <span>I want to load my synced data on this device.</span>
           </label>
           <button className="button button--primary" disabled={busy || !consent} type="submit">
             {busy ? 'Working…' : 'Connect this device'}

@@ -792,6 +792,14 @@ function PlannerView({
                           >
                             ×
                           </button>
+                          {meal.recipeId && data.recipes.some((recipe) => recipe.id === meal.recipeId) ? (
+                            <Link
+                              className="button button--secondary"
+                              to={`/food/recipes/${meal.recipeId}/cook?servings=${meal.preparedServings || meal.servings}`}
+                            >
+                              Cook recipe
+                            </Link>
+                          ) : null}
                           <div className="meal-slot__controls">
                             <button
                               type="button"
