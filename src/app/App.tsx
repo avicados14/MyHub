@@ -9,6 +9,7 @@ const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
 const CalendarPage = lazy(() => import('../features/calendar/CalendarPage'))
 const SchoolPage = lazy(() => import('../features/school/SchoolPage'))
 const FoodPage = lazy(() => import('../features/food/FoodPage'))
+const CookingPage = lazy(() => import('../features/food/CookingPage'))
 const RecipePage = lazy(() => import('../features/food/RecipePage'))
 const PantryPage = lazy(() => import('../features/pantry/PantryPage'))
 const GroceryPage = lazy(() => import('../features/grocery/GroceryPage'))
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/school" element={<SchoolPage />} />
             <Route path="/food" element={<FoodPage />} />
+            <Route path="/food/recipes/:recipeId/cook" element={<CookingPage />} />
             <Route path="/food/recipes/:recipeId" element={<RecipePage />} />
             <Route path="/pantry" element={<PantryPage />} />
             <Route path="/grocery" element={<GroceryPage />} />

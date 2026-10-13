@@ -39,6 +39,7 @@ import type {
 import { formatQuantity } from '../../domain/recipe'
 import { addDays, formatDate, makeId, startOfWeek, toLocalDate } from '../../utilities/date'
 import '../../styles/grocery-v2.css'
+import GroceryShare from './GroceryShare'
 
 const FALLBACK_CATEGORIES: GroceryCategory[] = [
   'Produce',
@@ -344,6 +345,7 @@ export default function GroceryPage() {
           ) : undefined
         }
       />
+      {list ? <GroceryShare key={list.id} list={list} /> : null}
       {!list ? (
         <Card>
           <EmptyState

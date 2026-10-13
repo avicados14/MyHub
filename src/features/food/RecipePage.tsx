@@ -154,6 +154,9 @@ export default function RecipePage() {
             </span>
           </div>
           <div className="recipe-hero__actions">
+            <Link className="button button--primary" to={`/food/recipes/${recipe.id}/cook?servings=${servings}`}>
+              Start cooking
+            </Link>
             <button className="button button--primary" type="button" onClick={() => setPlanOpen(true)}>
               <CalendarPlus aria-hidden="true" /> Add to meal plan
             </button>
