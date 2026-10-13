@@ -77,3 +77,17 @@ Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the nativ
 - [x] Establish a synthetic legacy migration bridge fixture and verify web migration plus native v2 import/re-encode. At `56ec15d`, all 19 Swift tests and simulator build passed (`36622604118`); local web gates passed 124 tests. Direct Swift v1 migration and broader legacy repair coverage remain unchecked.
 
 - Daily Home dashboard increment: configured-zone clock, visible daily agenda, due homework, explicit meal amounts and eight-field consumption totals implemented with synthetic boundary tests. Mac CI validation pending; full dashboard parity and device acceptance stay open.
+
+## Grocery sharing and cooking mode — October 12
+
+- [x] Inspect current meal, recipe, pantry, and encrypted sync behavior.
+- [x] Build grocery text from reviewed purchase quantities, grouped by category, excluding purchased items by default.
+- [x] Add preview, email and SMS drafts, system share menu, clipboard and manual-copy fallback.
+- [x] Add cooking route with scaled ingredients, ingredient checkboxes, readable steps, notes and optional screen wake lock.
+- [x] Link cooking mode from recipe details and planned recipe meals using the intended serving count.
+- [x] Pass contract, formatting, lint, type checks, 146 unit tests and production build; three additional wake-lock lifecycle tests also pass.
+- [ ] Run desktop/tablet/mobile browser regressions. Local Chromium download is invalid; GitHub CI will run on the pull request.
+- [ ] Push branch and open pull request. Owner approved publication to the public repository on October 12; publish through the authenticated GitHub connector.
+- [ ] Verify actual email/SMS handoff and screen wake lock on the owner's phone (requires installed apps and device settings).
+
+Sharing opens a draft for the user to send; it is not automatic server delivery. No paid service, new Supabase tables or plaintext recipe storage is needed. Cooking progress is temporary and does not update meal consumption. Existing encrypted recipe storage remains the source of truth.
