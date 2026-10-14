@@ -290,6 +290,8 @@ export interface GroceryStaple {
 }
 
 export interface UserSettings {
+  clothingProfile?: string
+  clothingTemperatureRules?: string
   name: string
   measurementSystem: 'us' | 'metric'
   appearance: 'light' | 'dark' | 'system'

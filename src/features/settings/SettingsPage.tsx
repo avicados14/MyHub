@@ -39,6 +39,7 @@ import '../../styles/crosscut-v2.css'
 import { createBackup, parseBackup } from '../../storage/database'
 import { useGitHubSync, type GitHubSyncStatus } from '../../sync/GitHubSyncContext'
 import { makeId } from '../../utilities/date'
+import { ClothingProfile } from '../closet/ClothingProfile'
 
 const WEEKDAYS = [
   { value: 0, label: 'Sun' },
@@ -60,6 +61,7 @@ const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
 
 const SETTINGS_SECTIONS = [
   ['general', 'General'],
+  ['clothing-profile', 'Clothing profile'],
   ['study', 'Study planner'],
   ['meals', 'Meal planning'],
   ['grocery-settings', 'Grocery'],
@@ -444,6 +446,7 @@ export default function SettingsPage() {
           ))}
         </nav>
         <div className="settings-content">
+          <ClothingProfile />
           <Card className="settings-card" as="section">
             <div className="settings-card__header" id="general">
               <h2>General</h2>

@@ -6,6 +6,7 @@ import { categories, occasions, recommend, type Garment, type Occasion, type Out
 import { extractZip, importBatch, inspectImage, isDuplicate, type Incoming } from './import'
 import * as api from './api'
 import './closet.css'
+import { ClothingProfile } from './ClothingProfile'
 
 function Photo({ path, name }: { path: string; name: string }) {
   const [url, setUrl] = useState(''),
@@ -187,6 +188,10 @@ export default function ClosetPage() {
   }
   return (
     <div className="closet-page">
+      <details>
+        <summary>My clothing profile and temperature rules</summary>
+        <ClothingProfile />
+      </details>
       <PageHeader
         title="Closet Planner"
         description="Your private wardrobe, ready for the day."

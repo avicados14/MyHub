@@ -563,6 +563,8 @@
     "UserSettings": {
       "type": "object",
       "properties": {
+        "clothingProfile": { "anyOf": [{ "type": "string" }] },
+        "clothingTemperatureRules": { "anyOf": [{ "type": "string" }] },
         "name": { "type": "string" },
         "measurementSystem": { "anyOf": [{ "const": "us" }, { "const": "metric" }] },
         "appearance": { "anyOf": [{ "const": "light" }, { "const": "dark" }, { "const": "system" }] },
