@@ -848,6 +848,8 @@ public struct GroceryHistoryEntry: Codable, Equatable {
 }
 
 public struct UserSettings: Codable, Equatable {
+    public var clothingProfile: String?
+    public var clothingTemperatureRules: String?
     public var name: String
     public var measurementSystem: String
     public var appearance: String
@@ -860,6 +862,8 @@ public struct UserSettings: Codable, Equatable {
     public var calendarFeeds: [CalendarFeed]
 
     enum CodingKeys: String, CodingKey {
+        case clothingProfile
+        case clothingTemperatureRules
         case name
         case measurementSystem
         case appearance
@@ -873,6 +877,8 @@ public struct UserSettings: Codable, Equatable {
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(clothingProfile, forKey: .clothingProfile)
+        try container.encodeIfPresent(clothingTemperatureRules, forKey: .clothingTemperatureRules)
         try container.encode(name, forKey: .name)
         try container.encode(measurementSystem, forKey: .measurementSystem)
         try container.encode(appearance, forKey: .appearance)

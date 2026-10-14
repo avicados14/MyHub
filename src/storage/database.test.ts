@@ -139,3 +139,11 @@ describe('local persistence', () => {
     expect(await loadPrivateAccessCredential()).toBeNull()
   })
 })
+
+it('preserves optional private clothing preferences through backup import', () => {
+  const data = createEmptyData()
+  data.settings.clothingProfile = 'Synthetic coral shirt and charcoal trousers.'
+  data.settings.clothingTemperatureRules = 'Use daily feels-like low; undershirts are tanks.'
+  expect(parseBackup(JSON.stringify(createBackup(data))).data).toEqual(data)
+  expect(parseBackup(JSON.stringify(createBackup(createEmptyData()))).data.settings.clothingProfile).toBeUndefined()
+})
