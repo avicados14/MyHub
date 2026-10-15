@@ -1,210 +1,156 @@
 # MyHub
 
-MyHub is a private, web-first college command center. It connects class schedules, homework, automatic study planning, recipes, meal planning, nutrition, pantry inventory, and grocery shopping in one locally persistent application.
+MyHub is a private, web-first college planner for calendars, homework, study time, recipes, meals, nutrition, pantry inventory, groceries, and a Closet Planner. It runs on desktop and can be installed as a free Home Screen web app on a phone or tablet. A separate, incomplete native SwiftUI application lives in `native/`.
 
-The web application is the product-validation phase for a future native SwiftUI application for iPhone and iPad. It is a normal standalone React project that can be cloned, run, tested, modified, and deployed without Manus.
+**[Open MyHub](https://avicados14.github.io/MyHub/)** · **[Phone installation and sign-in guide](docs/PHONE_INSTALL_GUIDE.md)** · **[Grocery sharing and cooking guide](docs/GROCERY_SHARING_AND_COOKING.md)**
 
-## What MyHub Does
+## Install on your phone and connect your data
 
-**School planning** combines editable calendar events, multiple local iCalendar (`.ics`) sources, homework with subtasks and provenance, estimated work, preferred study hours, and configured avoid-time ranges. The deterministic planner works through each deadline and preserves blocks that the user locks, completes, moves, or resizes.
+1. On iPhone/iPad, open MyHub in Safari and choose **Share → Add to Home Screen**. Leave **Open as Web App** enabled if shown. On Android, use Chrome's **Install app** or **Add to Home screen** option.
+2. Open MyHub from its new Home Screen icon **before connecting**. The installed app and the browser may use separate storage.
+3. On an already-connected device, open **Settings → Install MyHub / connect a device**. Resume sync if paused and wait until its status is **current**, then choose **Generate sign-in code**.
+4. On the new device, open the same page, enter the 16-character code, check **I want to load my synced data on this device**, and choose **Connect this device**.
+5. Confirm your records appear. If the device already has unsynced work, export it before connecting: connection replaces its local AppData with the synced copy.
 
-**Food planning** combines structured recipes and reviewable imports, cooking-friendly serving scaling and conversions, a weekly meal planner, prepared-versus-consumed servings, reusable leftovers, packaged foods, Open Food Facts barcode/text search, immutable food-log snapshots, and daily nutrition progress.
+Codes expire after 10 minutes and work once. Spaces and hyphens are optional. Generating another code cancels the previous pending code. Keep codes private. If connection fails after redemption, generate a new code on the connected device.
 
-**Pantry and groceries** aggregate compatible recipe ingredients for the remaining current planner week, use prepared quantities and saved yield overrides, compare those requirements with saved inventory, and persist the generation window and source meals. Pantry Check requires an explicit decision for every requirement and added staple. Completed trips become immutable history, and only confirmed purchases return to the pantry.
+The existing device must have active private access; a manually configured GitHub backup connection alone is insufficient. Open its existing private access link or follow the Settings recovery flow. **Do not routinely create replacement private links to add devices:** replacement revokes the shared capability used by existing devices. Use a sign-in code instead.
 
-## Project Status
+No paid Apple hosting, Apple Developer membership, App Store, or TestFlight distribution is required for this web-app path. GitHub and Supabase service quotas still apply. Full installation, recovery, offline, and update instructions are in the [phone guide](docs/PHONE_INSTALL_GUIDE.md).
 
-Version **0.1.0** is a complete Phase 1 web prototype. The school, calendar, food, pantry, grocery, search, backup, and encrypted-sync workflows are integrated and verified together. `REQUIREMENTS_AUDIT.md` records the final evidence and the boundaries reserved for native iPhone and iPad work.
+## Features and boundaries
 
-Working now:
+### Calendar, school, and study planning
 
-- Responsive dashboard with connected school and food summaries, including a compact previous/current/next schedule centered on the live current time
-- Day, week, and month calendar views
-- Full manual-event creation, editing, and deletion with source-aware display
-- Previewed, confirmed multi-file `.ics` imports for Canvas, Google Calendar, and other exports
-- RFC line unfolding, UTC/TZID conversion into a persisted IANA display time zone, all-day handling, rich event metadata, DST-aware recurrence, stable deduplication, and Canvas assignment mapping
-- Full homework editing, progress/status, subtasks, source links, and imported provenance
-- Deterministic conflict-aware study scheduling through deadlines, including configured avoid-time ranges
-- Study-block locking, completion, removal, accessible form editing, direct week-column drag, and 15-minute resize buttons
-- Structured recipe creation/editing, source metadata, notes, ingredient overrides, persistent current yield, and US/metric display conversion; the personal cookbook uses 8 oz for every former 6–8 oz chicken ingredient and includes ingredient-based nutrition for every recipe
-- Reviewable recipe drafts from permitted URL JSON-LD, pasted content, local image OCR, or user-supplied social caption/screenshot/video frame
-- Weekly meal planning for recipes, packaged foods, custom foods, and leftovers, with explicit planned, prepared, consumed, and leftover balances; extra prepared portions can automatically fill later open days, every linked day shows the same decreasing batch balance, and planning never records consumption automatically
-- Packaged-food entry and food-log search by barcode or text through read-only Open Food Facts, local Nutrition Facts OCR with confirmation, and immutable eight-metric nutrition snapshots
-- Daily calories, protein, carbohydrates, fat, sugar, saturated fat, fiber, and sodium progress; editable targets/limits; and totals that exclude planned meals until consumption is recorded
-- Pantry inventory across pantry, refrigerator, and freezer
-- Current-week grocery aggregation across compatible mass, volume, and count units using prepared servings and recipe overrides; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry handoff; and immutable history with source-window provenance
-- Universal search across recipes, homework, pantry items, packaged foods, grocery history, and meal plans
-- Empty first run, IndexedDB persistence, versioned migration, JSON export/import, and confirmed clear-all
-- End-to-end encrypted Supabase cross-device data, encrypted GitHub backup, a revocable private access link, and shareable query-backed Settings sections
-- Light, dark, desktop, tablet, and mobile layouts
-- GitHub Pages deployment workflow
+- Day, week, and month calendars; manual event creation, editing, and deletion.
+- Previewed, confirmed multi-file `.ics` imports with UTC/TZID conversion into the configured calendar time zone, DST-aware recurrence, exclusions, stable deduplication, and Canvas homework mapping.
+- Editable homework, subtasks, progress, source links, and imported provenance.
+- Deterministic study scheduling through deadlines with preferred hours, breaks, and avoid-time ranges. Locked, completed, moved, or resized study blocks remain protected.
+- Keyboard-operable forms and 15-minute resize controls alongside pointer drag-and-drop.
 
-In development or intentionally limited:
+### Food, meals, and cooking
 
-- Local `.ics` file import is the reliable browser path. Encrypted private-repository calendar snapshots can be checked after GitHub Sync is unlocked; no private feed URL or calendar file is bundled with MyHub.
-- Recipe URL and Open Food Facts requests are direct browser requests and can fail because of CORS, network access, or incomplete public records. The interface preserves provenance, requires review for imported/OCR values, and offers pasted/manual entry fallbacks; CI uses mocked lookup/parser tests and does not require remote data.
-- Image/video OCR runs locally in the browser after the user selects a file. Social intake accepts only user-supplied captions, screenshots, or local video frames; MyHub does not log in, scrape, or bypass platform restrictions.
-- Study blocks can be dragged between week columns, but drag-and-drop is never required: the edit form and labeled keyboard-operable resize buttons remain available.
-- Supabase uses optimistic document revisions. If two devices change the same stale revision before either refreshes, MyHub stops the stale write instead of silently overwriting the newer encrypted copy.
+- Structured recipe editing, serving scaling, US/metric conversion, and reviewable import drafts from supported URL JSON-LD, pasted text, local image OCR, or user-supplied social content.
+- Weekly planning for recipes, packaged foods, custom foods, and leftovers. Planned, prepared, and consumed amounts remain separate. Linked meal-prep days share one decreasing batch balance.
+- Barcode/text lookup through Open Food Facts, reviewed Nutrition Facts OCR, immutable food-log snapshots, and eight nutrition metrics. Planning a meal does not record it as eaten.
+- **Start cooking** on a recipe, or **Cook recipe** on a planned recipe meal, opens scaled ingredients, checkboxes, step navigation, and notes. Cooking progress is temporary and does not modify consumption or leftovers. **Keep screen awake** depends on browser/device support.
 
-Planned for native iOS and iPadOS after web review:
+### Pantry, groceries, and sharing
 
-- A true SwiftUI interface using platform-native navigation
-- EventKit calendar access
-- Camera, Vision, VisionKit, PhotosPicker, and barcode scanning
-- A Share Extension for legitimate intake from Safari, Photos, and supported apps
-- A synchronization decision between CloudKit and a private shared backend
+- Pantry, refrigerator, and freezer inventory.
+- Current-week grocery aggregation using compatible units, prepared servings, and recipe overrides; explicit Pantry Check and staple review; editable shopping; confirmed-purchase pantry updates; immutable trip history.
+- **Share grocery list** previews the list and offers **Email list**, **Text list**, **Copy list**, and native sharing where supported. Email/SMS actions open drafts; you choose the recipient and send in your own app. MyHub does not automatically deliver messages. Purchased items are excluded unless selected.
 
-## Screenshots
+### Closet Planner
 
-### Desktop Dashboard
+- Import a ZIP or individual garment photos, review exact/likely duplicates, edit metadata, and preserve stable numerical garment IDs.
+- Rule-based suggestions from clean garments, occasion, and available Fahrenheit weather. Golden, Colorado is the default; device location is optional and requested only when selected.
+- **Save outfit & mark dirty** saves a dated immutable garment snapshot and immediately marks selected garments dirty, including future-dated plans. **Run laundry** marks garments clean. There is currently no separate “mark worn later” workflow.
+- Private Supabase photo storage and owner/session-protected wardrobe/history tables. Closet data is separate from encrypted AppData and requires a network connection.
+- **Export JSON** exports wardrobe/history metadata, not image files. It is separate from Settings' AppData backup; a complete photo backup/restore flow is not implemented. OpenAI recommendations are not enabled.
 
-![MyHub desktop dashboard](docs/screenshots/dashboard-desktop.png)
+See [Closet setup and privacy](docs/CLOSET_SETUP.md), [architecture](docs/CLOSET_PLAN.md), and the dated [verification report](docs/CLOSET_VERIFICATION.md).
 
-### Mobile Meal Planner
+### Shared application behavior
 
-![MyHub mobile weekly meal planner](docs/screenshots/meal-planner-mobile.png)
+Responsive light/dark layouts, a connected dashboard, universal search across the six core academic/food collections, IndexedDB persistence, versioned backup validation/migration, confirmed data replacement, encrypted AppData sync, and encrypted GitHub backup. Fresh installs contain **no personal recipes, assignments, or wardrobe** until data is imported or connected.
 
-### Mobile Grocery Mode
+## Storage, sync, and privacy
 
-![MyHub mobile grocery shopping list](docs/screenshots/grocery-mobile.png)
+There are two different storage models:
 
-## Technology Stack
+| Data                                                                                     | Local/cloud storage                                                         | Protection and backup                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Core AppData: calendar, homework, recipes, meals, nutrition, pantry, groceries, settings | Immediate IndexedDB cache; primary Supabase document; private GitHub backup | Client-side AES-256-GCM encryption, PBKDF2-SHA-256 with 310,000 iterations. Supabase and GitHub receive ciphertext for these documents.                                  |
+| Closet garments, outfit snapshots, and photos                                            | Supabase tables and private Storage bucket                                  | Supabase Auth, ownership policies, and immutable session-to-private-link binding. **Not client-side end-to-end encrypted** and not included in AppData/GitHub snapshots. |
+| Settings JSON export                                                                     | Downloaded file                                                             | Plaintext core AppData; validated/migrated on import. Excludes sync credentials and Closet Planner data.                                                                 |
+| Closet JSON export                                                                       | Downloaded file                                                             | Plaintext garment/history metadata, including image paths; excludes photo bytes and sync credentials.                                                                    |
 
-MyHub uses **React 19**, **TypeScript**, **Vite**, semantic CSS, **IndexedDB**, **Vitest**, and **Playwright**. Hash routing keeps every application route usable on GitHub Pages without server rewrites. Feature routes are lazy-loaded to keep the initial bundle focused.
+A private link contains a random record ID and a browser decryption/write key in its URL fragment. Opening it resolves and decrypts AppData, configures encrypted backup, removes the capability from the active address, and opens Home. Device codes transfer this same capability in an encrypted, temporary package; they do not create independently revocable device accounts. Replacing a private link revokes access for all devices using it. Unlink removes the local connection only.
 
-## Getting Started
+Core capability/pairing tables deny direct client access; narrow Edge Functions validate capabilities and enforce optimistic revision writes. Concurrent stale edits are blocked rather than silently overwriting newer data. Closet Planner exchanges an active MyHub capability for a Supabase Auth session; its RLS checks that session's original, still-active link. See [access architecture](ACCESS_ARCHITECTURE.md) and [Closet setup](docs/CLOSET_SETUP.md).
 
-Requirements:
+GitHub backup targets the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc`, with conditional SHA writes and explicit conflict handling. For manual recovery setup, use a fine-grained token limited to that repository with **Contents: read and write**, plus the existing encryption passphrase. Do not grant workflow/admin permissions or use a classic PAT. Credentials remain separate from AppData and exports.
 
-- Node.js 22 or newer
-- npm 10 or newer
-- Git
+MyHub includes no advertising, behavioral analytics, or marketing software. Core calculations and OCR run in the browser. External lookups, weather, Supabase Auth/Storage, and GitHub requests still contact their respective services. A compromised browser can access decrypted records and credentials while the app is active. Keep private links, codes, plaintext exports, and calendar-feed URLs private.
+
+### Calendar refresh paths
+
+- **Settings → Refresh feed:** a direct browser fetch. Canvas/provider CORS restrictions can block it.
+- **Scheduled encrypted snapshot:** the separate private MyHub-Data workflow fetches feeds every 30 minutes. With unlocked GitHub access, Calendar imports `myhub-data/v1/calendars.enc` on open, explicit check, and every 15 minutes while open. The producer does not itself push AppData to Supabase; the browser's ordinary encrypted sync propagates imported records.
+- **Manual ICS import:** privately download an export, preview it in Calendar, and confirm. This is the fallback when direct fetching fails.
+
+Historical personal-data counts and their verification limits are recorded in [the September continuation report](docs/CONTINUATION_2026-09-28.md); they are not current live-data guarantees.
+
+### Offline use, updates, and clearing data
+
+After a successful online load and service-worker installation, the production app can reopen its cached shell and local AppData offline. Sign-in, synchronization, Closet Planner, weather, remote images/lookups, and first-time OCR downloads require a connection. Temporary connection failures retain the saved private-access credential. Close all app windows and reopen online to activate a waiting update.
+
+**Settings → Data & privacy → Clear all data** empties core AppData after confirmation. If connected, that empty state propagates to Supabase and GitHub; this is **not merely a local cache reset**. Connection settings remain. It does not erase Closet Planner tables/photos or historical Git commits. Export before clearing. Browser storage removal can discard unsynced local changes; the last synced document remains recoverable through an active link or connected device.
+
+## Development
+
+Requirements: Node.js 22+, npm, and Git.
 
 ```bash
 git clone https://github.com/avicados14/MyHub.git
 cd MyHub
-npm install
+npm ci
 npm run dev
 ```
 
-Open the local address printed by Vite, normally `http://localhost:5173`.
+Open the address Vite prints, normally `http://localhost:5173`. Build with `npm run build`; preview with `npm run preview`. `dist/` contains the generated site and service worker. `GITHUB_ACTIONS=true` selects the `/MyHub/` base path for GitHub Pages.
 
-## Building
-
-```bash
-npm run build
-npm run preview
-```
-
-The optimized site is written to `dist/`. The GitHub Actions environment automatically sets the Vite base path to `/MyHub/` for repository-subpath hosting.[1]
-
-## Testing
-
-```bash
-npm run lint
-npm run typecheck
-npm run test
-npx playwright install chromium
-npm run test:e2e
-npm run build
-```
-
-Run the complete non-browser quality gate with:
+### Tests
 
 ```bash
 npm run check
+npx playwright install --with-deps chromium webkit
+npm run test:e2e
 ```
 
-Domain tests cover recipe scaling, fraction formatting, safe unit normalization/conversion, meal consumption and leftovers, nutrition-label parsing, mocked Open Food Facts lookup/failure fallback, deterministic recipe imports and suggestions, grocery aggregation and pantry decisions, long-horizon and avoid-time scheduling, ICS recurrence/classification/deduplication, encrypted calendar snapshots, large GitHub Contents files, Supabase private-link encryption and revisions, IndexedDB persistence, and backup validation. Browser tests cover food authoring/review/planning/consumption, pantry and grocery lifecycle, homework/subtasks/provenance, event CRUD, confirmed multi-file imports, study-block pointer and keyboard editing, populated dashboard ordering, all 6 universal-search collections, plaintext backup recovery, and provider-level cross-device sync from a private link through Supabase to GitHub backup. Final release counts are recorded in `REQUIREMENTS_AUDIT.md` after the complete matrix runs.
+`npm run check` validates generated portable contracts/Swift models, formatting, lint, actual TypeScript projects, unit tests, and the production build. Browser tests use desktop/tablet/mobile Chromium plus iPhone WebKit device pairing. Network-dependent acceptance tests use synthetic fixtures and mocked services.
 
-## GitHub Pages Deployment
+To test production Home Screen/offline behavior at the expected Pages path:
 
-The workflow at `.github/workflows/pages.yml` runs on pushes to `main` and can also be started manually. It installs dependencies, checks formatting, runs linting, strict type checking, unit tests, the complete Playwright Chromium matrix, and a production build. That matrix contains desktop, tablet, and mobile projects. The workflow then uses the current GitHub Pages artifact workflow with least-privilege `pages: write` and `id-token: write` permissions.[2]
-
-In the repository, choose **Settings → Pages → Build and deployment → GitHub Actions** if it is not already selected.
-
-## Data Storage
-
-Structured data is stored immediately in IndexedDB under the current browser profile and origin. When the private access link is used, the browser also pushes a client-encrypted AppData document to Supabase and keeps the encrypted GitHub snapshot as backup history. A fresh installation starts with empty personal collections until it opens the private link.
-
-Use **Settings → Data & privacy → Export data** to download a portable JSON backup. Import validates and migrates the MyHub backup envelope before replacing local data. **JSON exports are plaintext** and may contain private academic and food records.
-
-## Encrypted Supabase Sync and GitHub Backup
-
-IndexedDB remains the immediate offline cache. Supabase stores the live cross-device AppData document as AES-256-GCM ciphertext produced in the browser with PBKDF2-SHA-256 at 310,000 iterations. The database has Row Level Security enabled and grants no direct anonymous table access; a narrow Edge Function resolves an unguessable active record, checks a hashed write capability, and enforces monotonic optimistic revisions.[4][5] Supabase never receives readable recipes, academic records, calendar details, the private-link key, or the recovery passphrase.
-
-GitHub remains the encrypted backup and calendar-ingestion source. MyHub uploads a versioned encrypted snapshot to the private `avicados14/MyHub-Data` repository at `myhub-data/v1/snapshot.enc`, using conditional blob-SHA writes and explicit conflict handling. The scheduled private-repository workflow continues to refresh the separately encrypted calendar snapshot.
-
-When GitHub Sync is unlocked, Calendar can also consume an encrypted `myhub-data/v1/calendars.enc` snapshot through a narrow provider API. The calendar page never receives the token or passphrase: the provider fetches with the authenticated client and decrypts in memory. The page checks on open, offers an explicit refresh, and rechecks every 15 minutes while it remains open. Files larger than 1 MB use GitHub's authenticated raw media representation, as required by the Contents API.[3] A separate producer for that encrypted snapshot is not bundled with this static client.
-
-Historical September 23 verification recorded 27 cookbook recipes, 3,328 calendar events, two feeds in `America/Denver`, and zero homework assignments. After the deployed Canvas UID fix, the September 28 handoff recorded an import of **3,332 events and 168 assignments in the connected browser**, with School rendering homework. On September 29, a fresh stateless client used the current application resolve/decrypt path and verified **3,361 events and 168 assignments in Supabase revision 60** (updated September 28 at 22:53:52.106 UTC). Only aggregate counts/status were emitted. This confirms remote retrieval, not fresh-browser School rendering or record-by-record identity with the earlier import; those remain unverified. See `docs/CONTINUATION_2026-09-28.md` for exact scope and blockers.
-
-The approved private access link is a revocable bearer capability. It contains only a random Supabase row ID and a high-entropy browser decryption/write key in the URL fragment—not readable user data or the GitHub token. URI fragments stay client-side rather than being sent with the page request.[6] Opening the link loads and decrypts the latest Supabase AppData automatically, configures the encrypted GitHub backup, removes the capability from the active address, and opens Home without a form, QR, code, or sign-in. Creating a replacement link revokes previous broker rows. Manual GitHub token and passphrase entry remains a recovery fallback.
-
-Create a **fine-grained personal access token** limited to the single `MyHub-Data` repository with **Contents: read and write**. Do not use a classic PAT and do not grant workflow or administration permissions. The token is encrypted at rest in a separate IndexedDB credential record; it is never part of `AppData`, JSON backups, source code, logs, or remote plaintext.
-
-The GitHub target must be private. Browser integration tests verify private-repository enforcement, encrypted Supabase payloads, cross-device revision propagation, and ciphertext-only GitHub writes. Deleting the latest GitHub snapshot cannot guarantee erasure from Git history, forks, caches, or GitHub retention.
-
-### Three distinct calendar refresh paths
-
-- **Settings → Refresh feed:** direct browser fetch; Canvas can reject it under provider CORS. This does not imply a parser failure.
-- **Scheduled encrypted snapshot:** the private MyHub-Data workflow fetches feeds every 30 minutes; Calendar imports its encrypted result on open, explicit check, and every 15 minutes while open with unlocked GitHub access. The workflow itself does not push AppData to Supabase.
-- **Manual ICS import:** download an export privately, preview a local file in Calendar and confirm the import. This is the reviewed fallback when direct fetch fails.
-
-## Clearing Data
-
-Open **Settings → Data & privacy**, export anything you want to keep, and choose **Clear all data**. MyHub asks for explicit confirmation and restores empty personal collections while retaining reasonable non-personal defaults. The GitHub connection is not deleted; pause/unlink it separately, and use the explicit remote-delete control if needed.
-
-## Repository Structure
-
-```text
-src/app/           Application shell, routes, and persistent state provider
-src/components/    Reusable accessible UI primitives
-src/domain/        Portable models and deterministic business logic
-src/features/      Dashboard, calendar, school, food, pantry, grocery, settings
-src/storage/       IndexedDB and backup boundary
-src/styles/        Semantic tokens and responsive layouts
-src/utilities/     Date, identity, and asset helpers
-supabase/          Versioned RLS migrations and the narrow encrypted-document Edge Function
-tests/             Playwright browser acceptance tests
-public/recipes/    Original local recipe photography
-.github/workflows/ Validation and GitHub Pages deployment
+```bash
+GITHUB_ACTIONS=true npm run build
+npx playwright test --config=playwright.pwa.config.ts
 ```
 
-## Future iOS App
+The offline suite runs Chromium and WebKit, stops the test origin, proves uncached requests fail, then checks cached navigation. This is browser-engine evidence, not physical iPhone installation acceptance. PowerShell users should set `$env:GITHUB_ACTIONS='true'` before running the build.
 
-The future Apple application will reimplement the proven workflows using SwiftUI instead of wrapping this website in a WebView. The TypeScript domain models, invariants, calculation fixtures, and JSON backup format are the initial interoperability contract. A standalone, local-only SwiftUI foundation now lives in `native/`; feature editing and sync remain pending acceptance. See `MYHUB_IOS_PLAN.md`, `contracts/v2/README.md`, and `docs/NATIVE_DECISIONS.md`.
+For Swift tests and simulator build commands, see [native/README.md](native/README.md). They require a Mac/Xcode; GitHub's native workflow runs them on macOS. Current results belong to the relevant commit's CI run and dated work log, not the historical totals in `REQUIREMENTS_AUDIT.md`.
 
-## Privacy
+### Deployment
 
-MyHub has no advertising, behavioral analytics, trackers, accounts, or marketing software. Core calculations stay in the browser. Supabase and GitHub receive client-encrypted records only. A user-initiated Canvas feed request goes directly from the browser to the provided URL; if the request is blocked, MyHub uses the encrypted private-repository calendar path rather than an unknown proxy.
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) validates pull requests and main pushes with static checks, unit tests, production build, two offline-install cases, and the full browser matrix. Only main/non-PR runs publish Pages after validation. Configure **Settings → Pages → GitHub Actions**. The separate native workflow validates Swift tests and an unsigned iPhone/iPad simulator build.
 
-Exported JSON backups can contain private academic and food records. Store them accordingly. Do not commit personal backup files or private feed URLs.
+### Repository map
 
-## Known Limitations
+| Location                                        | Responsibility                                                                               |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `src/app/`, `src/components/`, `src/styles/`    | Persistent app context, routing, shell, shared UI, responsive styling                        |
+| `src/domain/`, `src/storage/`, `src/utilities/` | Models/calculations, migrations, IndexedDB/backup validation, shared helpers                 |
+| `src/sync/`                                     | Encrypted AppData, GitHub backup, private-access/device-code orchestration                   |
+| `src/features/`                                 | Dashboard, calendar, school, food/cooking, pantry, grocery/sharing, closet, settings/devices |
+| `supabase/`                                     | Broker/closet functions, migrations, SQL authorization tests                                 |
+| `tests/`, `tests-pwa/`                          | Browser workflows and production offline-install tests                                       |
+| `contracts/`, `native/`                         | Portable contracts/fixtures and native SwiftUI foundation                                    |
+| `public/`, `docs/`                              | Static assets/icons/manifest, guides, dated screenshots and verification records             |
 
-GitHub Pages is static hosting, so the private access link is a bearer capability rather than an account session. Anyone who obtains that link can open MyHub until it is replaced; keep it in a password manager or private bookmark. The browser necessarily holds decrypted AppData and backup credentials while active, so a compromised browser runtime can access them. Optimistic Supabase revisions prevent stale silent overwrites but may require reopening the private link if two devices edit concurrently. IndexedDB can be cleared by browser or device storage management, but the encrypted Supabase document and GitHub backup remain recoverable through the private link.
+## Native app and remaining acceptance
 
-## Roadmap
+The native SwiftUI foundation already includes navigation, offline storage/import/export, dashboard, event/homework editing, study planning, recipe viewing/scaling, and reviewed export through Apple's event editor. It is **not the Home Screen web app**. Native enrollment/sync, complete feature parity, and physical-device/accessibility acceptance remain incomplete. See [native README](native/README.md), [iOS plan](MYHUB_IOS_PLAN.md), [decisions](docs/NATIVE_DECISIONS.md), [TODO](TODO.md), and [FIXME](FIXME.md).
 
-1. Validate and refine the complete web workflow.
-2. Improve imports through explicit secure adapter boundaries.
-3. Freeze approved data contracts and interaction behavior.
-4. Build native iPhone and iPad interfaces in SwiftUI.
-5. Add EventKit, camera, Vision, share-extension, and synchronization adapters only after the native foundation is approved.
+Physical iPhone installation, the owner's installed email/SMS apps, wake-lock behavior, and live personal-calendar propagation still need device acceptance. Automated mocked browser passes do not prove those interactions. Recipe URL/OCR/import quality and remote services remain subject to CORS, network availability, and review of imported values.
 
-## References
+## Screenshots
 
-[1]: https://vite.dev/guide/static-deploy.html 'Vite: Deploying a Static Site'
-[2]: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages 'GitHub Docs: Using custom workflows with GitHub Pages'
-[3]: https://docs.github.com/en/rest/repos/contents 'GitHub REST API endpoints for repository contents'
-[4]: https://supabase.com/docs/guides/database/postgres/row-level-security 'Supabase: Row Level Security'
-[5]: https://supabase.com/docs/guides/functions 'Supabase: Edge Functions'
-[6]: https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Fragment 'MDN: URI fragment'
+These are illustrative fixture screenshots, not personal account contents or a guarantee of the latest release layout. See the dated work log for the scope of visual review.
 
-## Closet Planner
+![Desktop dashboard](docs/screenshots/dashboard-desktop.png)
 
-MyHub now includes a private **Closet Planner** at `#/closet`, integrated into its existing navigation and private-device access. Import a closet ZIP or individual photos, review exact/likely duplicates, edit garments, plan clean outfits using Fahrenheit weather, run laundry, and export wardrobe/history JSON. Photos use a private Supabase bucket and never enter the public repository. Recommendations are rule-based; OpenAI is not enabled.
+![Mobile meal planner](docs/screenshots/meal-planner-mobile.png)
 
-See [Closet setup, privacy, environment variables, redirects, imports and future AI](docs/CLOSET_SETUP.md), [architecture/migration plan](docs/CLOSET_PLAN.md), and [verification report](docs/CLOSET_VERIFICATION.md). MyHub's existing encrypted AppData and GitHub backup remain separate from the new owner-protected wardrobe tables.
+![Mobile grocery list](docs/screenshots/grocery-mobile.png)

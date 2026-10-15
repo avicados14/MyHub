@@ -2,6 +2,7 @@ import { Download } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, EmptyState, Field, Modal, PageHeader, ProgressBar, StatusBadge } from '../../components/ui'
+import { toLocalDate } from '../../utilities/date'
 import { categories, occasions, recommend, type Garment, type Occasion, type OutfitPlan } from './types'
 import { extractZip, importBatch, inspectImage, isDuplicate, type Incoming } from './import'
 import * as api from './api'
@@ -62,10 +63,7 @@ export default function ClosetPage() {
     [progress, setProgress] = useState({ done: 0, total: 0 })
   const [occasion, setOccasion] = useState<Occasion>('Everyday'),
     [note, setNote] = useState(''),
-    [date, setDate] = useState(() => {
-      const d = new Date()
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    })
+    [date, setDate] = useState(() => toLocalDate(new Date()))
   const [picks, setPicks] = useState<Garment[]>([]),
     [planId, setPlanId] = useState(() => crypto.randomUUID())
   const [temperature, setTemperature] = useState<number | null>(null),

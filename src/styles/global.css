@@ -2907,3 +2907,35 @@ kbd {
     animation-iteration-count: 1 !important;
   }
 }
+
+.device-setup-page,
+.device-signin-form {
+  display: grid;
+  gap: 20px;
+}
+.device-setup-page .page-header {
+  margin-bottom: 0;
+}
+.device-setup-page .card > h2,
+.device-setup-page .card > p,
+.device-signin-form p {
+  margin: 0;
+}
+.device-setup-page .button {
+  justify-self: start;
+}
+.device-signin-form .field input {
+  font-size: 16px;
+}
+.device-signin-consent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.device-signin-consent input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}

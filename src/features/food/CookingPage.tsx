@@ -15,7 +15,7 @@ export default function CookingPage() {
   const recipe = data.recipes.find((item) => item.id === recipeId)
   if (!recipe)
     return (
-      <Card>
+      <Card className="cooking-unavailable">
         <h1>Recipe unavailable</h1>
         <p>This recipe may have been removed. Choose another recipe to cook.</p>
         <Link to="/food">Back to Food</Link>
