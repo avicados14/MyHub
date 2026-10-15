@@ -32,8 +32,11 @@ export function hashDistance(a: string, b: string): number {
   if (!/^[01]{64}$/.test(a) || !/^[01]{64}$/.test(b)) return 64
   return [...a].reduce((n, bit, i) => n + Number(bit !== b[i]), 0)
 }
-export const isDuplicate = (a: { hash: string; dhash: string | null }, b: { hash: string; dhash: string | null }) =>
-  a.hash === b.hash
+export const isDuplicate = (
+  a: { hash: string; dhash: string | null },
+  b: { hash: string | null; dhash: string | null },
+) =>
+  b.hash && a.hash === b.hash
     ? 'Exact duplicate'
     : a.dhash && b.dhash && hashDistance(a.dhash, b.dhash) <= 5
       ? 'Possible visual duplicate'
@@ -48,9 +51,9 @@ export function defaults(filename: string): { name: string; category: Category; 
       .trim()
       .slice(0, 120) || 'New garment'
   const text = name.toLowerCase()
-  const category: Category = /jacket|coat|hoodie|sweater/.test(text)
+  const category: Category = /jacket|coat/.test(text)
     ? 'outerwear'
-    : /pant|jean|short|skirt/.test(text)
+    : /\b(?:pants?|jeans?|shorts|skirts?|sweats|trousers)\b/.test(text)
       ? 'bottoms'
       : /shoe|sneaker|boot|loafer/.test(text)
         ? 'shoes'
@@ -58,12 +61,13 @@ export function defaults(filename: string): { name: string; category: Category; 
           ? 'one-piece'
           : /hat|cap|belt|scarf|beanie/.test(text)
             ? 'accessories'
-            : /shirt|tee|blouse|top/.test(text)
+            : /shirt|tee|blouse|top|hoodie|sweater|tank|flannel/.test(text)
               ? 'tops'
               : 'other'
   const color =
-    text.match(/\b(black|white|blue|red|green|grey|gray|pink|purple|brown|beige|navy|cream|olive|yellow)\b/)?.[1] ??
-    'Unknown'
+    text.match(
+      /\b(black|white|blue|red|green|grey|gray|pink|purple|brown|beige|navy|cream|olive|yellow|orange|tan)\b/,
+    )?.[1] ?? 'Unknown'
   return { name, category, color }
 }
 export async function inspectImage(file: File): Promise<Incoming> {

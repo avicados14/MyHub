@@ -1,3 +1,17 @@
+export const garmentTypes = [
+  'unknown',
+  'short-sleeve',
+  'long-sleeve',
+  'sweatshirt',
+  'tank',
+  'shorts',
+  'pants',
+  'jacket',
+  'shoes',
+  'accessory',
+  'one-piece',
+] as const
+export type GarmentType = (typeof garmentTypes)[number]
 export const categories = [
   'tops',
   'bottoms',
@@ -14,13 +28,15 @@ export type Occasion = (typeof occasions)[number]
 export interface Garment {
   id: string
   user_id: string
+  garment_type?: GarmentType
+  preference?: 'preferred' | 'normal' | 'avoid'
   garment_number: number
   name: string
   category: Category
   primary_color: string
-  image_path: string
+  image_path: string | null
   laundry_status: 'clean' | 'dirty'
-  content_hash: string
+  content_hash: string | null
   dhash: string | null
   import_key: string
   created_at: string

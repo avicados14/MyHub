@@ -848,6 +848,7 @@ public struct GroceryHistoryEntry: Codable, Equatable {
 }
 
 public struct UserSettings: Codable, Equatable {
+    public var clothingTemperatureBands: [ClothingTemperatureBand]?
     public var clothingProfile: String?
     public var clothingTemperatureRules: String?
     public var name: String
@@ -862,6 +863,7 @@ public struct UserSettings: Codable, Equatable {
     public var calendarFeeds: [CalendarFeed]
 
     enum CodingKeys: String, CodingKey {
+        case clothingTemperatureBands
         case clothingProfile
         case clothingTemperatureRules
         case name
@@ -877,6 +879,7 @@ public struct UserSettings: Codable, Equatable {
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(clothingTemperatureBands, forKey: .clothingTemperatureBands)
         try container.encodeIfPresent(clothingProfile, forKey: .clothingProfile)
         try container.encodeIfPresent(clothingTemperatureRules, forKey: .clothingTemperatureRules)
         try container.encode(name, forKey: .name)
@@ -889,6 +892,27 @@ public struct UserSettings: Codable, Equatable {
         try container.encode(groceryCategories, forKey: .groceryCategories)
         try container.encode(groceryStaples, forKey: .groceryStaples)
         try container.encode(calendarFeeds, forKey: .calendarFeeds)
+    }
+}
+
+public struct ClothingTemperatureBand: Codable, Equatable {
+    public var minF: Decimal
+    public var top: String
+    public var bottom: String
+    public var tank: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case minF
+        case top
+        case bottom
+        case tank
+    }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(minF, forKey: .minF)
+        try container.encode(top, forKey: .top)
+        try container.encode(bottom, forKey: .bottom)
+        try container.encode(tank, forKey: .tank)
     }
 }
 
