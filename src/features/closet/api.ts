@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { loadPrivateAccessCredential } from '../../storage/database'
 import type { Incoming } from './import'
+import { inferType } from './recommendations'
 import type { Garment, OutfitPlan, Occasion } from './types'
 // Publishable keys are public identifiers. All access is enforced by Auth + RLS.
 const url = import.meta.env.VITE_SUPABASE_URL || 'https://vlsxvwqmzcriarcctubr.supabase.co'
@@ -67,14 +68,15 @@ export async function imageUrl(path: string) {
 }
 export async function editGarment(
   id: string,
-  patch: Pick<Garment, 'name' | 'category' | 'primary_color' | 'laundry_status'>,
+  patch: Pick<Garment, 'name' | 'category' | 'primary_color' | 'laundry_status' | 'garment_type' | 'preference'>,
 ) {
   await authenticate()
   const { data, error } = await client.from('wardrobe_items').update(patch).eq('id', id).select('id').single()
   if (error || !data) throw error ?? new Error('Garment no longer exists')
 }
 // Preserve objects referenced by immutable historical snapshots.
-async function removeIfUnused(path: string) {
+async function removeIfUnused(path: string | null) {
+  if (!path) return
   const { data: items, error } = await client.from('wardrobe_items').select('id').eq('image_path', path)
   if (error) throw error
   const plans = await allRows<OutfitPlan>('outfit_plans', 'planned_date')
@@ -127,7 +129,13 @@ export async function saveIncoming(row: Incoming) {
       ? await client.from('wardrobe_items').update(metadata).eq('id', row.replaceId!).select('id').single()
       : await client
           .from('wardrobe_items')
-          .insert({ ...metadata, id: row.id, user_id: userId, import_key: row.id })
+          .insert({
+            ...metadata,
+            garment_type: inferType(row.name, row.category),
+            id: row.id,
+            user_id: userId,
+            import_key: row.id,
+          })
           .select('id')
           .single()
   if (result.error) {
@@ -167,13 +175,36 @@ export async function runLaundry() {
     .eq('laundry_status', 'dirty')
   if (error) throw error
 }
-export async function weather(latitude = 39.7555, longitude = -105.2211) {
+export async function weather(date: string, latitude = 39.7555, longitude = -105.2211) {
   const response = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&temperature_unit=fahrenheit`,
+    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=apparent_temperature_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`,
     { signal: AbortSignal.timeout(12000) },
   )
-  if (!response.ok) throw new Error('Weather unavailable')
+  if (!response.ok) throw new Error('Weather unavailable; enter a feels-like low manually.')
   const result = await response.json()
-  if (!Number.isFinite(result.current?.temperature_2m)) throw new Error('Weather unavailable')
-  return Math.round(result.current.temperature_2m) as number
+  const index = Array.isArray(result.daily?.time) ? result.daily.time.indexOf(date) : -1
+  const value = index >= 0 ? result.daily?.apparent_temperature_min?.[index] : null
+  if (!Number.isFinite(value)) throw new Error('No feels-like forecast for this date; enter a low manually.')
+  return value as number
+}
+
+export async function createTextGarment(item: Garment) {
+  const userId = await authenticate()
+  const prior = await client.from('wardrobe_items').select('id').eq('import_key', item.id).maybeSingle()
+  if (prior.error) throw prior.error
+  if (prior.data) return
+  const { error } = await client.from('wardrobe_items').insert({
+    id: item.id,
+    import_key: item.id,
+    user_id: userId,
+    name: item.name,
+    category: item.category,
+    primary_color: item.primary_color,
+    garment_type: item.garment_type,
+    preference: item.preference,
+    laundry_status: item.laundry_status,
+    image_path: null,
+    content_hash: null,
+  })
+  if (error) throw error
 }

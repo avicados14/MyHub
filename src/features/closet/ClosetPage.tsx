@@ -3,16 +3,20 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, EmptyState, Field, Modal, PageHeader, ProgressBar, StatusBadge } from '../../components/ui'
 import { toLocalDate } from '../../utilities/date'
-import { categories, occasions, recommend, type Garment, type Occasion, type OutfitPlan } from './types'
+import { categories, occasions, garmentTypes, type Garment, type Occasion, type OutfitPlan } from './types'
 import { extractZip, importBatch, inspectImage, isDuplicate, type Incoming } from './import'
 import * as api from './api'
 import './closet.css'
+import { useApp } from '../../app/AppContext'
+import { planOutfit, typeOf, type OutfitSuggestion } from './recommendations'
 import { ClothingProfile } from './ClothingProfile'
 
-function Photo({ path, name }: { path: string; name: string }) {
+function Photo({ path, name }: { path: string | null; name: string }) {
   const [url, setUrl] = useState(''),
     [failed, setFailed] = useState(false)
   useEffect(() => {
+    if (!path) return
+    setUrl('')
     let active = true
     const load = () =>
       void api
@@ -33,6 +37,12 @@ function Photo({ path, name }: { path: string; name: string }) {
       clearInterval(timer)
     }
   }, [path])
+  if (!path)
+    return (
+      <div className="closet-photo closet-placeholder" aria-label={`${name}: photo not added`}>
+        Photo not added
+      </div>
+    )
   return url && !failed ? (
     <img className="closet-photo" src={url} alt={name} loading="lazy" onError={() => setFailed(true)} />
   ) : (
@@ -49,6 +59,17 @@ function IncomingPhoto({ file }: { file: File }) {
   return <img className="closet-photo" src={url} alt={`Incoming ${file.name}`} />
 }
 export default function ClosetPage() {
+  const { data: appData } = useApp()
+  const bands = appData.settings.clothingTemperatureBands
+  const [newText, setNewText] = useState(false)
+  const [warmer, setWarmer] = useState(false),
+    [jacket, setJacket] = useState(false),
+    [includeAvoid, setIncludeAvoid] = useState(false)
+  const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null),
+    [tankConfirmed, setTankConfirmed] = useState(false),
+    [variant, setVariant] = useState(0)
+  const [coords, setCoords] = useState({ latitude: 39.7555, longitude: -105.2211 })
+  const [weatherMode, setWeatherMode] = useState<'auto' | 'manual'>('auto')
   const [items, setItems] = useState<Garment[]>([]),
     [plans, setPlans] = useState<OutfitPlan[]>([]),
     [ready, setReady] = useState(false)
@@ -80,14 +101,6 @@ export default function ClosetPage() {
     void refresh().catch((e) => {
       if (active) setError(e.message)
     })
-    void api
-      .weather()
-      .then((t) => {
-        if (active) setTemperature(t)
-      })
-      .catch(() => {
-        if (active) setWeatherError('Weather unavailable; recommendations use no temperature assumption.')
-      })
     const focus = () => {
       void refresh().catch(() => undefined)
     }
@@ -97,6 +110,31 @@ export default function ClosetPage() {
       window.removeEventListener('focus', focus)
     }
   }, [refresh])
+  useEffect(() => {
+    setPicks([])
+    setSuggestion(null)
+    setTankConfirmed(false)
+  }, [date, temperature, occasion, bands, warmer, jacket, includeAvoid, items])
+  useEffect(() => {
+    if (weatherMode === 'manual') return
+    let active = true
+    setTemperature(null)
+    setWeatherError('Loading feels-like forecast…')
+    void api
+      .weather(date, coords.latitude, coords.longitude)
+      .then((value) => {
+        if (active) {
+          setTemperature(value)
+          setWeatherError('')
+        }
+      })
+      .catch((e) => {
+        if (active) setWeatherError(e.message)
+      })
+    return () => {
+      active = false
+    }
+  }, [date, coords, weatherMode])
   const act = async (task: () => Promise<void>) => {
     setBusy(true)
     setError('')
@@ -158,6 +196,8 @@ export default function ClosetPage() {
   const upload = () =>
     act(async () => {
       const replacements = incoming.filter((row) => row.choice === 'replace' && !row.done)
+      if (new Set(replacements.map((row) => row.replaceId)).size !== replacements.length)
+        throw new Error('Match only one incoming photo to each existing garment per import.')
       if (
         replacements.length &&
         !window.confirm(
@@ -225,8 +265,10 @@ export default function ClosetPage() {
         <>
           <div className="closet-overview">
             <Card>
-              <h2>Today's weather</h2>
-              <p className="closet-temperature">{temperature === null ? '—' : `${temperature}°F`}</p>
+              <h2>Feels-like low for {date}</h2>
+              <p className="closet-temperature">
+                {temperature === null ? '—' : `${Math.round(temperature * 10) / 10}°F`}
+              </p>
               <p>{place}</p>
               {weatherError ? <p role="status">{weatherError}</p> : null}
               <button
@@ -239,14 +281,9 @@ export default function ClosetPage() {
                   }
                   navigator.geolocation.getCurrentPosition(
                     (position) => {
-                      void api
-                        .weather(position.coords.latitude, position.coords.longitude)
-                        .then((t) => {
-                          setTemperature(t)
-                          setPlace('Your device location')
-                          setWeatherError('')
-                        })
-                        .catch(() => setWeatherError('Could not update weather; showing the previous location.'))
+                      setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude })
+                      setWeatherMode('auto')
+                      setPlace('Your device location')
                     },
                     () => setWeatherError('Location permission was denied or unavailable. Golden remains the default.'),
                     { timeout: 10000 },
@@ -255,13 +292,39 @@ export default function ClosetPage() {
               >
                 Use device location
               </button>
+              <Field
+                label="Feels-like low °F"
+                hint="Override missing weather or use a temperature you trust. This is the day's low, not the current temperature."
+              >
+                <input
+                  type="number"
+                  min={-150}
+                  max={150}
+                  step="0.1"
+                  value={temperature ?? ''}
+                  onChange={(e) => {
+                    setWeatherMode('manual')
+                    setWeatherError('')
+                    setTemperature(e.target.value === '' ? null : Number(e.target.value))
+                  }}
+                />
+              </Field>
+              <button
+                className="button button--quiet"
+                onClick={() => {
+                  setCoords({ ...coords })
+                  setWeatherMode('auto')
+                }}
+              >
+                Refresh forecast
+              </button>
               <p className="muted">Weather by Open-Meteo. Location is requested only when you choose it.</p>
             </Card>
             <Card>
               <h2>Plan an outfit</h2>
               <p>
-                Rule-based suggestions use clean garments, the occasion, and available weather. AI recommendations are
-                not enabled.
+                Suggestions use clean garments, your active temperature bands, clothing preferences, and color matching.
+                AI recommendations are not enabled.
               </p>
               <div className="form-grid">
                 <Field label="Occasion">
@@ -278,29 +341,69 @@ export default function ClosetPage() {
                   </select>
                 </Field>
                 <Field label="Planned date">
-                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => {
+                      setDate(e.target.value)
+                      setWeatherMode('auto')
+                    }}
+                  />
                 </Field>
                 <Field label="Styling note (saved with plan)">
                   <input
-                    maxLength={1000}
+                    maxLength={750}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Lots of walking, a light layer…"
                   />
                 </Field>
               </div>
+              <div className="closet-toolbar">
+                <label>
+                  <input type="checkbox" checked={warmer} onChange={(e) => setWarmer(e.target.checked)} /> Use one
+                  warmer clothing band
+                </label>
+                <label>
+                  <input type="checkbox" checked={jacket} onChange={(e) => setJacket(e.target.checked)} /> Add a jacket
+                </label>
+                <label>
+                  <input type="checkbox" checked={includeAvoid} onChange={(e) => setIncludeAvoid(e.target.checked)} />{' '}
+                  Include less-preferred clothes
+                </label>
+              </div>
               <button
                 className="button button--primary"
                 disabled={busy}
                 onClick={() => {
-                  const next = recommend(items, temperature, occasion)
-                  setPicks(next)
+                  const next = planOutfit(items, temperature, occasion, bands, {
+                    warmer,
+                    jacket,
+                    includeAvoid,
+                    variant,
+                  })
+                  setSuggestion(next)
+                  setPicks(next.items)
+                  setTankConfirmed(false)
+                  setVariant((value) => value + 1)
                   setPlanId(crypto.randomUUID())
-                  if (!next.length) setNotice('Add clean tops and bottoms, or a one-piece garment, to build an outfit.')
+                  setNotice(next.messages.join(' '))
                 }}
               >
                 Suggest outfit
               </button>
+              {suggestion?.band ? (
+                <p>
+                  Using {suggestion.band.top} + {suggestion.band.bottom}
+                  {suggestion.band.tank ? ' + tank undershirt' : '; no undershirt'}.
+                </p>
+              ) : null}
+              {suggestion?.needsTank && picks.length ? (
+                <label>
+                  <input type="checkbox" checked={tankConfirmed} onChange={(e) => setTankConfirmed(e.target.checked)} />{' '}
+                  I have a clean tank undershirt for this outfit
+                </label>
+              ) : null}
               {picks.length ? (
                 <>
                   <div className="closet-picks">
@@ -315,10 +418,24 @@ export default function ClosetPage() {
                   </div>
                   <button
                     className="button button--primary"
-                    disabled={busy || !date}
+                    disabled={busy || !date || Boolean(suggestion?.needsTank && !tankConfirmed)}
                     onClick={() =>
                       void act(async () => {
-                        await api.savePlan(planId, date, occasion, `${occasion} outfit`, note, picks)
+                        await api.savePlan(
+                          planId,
+                          date,
+                          occasion,
+                          `${occasion} outfit`,
+                          [
+                            note,
+                            suggestion?.band
+                              ? `Feels-like low ${temperature}°F; ${suggestion.band.top}, ${suggestion.band.bottom}${suggestion.band.tank ? ', tank undershirt' : ', no undershirt'}${warmer ? '; one warmer band' : ''}${jacket ? '; jacket requested' : ''}.`
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join('\n'),
+                          picks,
+                        )
                         setPicks([])
                         await refresh()
                         setNotice('Outfit saved. Selected garments are now dirty.')
@@ -435,6 +552,38 @@ export default function ClosetPage() {
                           onChange={(e) => updateIncoming(row.id, { color: e.target.value })}
                         />
                       </Field>
+                      <Field
+                        label={`Match existing garment for ${row.file.name}`}
+                        hint="Attach this photo to a listed garment to keep its number and history."
+                      >
+                        <select
+                          value={row.replaceId ?? ''}
+                          disabled={row.done || busy}
+                          onChange={(e) => {
+                            const item = items.find((i) => i.id === e.target.value)
+                            updateIncoming(
+                              row.id,
+                              item
+                                ? {
+                                    replaceId: item.id,
+                                    choice: 'replace',
+                                    name: item.name,
+                                    category: item.category,
+                                    color: item.primary_color,
+                                  }
+                                : { replaceId: undefined, choice: 'keep' },
+                            )
+                          }}
+                        >
+                          <option value="">New garment</option>
+                          {items.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              #{item.garment_number} · {item.name}
+                              {item.image_path ? '' : ' (no photo)'}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
                       <Field label={`Import choice for ${row.file.name}`}>
                         <select
                           value={row.choice}
@@ -467,6 +616,33 @@ export default function ClosetPage() {
                 </div>
               </section>
             ) : null}
+            <button
+              className="button button--secondary"
+              disabled={busy}
+              onClick={() => {
+                const id = crypto.randomUUID()
+                setNewText(true)
+                setEditing({
+                  id,
+                  import_key: id,
+                  user_id: '',
+                  garment_number: 0,
+                  name: '',
+                  category: 'tops',
+                  primary_color: 'Unknown',
+                  garment_type: 'unknown',
+                  preference: 'normal',
+                  laundry_status: 'clean',
+                  image_path: null,
+                  content_hash: null,
+                  dhash: null,
+                  created_at: '',
+                  updated_at: '',
+                })
+              }}
+            >
+              Add garment without photo
+            </button>
             <div className="closet-toolbar">
               <Field label="Category filter">
                 <select value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -507,7 +683,10 @@ export default function ClosetPage() {
                       <button
                         className="button button--secondary"
                         disabled={busy}
-                        onClick={() => setEditing({ ...item })}
+                        onClick={() => {
+                          setNewText(false)
+                          setEditing({ ...item })
+                        }}
                       >
                         Edit #{item.garment_number}
                       </button>
@@ -580,12 +759,16 @@ export default function ClosetPage() {
             onSubmit={(e) => {
               e.preventDefault()
               void act(async () => {
-                await api.editGarment(editing.id, {
-                  name: editing.name,
-                  category: editing.category,
-                  primary_color: editing.primary_color,
-                  laundry_status: editing.laundry_status,
-                })
+                if (newText) await api.createTextGarment(editing)
+                else
+                  await api.editGarment(editing.id, {
+                    name: editing.name,
+                    category: editing.category,
+                    primary_color: editing.primary_color,
+                    laundry_status: editing.laundry_status,
+                    garment_type: editing.garment_type ?? typeOf(editing),
+                    preference: editing.preference ?? 'normal',
+                  })
                 setEditing(null)
                 setPicks([])
                 await refresh()
@@ -618,6 +801,56 @@ export default function ClosetPage() {
                 onChange={(e) => setEditing({ ...editing, primary_color: e.target.value })}
               />
             </Field>
+            <Field label="Clothing type" hint="Temperature suggestions require the correct sleeve and bottom type.">
+              <select
+                value={editing.garment_type ?? typeOf(editing)}
+                onChange={(e) => setEditing({ ...editing, garment_type: e.target.value as Garment['garment_type'] })}
+              >
+                {garmentTypes.map((type) => (
+                  <option key={type}>{type}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Clothing preference">
+              <select
+                value={editing.preference ?? 'normal'}
+                onChange={(e) => setEditing({ ...editing, preference: e.target.value as Garment['preference'] })}
+              >
+                <option value="preferred">Preferred</option>
+                <option value="normal">Normal</option>
+                <option value="avoid">Less preferred (opt in)</option>
+              </select>
+            </Field>
+            {!newText ? (
+              <Field
+                label="Attach or replace garment photo"
+                hint="Review and confirm the image; this keeps the existing garment number and laundry status."
+              >
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    void act(async () => {
+                      const row = await inspectImage(file)
+                      row.name = editing.name
+                      row.category = editing.category
+                      row.color = editing.primary_color
+                      row.replaceId = editing.id
+                      row.choice = 'replace'
+                      row.duplicate = `Attach to #${editing.garment_number}: ${editing.name}`
+                      setIncoming([row])
+                      setEditing(null)
+                      setNotice(
+                        'Review the photo attachment and confirm import. Existing metadata, ID and laundry status are preserved.',
+                      )
+                    })
+                  }}
+                />
+              </Field>
+            ) : null}
             <Field label="Laundry status">
               <select
                 value={editing.laundry_status}

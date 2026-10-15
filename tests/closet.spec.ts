@@ -25,7 +25,14 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   )
   let bridgeCalls = 0
   let rejectFirstPantsInsert = true
-  await page.route('**/api.open-meteo.com/**', (route) => route.fulfill({ json: { current: { temperature_2m: 70 } } }))
+  await page.route('**/api.open-meteo.com/**', (route) =>
+    route.fulfill({
+      json: {
+        current: { temperature_2m: 90 },
+        daily: { time: ['2026-06-01', '2026-06-02'], apparent_temperature_min: [55, 75] },
+      },
+    }),
+  )
   await page.route('https://vlsxvwqmzcriarcctubr.supabase.co/**', async (route) => {
     const request = route.request(),
       url = new URL(request.url()),
@@ -217,4 +224,55 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
     .setInputFiles({ name: 'invalid.zip', mimeType: 'application/zip', buffer: Buffer.from(badZip) })
   await expect(page.getByText('broken.png: Image signature is invalid or unsupported.')).toBeVisible()
   await expect(page.getByText('too-large.png: exceeds 8 MB')).toBeVisible()
+  // A photo-free starter garment participates in the same planner and laundry transaction.
+  await page.getByRole('button', { name: 'Add garment without photo' }).click()
+  await page.getByLabel('Garment name', { exact: true }).fill('Synthetic coral long sleeves')
+  await page.getByLabel('Primary color', { exact: true }).fill('Coral')
+  await page.getByLabel('Clothing type', { exact: true }).selectOption('long-sleeve')
+  await page.getByRole('button', { name: 'Save garment', exact: true }).click()
+  await expect(page.getByText('3 garments · 0 in laundry')).toBeVisible()
+  const starter = items.find((item) => item.name === 'Synthetic coral long sleeves')!
+  expect(starter.image_path).toBeNull()
+  const starterNumber = starter.garment_number
+  await page.getByText('My clothing profile and temperature rules', { exact: true }).click()
+  await page.getByRole('button', { name: 'Add temperature band', exact: true }).click()
+  await page.getByLabel('Top for band 1', { exact: true }).selectOption('long-sleeve')
+  await page.getByLabel('Bottom for band 1', { exact: true }).selectOption('pants')
+  await page.getByLabel('Tank undershirt for band 1', { exact: true }).check()
+  await page.getByRole('button', { name: 'Add temperature band', exact: true }).click()
+  await page.getByLabel('Minimum °F for band 2', { exact: true }).fill('68')
+  await page.getByText('My clothing profile and temperature rules', { exact: true }).click()
+  await page.getByLabel('Planned date', { exact: true }).fill('2026-06-02')
+  await expect(page.getByLabel('Feels-like low °F', { exact: true })).toHaveValue('75')
+  await page.getByRole('button', { name: 'Suggest outfit', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toHaveCount(0)
+  await page.getByLabel('Planned date', { exact: true }).fill('2026-06-01')
+  await expect(page.getByLabel('Feels-like low °F', { exact: true })).toHaveValue('55')
+  await page.getByRole('button', { name: 'Suggest outfit', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toBeDisabled()
+  await page.getByLabel('I have a clean tank undershirt for this outfit', { exact: true }).check()
+  await page.getByRole('button', { name: 'Save outfit & mark dirty' }).click()
+  await expect(page.getByText('3 garments · 2 in laundry')).toBeVisible()
+  const snapshot = plans.at(-1)!.garment_snapshot.find((item) => item.id === starter.id)!
+  expect(snapshot.image_path).toBeNull()
+  expect(plans.at(-1)!.note).toContain('tank undershirt')
+  await page
+    .locator('.closet-garment')
+    .filter({ hasText: 'Synthetic coral long sleeves' })
+    .getByRole('button', { name: `Edit #${starterNumber}`, exact: true })
+    .click()
+  await page
+    .getByLabel('Attach or replace garment photo', { exact: true })
+    .setInputFiles({ name: 'later.png', mimeType: 'image/png', buffer: Buffer.from(images[0]!, 'base64') })
+  await page.getByRole('button', { name: 'Import accepted / retry failed' }).click()
+  await expect.poll(() => starter.image_path).not.toBeNull()
+  expect(starter.garment_number).toBe(starterNumber)
+  expect(starter.garment_type).toBe('long-sleeve')
+  expect(starter.laundry_status).toBe('dirty')
+  expect(snapshot.image_path).toBeNull()
+  await expect(page.getByText('3 garments · 2 in laundry')).toBeVisible()
+  await page.getByRole('button', { name: 'Run laundry', exact: true }).click()
+  await expect(page.getByText('3 garments · 0 in laundry')).toBeVisible()
+  await page.getByRole('button', { name: 'Suggest outfit', exact: true }).click()
+  await expect(page.locator('.closet-picks').first()).toContainText('Synthetic coral long sleeves')
 })

@@ -563,6 +563,9 @@
     "UserSettings": {
       "type": "object",
       "properties": {
+        "clothingTemperatureBands": {
+          "anyOf": [{ "type": "array", "items": { "$ref": "#/$defs/ClothingTemperatureBand" } }]
+        },
         "clothingProfile": { "anyOf": [{ "type": "string" }] },
         "clothingTemperatureRules": { "anyOf": [{ "type": "string" }] },
         "name": { "type": "string" },
@@ -587,6 +590,17 @@
         "groceryStaples",
         "calendarFeeds"
       ],
+      "additionalProperties": false
+    },
+    "ClothingTemperatureBand": {
+      "type": "object",
+      "properties": {
+        "minF": { "type": "number" },
+        "top": { "anyOf": [{ "const": "short-sleeve" }, { "const": "long-sleeve" }, { "const": "sweatshirt" }] },
+        "bottom": { "anyOf": [{ "const": "shorts" }, { "const": "pants" }] },
+        "tank": { "anyOf": [{ "const": false }, { "const": true }] }
+      },
+      "required": ["minF", "top", "bottom", "tank"],
       "additionalProperties": false
     },
     "StudySettings": {

@@ -154,3 +154,7 @@ These are illustrative fixture screenshots, not personal account contents or a g
 ![Mobile meal planner](docs/screenshots/meal-planner-mobile.png)
 
 ![Mobile grocery list](docs/screenshots/grocery-mobile.png)
+
+### Personal wardrobe and temperature rules
+
+Closet Planner supports garments before photos are available, active feels-like-low temperature bands, and color-coordinated clean-only suggestions. Later photo attachments preserve garment IDs and history. Configure bands in Settings → Clothing profile and review garment types/preferences in Closet Planner. See [Clothing profile guide](docs/CLOTHING_PROFILE.md).

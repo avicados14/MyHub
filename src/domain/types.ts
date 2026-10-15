@@ -289,7 +289,15 @@ export interface GroceryStaple {
   enabled: boolean
 }
 
+export interface ClothingTemperatureBand {
+  minF: number
+  top: 'short-sleeve' | 'long-sleeve' | 'sweatshirt'
+  bottom: 'shorts' | 'pants'
+  tank: boolean
+}
+
 export interface UserSettings {
+  clothingTemperatureBands?: ClothingTemperatureBand[]
   clothingProfile?: string
   clothingTemperatureRules?: string
   name: string
