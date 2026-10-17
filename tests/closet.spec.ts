@@ -195,7 +195,7 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   const originalTop = structuredClone(items[0]!)
   const dirtyButton = page.getByRole('button', { name: 'Mark garment #1 dirty', exact: true })
   await dirtyButton.click()
-  await expect(page.getByText('Temporary laundry update failure')).toBeVisible()
+  await expect(page.getByText('Something went wrong. Please retry.')).toBeVisible()
   await expect(page.getByText('2 garments · 0 in laundry')).toBeVisible()
   await dirtyButton.click()
   await expect(page.getByText('2 garments · 1 in laundry')).toBeVisible()
