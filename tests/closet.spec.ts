@@ -25,6 +25,7 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   )
   let bridgeCalls = 0
   let rejectFirstPantsInsert = true
+  let rejectQuickDirty = true
   await page.route('**/api.open-meteo.com/**', (route) =>
     route.fulfill({
       json: {
@@ -93,6 +94,13 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
         return route.fulfill({ status: 201, json: row })
       }
       if (method === 'PATCH') {
+        if (url.searchParams.has('id') && request.postDataJSON().laundry_status === 'dirty') {
+          expect(request.postDataJSON()).toEqual({ laundry_status: 'dirty' })
+          if (rejectQuickDirty) {
+            rejectQuickDirty = false
+            return route.fulfill({ status: 503, json: { message: 'Temporary laundry update failure' } })
+          }
+        }
         const selected = items.filter(matches)
         selected.forEach((item) => Object.assign(item, request.postDataJSON()))
         return route.fulfill({ json: request.headers().accept?.includes('object') ? selected[0] : selected })
@@ -184,6 +192,23 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
         .evaluate((image) => (image as HTMLImageElement).naturalWidth),
     )
     .toBe(40)
+  const originalTop = structuredClone(items[0]!)
+  const dirtyButton = page.getByRole('button', { name: 'Mark garment #1 dirty', exact: true })
+  await dirtyButton.click()
+  await expect(page.getByText('Something went wrong. Please retry.')).toBeVisible()
+  await expect(page.getByText('2 garments · 0 in laundry')).toBeVisible()
+  await dirtyButton.click()
+  await expect(page.getByText('2 garments · 1 in laundry')).toBeVisible()
+  await expect(dirtyButton).toHaveCount(0)
+  expect(items[0]).toEqual({ ...originalTop, laundry_status: 'dirty' })
+  expect(items[1]!.laundry_status).toBe('clean')
+  await page.reload()
+  await expect(page.getByText('2 garments · 1 in laundry')).toBeVisible()
+  await page.getByLabel('Laundry filter').selectOption('clean')
+  await expect(page.getByRole('heading', { name: '#1 · blue tee' })).toHaveCount(0)
+  await page.getByLabel('Laundry filter').selectOption('all')
+  await page.getByRole('button', { name: 'Run laundry' }).click()
+  await expect(dirtyButton).toBeVisible()
   await page.getByLabel('Occasion', { exact: true }).selectOption('School')
   await page.getByLabel('Styling note (saved with plan)').fill('Walking to class')
   await page.getByRole('button', { name: 'Suggest outfit' }).click()

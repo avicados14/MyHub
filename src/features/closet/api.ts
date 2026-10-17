@@ -68,7 +68,9 @@ export async function imageUrl(path: string) {
 }
 export async function editGarment(
   id: string,
-  patch: Pick<Garment, 'name' | 'category' | 'primary_color' | 'laundry_status' | 'garment_type' | 'preference'>,
+  patch: Partial<
+    Pick<Garment, 'name' | 'category' | 'primary_color' | 'laundry_status' | 'garment_type' | 'preference'>
+  >,
 ) {
   await authenticate()
   const { data, error } = await client.from('wardrobe_items').update(patch).eq('id', id).select('id').single()
