@@ -62,6 +62,7 @@ export default function ClosetPage() {
   const { data: appData } = useApp()
   const bands = appData.settings.clothingTemperatureBands
   const [newText, setNewText] = useState(false)
+  const [markingDirty, setMarkingDirty] = useState<string | null>(null)
   const [warmer, setWarmer] = useState(false),
     [jacket, setJacket] = useState(false),
     [includeAvoid, setIncludeAvoid] = useState(false)
@@ -680,6 +681,26 @@ export default function ClosetPage() {
                       {item.laundry_status}
                     </StatusBadge>
                     <div className="closet-toolbar">
+                      {item.laundry_status === 'clean' ? (
+                        <button
+                          className="button button--secondary"
+                          disabled={busy}
+                          aria-label={`Mark garment #${item.garment_number} dirty`}
+                          aria-busy={markingDirty === item.id}
+                          onClick={() => {
+                            setMarkingDirty(item.id)
+                            void act(async () => {
+                              await api.editGarment(item.id, { laundry_status: 'dirty' })
+                              setItems((previous) =>
+                                previous.map((row) => (row.id === item.id ? { ...row, laundry_status: 'dirty' } : row)),
+                              )
+                              setNotice(`Garment #${item.garment_number} marked dirty.`)
+                            }).finally(() => setMarkingDirty(null))
+                          }}
+                        >
+                          {markingDirty === item.id ? 'Saving…' : 'Mark dirty'}
+                        </button>
+                      ) : null}
                       <button
                         className="button button--secondary"
                         disabled={busy}
