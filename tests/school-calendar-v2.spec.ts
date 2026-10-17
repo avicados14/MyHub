@@ -234,11 +234,14 @@ test('recurrences, exclusions, overrides, and multi-day spans render without dup
 })
 
 test('study blocks support pointer date-time moves and pointer edge resizing', async ({ page }, testInfo) => {
+  // Keep both drag dates inside the displayed week, regardless of the CI run date.
+  const today = new Date('2026-10-12T09:00:00')
+  await page.clock.setFixedTime(today)
   await page.goto('/#/school')
   await page.getByRole('button', { name: 'Add homework' }).click()
   await page.getByLabel('Assignment title').fill('Pointer practice')
   await page.getByLabel('Course').fill('TEST 302')
-  const due = new Date()
+  const due = new Date(today)
   due.setDate(due.getDate() + 4)
   await page.getByLabel('Due date').fill(localDate(due))
   await page.getByLabel('Estimated minutes').fill('45')
