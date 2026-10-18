@@ -13,7 +13,13 @@ export const visibleCalendarEvents = (data: Pick<AppData, 'events' | 'settings'>
 
 export const visibleAssignments = (data: Pick<AppData, 'assignments' | 'settings'>): HomeworkAssignment[] => {
   const enabledIds = enabledCalendarFeedIds(data)
-  return data.assignments.filter((assignment) => sourceIsVisible(assignment.sourceFeedId, enabledIds))
+  // CSCI128 is a TA course, not personal homework. Keep its calendar events and
+  // stored records, but exclude it consistently from homework and study planning.
+  const isTaCourse = (course: string): boolean =>
+    /(?:^|[^a-z0-9])CSCI[\s-]*128(?:[a-z](?=$|[^a-z0-9])|(?=$|[^a-z0-9]))/i.test(course)
+  return data.assignments.filter(
+    (assignment) => sourceIsVisible(assignment.sourceFeedId, enabledIds) && !isTaCourse(assignment.course),
+  )
 }
 
 export const eventCoversDate = (event: Pick<CalendarEvent, 'date' | 'endDate'>, date: string): boolean =>

@@ -2,6 +2,16 @@
 
 Phase 1 is the deployed React/Vite web prototype (`0.1.0`). Phase 2 is the native iPhone and iPad application described in `MYHUB_IOS_PLAN.md`, with any web refinements needed to establish a reliable shared contract. This is a working checklist. The native foundation is now implemented on the continuation branch; full feature parity and acceptance remain open.
 
+## Dashboard current-date fix — October 18, 2026
+
+- [x] Identify historical unfinished assignments crowding out current deadlines.
+- [x] Filter Focus next to today and future dates in the configured calendar time zone; retain past work in School.
+- [x] Align relative date labels with the dashboard clock and add browser regression coverage for midnight, visibility, completion, and empty state.
+- [x] Pass formatting, lint, type checking, all 156 unit tests, and production build locally.
+- [x] Pass the component regression for current deadlines, configured time zone, midnight rollover, completed/hidden entries, retained history, and empty state.
+- [x] Exclude CSCI128 TA assignments from shared homework visibility, including dashboard and study planning; preserve calendar events.
+- [ ] Verify desktop/mobile browser regressions in CI (local Chromium download failed) and deploy the fix. Publication and deployment approved by the user.
+
 ## 0. Close the Phase 1 handoff gate
 
 - [x] Independently retrieve the encrypted Supabase document and verify privacy-safe counts: September 29 stateless resolve/decrypt returned revision 60, 3,361 events and 168 assignments. This is remote retrieval proof, not browser UI acceptance.
