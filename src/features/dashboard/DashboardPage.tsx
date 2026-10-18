@@ -10,7 +10,7 @@ import { dueAssignments, eventsForDate, greeting, mealsForDate, nutritionForDate
 import type { MealSlot, Nutrition } from '../../domain/types'
 import '../../styles/crosscut-v2.css'
 import { assetUrl } from '../../utilities/assets'
-import { addDays, dateTimeInZone, formatDate, formatTime, relativeDueLabel } from '../../utilities/date'
+import { addDays, dateFromLocal, dateTimeInZone, formatDate, formatTime, relativeDueLabel } from '../../utilities/date'
 
 const mealSlots: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack']
 
@@ -66,7 +66,9 @@ export default function DashboardPage() {
   const commitments = events.filter((event) => event.kind !== 'study')
   const nowTime = zonedNow.time
   const schedule = dashboardScheduleWindow(commitments, todayDate, today, nowTime)
-  const assignments = dueAssignments(data).slice(0, 3)
+  const assignments = dueAssignments(data)
+    .filter((assignment) => assignment.dueDate >= today)
+    .slice(0, 3)
   const meals = mealsForDate(data, today)
   const nutrition = nutritionForDate(data, today)
   const recipeMap = new Map(data.recipes.map((recipe) => [recipe.id, recipe]))
@@ -148,7 +150,7 @@ export default function DashboardPage() {
             </span>
             <div>
               <h2>Focus next</h2>
-              <p>Due soon, in priority order</p>
+              <p>Due today and next, by deadline</p>
             </div>
           </div>
           <div className="assignment-stack">
@@ -158,7 +160,8 @@ export default function DashboardPage() {
                 <span className="assignment-row__content">
                   <strong>{assignment.title}</strong>
                   <small>
-                    {assignment.course} · {relativeDueLabel(assignment.dueDate)} at {formatTime(assignment.dueTime)}
+                    {assignment.course} · {relativeDueLabel(assignment.dueDate, dateFromLocal(today))} at{' '}
+                    {formatTime(assignment.dueTime)}
                   </small>
                 </span>
                 <StatusBadge tone={assignment.priority === 'high' ? 'danger' : 'attention'}>
@@ -167,7 +170,7 @@ export default function DashboardPage() {
               </Link>
             ))}
             {!assignments.length ? (
-              <p className="focus-card__empty">No open assignments. Add homework when it arrives.</p>
+              <p className="focus-card__empty">No upcoming assignments. Past-due work is available in School.</p>
             ) : null}
           </div>
           <div className="focus-card__footer">

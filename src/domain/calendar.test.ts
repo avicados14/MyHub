@@ -52,6 +52,16 @@ describe('calendar visibility and coverage', () => {
     expect(visibleAssignments(data)).toEqual([assignment])
   })
 
+  it('excludes CSCI128 TA homework across Canvas course formats without hiding events or other courses', () => {
+    const data = createEmptyData()
+    const courses = ['CSCI128', 'CSCI 128', 'csci-128', 'Fall 2026.CSCI128A.81464', 'CSCI1280', 'CSCI129', 'MEGN128']
+    data.assignments = courses.map((course) => ({ ...assignment, id: course, course, sourceFeedId: undefined }))
+    data.events = [{ ...importedEvent, course: 'CSCI128', sourceFeedId: undefined }]
+    expect(visibleAssignments(data).map((item) => item.course)).toEqual(['CSCI1280', 'CSCI129', 'MEGN128'])
+    expect(visibleCalendarEvents(data)).toHaveLength(1)
+    expect(data.assignments).toHaveLength(7)
+  })
+
   it('returns full-day conflict spans for middle days of multi-day timed and all-day events', () => {
     const multiDay: CalendarEvent = {
       ...importedEvent,
