@@ -61,6 +61,9 @@ function IncomingPhoto({ file }: { file: File }) {
 export default function ClosetPage() {
   const { data: appData } = useApp()
   const bands = appData.settings.clothingTemperatureBands
+  const [manualOutfit, setManualOutfit] = useState(false)
+  const [outfitCategory, setOutfitCategory] = useState('all')
+  const [outfitTitle, setOutfitTitle] = useState('')
   const [newText, setNewText] = useState(false)
   const [markingDirty, setMarkingDirty] = useState<string | null>(null)
   const [warmer, setWarmer] = useState(false),
@@ -112,10 +115,23 @@ export default function ClosetPage() {
     }
   }, [refresh])
   useEffect(() => {
+    if (manualOutfit) return
     setPicks([])
     setSuggestion(null)
     setTankConfirmed(false)
-  }, [date, temperature, occasion, bands, warmer, jacket, includeAvoid, items])
+  }, [date, temperature, occasion, bands, warmer, jacket, includeAvoid, items, manualOutfit])
+  useEffect(() => {
+    if (manualOutfit)
+      setPicks((previous) =>
+        previous.flatMap((picked) => {
+          const current = items.find((item) => item.id === picked.id && item.laundry_status === 'clean')
+          return current ? [current] : []
+        }),
+      )
+  }, [items, manualOutfit])
+  useEffect(() => {
+    setPlanId(crypto.randomUUID())
+  }, [date, occasion, note, outfitTitle])
   useEffect(() => {
     if (weatherMode === 'manual') return
     let active = true
@@ -327,13 +343,50 @@ export default function ClosetPage() {
                 Suggestions use clean garments, your active temperature bands, clothing preferences, and color matching.
                 AI recommendations are not enabled.
               </p>
+              <div className="closet-toolbar" role="group" aria-label="Outfit planning mode">
+                <button
+                  className="button button--secondary"
+                  disabled={busy}
+                  aria-pressed={!manualOutfit}
+                  onClick={() => {
+                    setManualOutfit(false)
+                    setPicks([])
+                    setSuggestion(null)
+                    setTankConfirmed(false)
+                    setPlanId(crypto.randomUUID())
+                  }}
+                >
+                  Get suggestions
+                </button>
+                <button
+                  className="button button--secondary"
+                  disabled={busy}
+                  aria-pressed={manualOutfit}
+                  onClick={() => {
+                    setManualOutfit(true)
+                    setSuggestion(null)
+                    setTankConfirmed(false)
+                    setPlanId(crypto.randomUUID())
+                  }}
+                >
+                  Build my own outfit
+                </button>
+              </div>
               <div className="form-grid">
+                <Field label="Outfit name (optional)">
+                  <input
+                    value={outfitTitle}
+                    maxLength={160}
+                    onChange={(e) => setOutfitTitle(e.target.value)}
+                    placeholder={`${occasion} outfit`}
+                  />
+                </Field>
                 <Field label="Occasion">
                   <select
                     value={occasion}
                     onChange={(e) => {
                       setOccasion(e.target.value as Occasion)
-                      setPicks([])
+                      if (!manualOutfit) setPicks([])
                     }}
                   >
                     {occasions.map((value) => (
@@ -360,39 +413,115 @@ export default function ClosetPage() {
                   />
                 </Field>
               </div>
-              <div className="closet-toolbar">
-                <label>
-                  <input type="checkbox" checked={warmer} onChange={(e) => setWarmer(e.target.checked)} /> Use one
-                  warmer clothing band
-                </label>
-                <label>
-                  <input type="checkbox" checked={jacket} onChange={(e) => setJacket(e.target.checked)} /> Add a jacket
-                </label>
-                <label>
-                  <input type="checkbox" checked={includeAvoid} onChange={(e) => setIncludeAvoid(e.target.checked)} />{' '}
-                  Include less-preferred clothes
-                </label>
-              </div>
-              <button
-                className="button button--primary"
-                disabled={busy}
-                onClick={() => {
-                  const next = planOutfit(items, temperature, occasion, bands, {
-                    warmer,
-                    jacket,
-                    includeAvoid,
-                    variant,
-                  })
-                  setSuggestion(next)
-                  setPicks(next.items)
-                  setTankConfirmed(false)
-                  setVariant((value) => value + 1)
-                  setPlanId(crypto.randomUUID())
-                  setNotice(next.messages.join(' '))
-                }}
-              >
-                Suggest outfit
-              </button>
+              {manualOutfit ? (
+                <section aria-label="Choose outfit garments">
+                  <p>
+                    Choose up to 20 clean items in any combination. Weather and temperature rules do not restrict your
+                    own outfits. Saving marks only your selected items dirty.
+                  </p>
+                  <Field label="Outfit category filter">
+                    <select value={outfitCategory} onChange={(e) => setOutfitCategory(e.target.value)}>
+                      <option value="all">All categories</option>
+                      {categories.map((value) => (
+                        <option key={value}>{value}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <p role="status">{picks.length} of 20 items selected</p>
+                  <div className="closet-manual-items">
+                    {items
+                      .filter(
+                        (item) =>
+                          item.laundry_status === 'clean' &&
+                          (outfitCategory === 'all' || item.category === outfitCategory),
+                      )
+                      .map((item) => {
+                        const checked = picks.some((picked) => picked.id === item.id)
+                        return (
+                          <label key={item.id} className="closet-manual-choice">
+                            <input
+                              type="checkbox"
+                              aria-label={`Select garment #${item.garment_number}: ${item.name}`}
+                              checked={checked}
+                              disabled={busy || (!checked && picks.length >= 20)}
+                              onChange={(e) => {
+                                setPicks((previous) =>
+                                  e.target.checked
+                                    ? [...previous, item]
+                                    : previous.filter((picked) => picked.id !== item.id),
+                                )
+                                setPlanId(crypto.randomUUID())
+                              }}
+                            />
+                            <span>
+                              #{item.garment_number} · {item.name}
+                              <small>
+                                {item.category} · {item.primary_color}
+                              </small>
+                            </span>
+                          </label>
+                        )
+                      })}
+                  </div>
+                  {!items.some(
+                    (item) =>
+                      item.laundry_status === 'clean' && (outfitCategory === 'all' || item.category === outfitCategory),
+                  ) ? (
+                    <p>No clean garments match this category. Change the filter or run laundry.</p>
+                  ) : null}
+                  <button
+                    className="button button--quiet"
+                    disabled={busy || !picks.length}
+                    onClick={() => {
+                      setPicks([])
+                      setPlanId(crypto.randomUUID())
+                    }}
+                  >
+                    Clear selection
+                  </button>
+                </section>
+              ) : (
+                <>
+                  <div className="closet-toolbar">
+                    <label>
+                      <input type="checkbox" checked={warmer} onChange={(e) => setWarmer(e.target.checked)} /> Use one
+                      warmer clothing band
+                    </label>
+                    <label>
+                      <input type="checkbox" checked={jacket} onChange={(e) => setJacket(e.target.checked)} /> Add a
+                      jacket
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={includeAvoid}
+                        onChange={(e) => setIncludeAvoid(e.target.checked)}
+                      />{' '}
+                      Include less-preferred clothes
+                    </label>
+                  </div>
+                  <button
+                    className="button button--primary"
+                    disabled={busy}
+                    onClick={() => {
+                      const next = planOutfit(items, temperature, occasion, bands, {
+                        warmer,
+                        jacket,
+                        includeAvoid,
+                        variant,
+                      })
+                      setSuggestion(next)
+                      setPicks(next.items)
+                      setTankConfirmed(false)
+                      setVariant((value) => value + 1)
+                      setPlanId(crypto.randomUUID())
+                      setNotice(next.messages.join(' '))
+                    }}
+                  >
+                    Suggest outfit
+                  </button>
+                </>
+              )}
               {suggestion?.band ? (
                 <p>
                   Using {suggestion.band.top} + {suggestion.band.bottom}
@@ -426,9 +555,10 @@ export default function ClosetPage() {
                           planId,
                           date,
                           occasion,
-                          `${occasion} outfit`,
+                          outfitTitle.trim() || `${occasion} outfit`,
                           [
                             note,
+                            manualOutfit ? 'Manually selected outfit.' : '',
                             suggestion?.band
                               ? `Feels-like low ${temperature}°F; ${suggestion.band.top}, ${suggestion.band.bottom}${suggestion.band.tank ? ', tank undershirt' : ', no undershirt'}${warmer ? '; one warmer band' : ''}${jacket ? '; jacket requested' : ''}.`
                               : '',

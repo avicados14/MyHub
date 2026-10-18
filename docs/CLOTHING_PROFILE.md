@@ -15,3 +15,7 @@ Migration: `20261015014559_closet_text_garments.sql`. Existing RLS and storage p
 Verification includes boundary/warmer-band tests, missing-weather/date matching, color selection, clean-only recommendations, preference exclusions, a browser text-item → temperature rule → plan → dirty → attach photo → laundry workflow, and the existing ZIP regression workflow. No OpenAI key or model call is added.
 
 Security advisor after migration: no new database/storage findings. The existing Auth leaked-password-protection warning remains a Dashboard setting; see [Supabase remediation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Current MyHub access is passwordless.
+
+## Build your own outfit
+
+In Closet Planner, choose **Build my own outfit**, select up to 20 clean garments, and optionally enter an outfit name. Category filtering keeps selections from other categories. The selected garments appear in the preview. Set the date, occasion and note, then choose **Save outfit & mark dirty**. The existing atomic save creates an immutable historical snapshot and marks only those garments dirty. Manual outfits do not require a weather forecast or follow automatic temperature restrictions. Dirty garments cannot be selected; run laundry to make them available again. Switch to **Get suggestions** to return to temperature-aware recommendations.
