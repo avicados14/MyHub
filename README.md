@@ -47,7 +47,7 @@ No paid Apple hosting, Apple Developer membership, App Store, or TestFlight dist
 - Rule-based suggestions from clean garments, occasion, and available Fahrenheit weather. Golden, Colorado is the default; device location is optional and requested only when selected.
 - **Save outfit & mark dirty** saves a dated immutable garment snapshot and immediately marks selected garments dirty, including future-dated plans. **Run laundry** marks garments clean. There is currently no separate “mark worn later” workflow.
 - Private Supabase photo storage and owner/session-protected wardrobe/history tables. Closet data is separate from encrypted AppData and requires a network connection.
-- **Export JSON** exports wardrobe/history metadata, not image files. It is separate from Settings' AppData backup; a complete photo backup/restore flow is not implemented. OpenAI recommendations are not enabled.
+- **Export JSON** exports wardrobe/history metadata, not image files. It is separate from Settings' AppData backup; a complete photo backup/restore flow is not implemented. Smart Suggest uses an optional server-side OpenAI integration and falls back to regular suggestions until configured. See [secure activation](docs/CLOSET_SETUP.md#smart-suggest-activation).
 
 See [Closet setup and privacy](docs/CLOSET_SETUP.md), [architecture](docs/CLOSET_PLAN.md), and the dated [verification report](docs/CLOSET_VERIFICATION.md).
 

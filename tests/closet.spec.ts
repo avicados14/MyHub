@@ -354,4 +354,35 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   const keptAccessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
   expect(keptAccessibility.violations).toEqual([])
   await page.screenshot({ path: testInfo.outputPath('keep-and-regenerate.png'), fullPage: true })
+  await page.route('**/functions/v1/closet-recommend', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 'AI_NOT_CONFIGURED' }),
+    }),
+  )
+  await page.getByRole('button', { name: 'Smart Suggest', exact: true }).click()
+  await expect(
+    page.getByText('Smart Suggest is unavailable or not configured. Showing a regular suggestion instead.', {
+      exact: false,
+    }),
+  ).toBeVisible()
+  await page.unroute('**/functions/v1/closet-recommend')
+  await page.route('**/functions/v1/closet-recommend', (route) => {
+    const body = route.request().postDataJSON()
+    expect(body.band.top).toBe('long-sleeve')
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ids: [starter.id, items.find((item) => item.garment_number === 4)!.id],
+        explanation: 'Synthetic smart suggestion for browser testing.',
+      }),
+    })
+  })
+  await keepTop.check()
+  await page.getByRole('button', { name: 'Smart Suggest', exact: true }).click()
+  await expect(
+    page.getByText('Smart Suggest: Synthetic smart suggestion for browser testing.', { exact: false }),
+  ).toBeVisible()
+  await expect(keepTop).toBeChecked()
 })

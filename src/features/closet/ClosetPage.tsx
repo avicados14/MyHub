@@ -1,5 +1,5 @@
 import { Download } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, EmptyState, Field, Modal, PageHeader, ProgressBar, StatusBadge } from '../../components/ui'
 import { toLocalDate } from '../../utilities/date'
@@ -9,6 +9,7 @@ import * as api from './api'
 import './closet.css'
 import { useApp } from '../../app/AppContext'
 import { planOutfit, typeOf, type OutfitSuggestion } from './recommendations'
+import { validateSmartOutput } from '../../../supabase/functions/closet-recommend/logic'
 import { ClothingProfile } from './ClothingProfile'
 
 function Photo({ path, name }: { path: string | null; name: string }) {
@@ -61,6 +62,7 @@ function IncomingPhoto({ file }: { file: File }) {
 export default function ClosetPage() {
   const { data: appData } = useApp()
   const bands = appData.settings.clothingTemperatureBands
+  const requestVersion = useRef(0)
   const [keptIds, setKeptIds] = useState<string[]>([])
   const [suggestionUsage, setSuggestionUsage] = useState<Record<string, number>>({})
   const [manualOutfit, setManualOutfit] = useState(false)
@@ -165,6 +167,60 @@ export default function ClosetPage() {
     } finally {
       setBusy(false)
     }
+  }
+  useEffect(() => {
+    requestVersion.current += 1
+  }, [items, date, temperature, occasion, bands, warmer, jacket, includeAvoid, manualOutfit, note])
+  const suggest = async (smart = false) => {
+    const version = requestVersion.current
+    const next = planOutfit(items, temperature, occasion, bands, {
+      warmer,
+      jacket,
+      includeAvoid,
+      variant,
+      keptIds,
+      previousIds: picks.map((item) => item.id),
+      usage: suggestionUsage,
+    })
+    if (smart && next.items.length && next.band && temperature !== null) {
+      setNotice('Finding a smart outfit…')
+      const input = {
+        low: temperature,
+        occasion,
+        note,
+        band: next.band,
+        jacket,
+        includeAvoid,
+        keptIds,
+        previousIds: picks.map((item) => item.id),
+      }
+      try {
+        const result = validateSmartOutput(await api.smartSuggest(input), items, input)
+        next.items = result.ids.map((id) => items.find((item) => item.id === id)!)
+        next.messages = [
+          'Smart Suggest: ' + result.explanation,
+          ...next.messages.filter((message) => message.includes('tank') || message.includes('No clean')),
+        ]
+      } catch {
+        next.messages.unshift('Smart Suggest is unavailable or not configured. Showing a regular suggestion instead.')
+      }
+    } else if (smart)
+      next.messages.unshift('Smart Suggest needs an active temperature band and suitable clean garments.')
+    if (version !== requestVersion.current) {
+      setNotice('Planning settings changed. Suggest again using your current settings.')
+      return
+    }
+    setSuggestion(next)
+    setPicks(next.items)
+    setSuggestionUsage((previous) => {
+      const counts = { ...previous }
+      for (const item of next.items) counts[item.id] = (counts[item.id] ?? 0) + 1
+      return counts
+    })
+    setTankConfirmed(false)
+    setVariant((value) => value + 1)
+    setPlanId(crypto.randomUUID())
+    setNotice(next.messages.join(' '))
   }
   const review = async (file: File, zip: boolean) =>
     act(async () => {
@@ -344,7 +400,7 @@ export default function ClosetPage() {
               <h2>Plan an outfit</h2>
               <p>
                 Suggestions use clean garments, your active temperature bands, clothing preferences, and color matching.
-                AI recommendations are not enabled.
+                Smart Suggest requires server-side setup; the regular planner always remains available.
               </p>
               <div className="closet-toolbar" role="group" aria-label="Outfit planning mode">
                 <button
@@ -503,34 +559,16 @@ export default function ClosetPage() {
                       Include less-preferred clothes
                     </label>
                   </div>
-                  <button
-                    className="button button--primary"
-                    disabled={busy}
-                    onClick={() => {
-                      const next = planOutfit(items, temperature, occasion, bands, {
-                        warmer,
-                        jacket,
-                        includeAvoid,
-                        variant,
-                        keptIds,
-                        previousIds: picks.map((item) => item.id),
-                        usage: suggestionUsage,
-                      })
-                      setSuggestion(next)
-                      setPicks(next.items)
-                      setSuggestionUsage((previous) => {
-                        const counts = { ...previous }
-                        for (const item of next.items) counts[item.id] = (counts[item.id] ?? 0) + 1
-                        return counts
-                      })
-                      setTankConfirmed(false)
-                      setVariant((value) => value + 1)
-                      setPlanId(crypto.randomUUID())
-                      setNotice(next.messages.join(' '))
-                    }}
-                  >
+                  <button className="button button--primary" disabled={busy} onClick={() => void act(() => suggest())}>
                     {keptIds.length ? 'Regenerate around kept items' : 'Suggest outfit'}
                   </button>
+                  <button className="button" disabled={busy} onClick={() => void act(() => suggest(true))}>
+                    Smart Suggest
+                  </button>
+                  <p className="muted">
+                    Smart Suggest uses your clothing descriptions and styling note with OpenAI when configured. Photos
+                    are not sent. If unavailable, the regular suggester is used.
+                  </p>
                   {keptIds.length > 0 && (
                     <button className="button" disabled={busy} onClick={() => setKeptIds([])}>
                       Release kept items

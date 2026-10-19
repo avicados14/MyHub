@@ -13,7 +13,7 @@ Project: MyHub (`vlsxvwqmzcriarcctubr`). Apply the three closet migrations in `s
 Deploy:
 
 - `myhub-closet-session`, including its relative `myhub-private-access/http.ts` dependency. Gateway JWT verification is disabled only because the handler authenticates the existing capability itself.
-- `closet-recommend`, with JWT verification enabled. It is intentionally disabled scaffolding and returns `AI_NOT_CONFIGURED`.
+- `closet-recommend`, with JWT verification enabled. It returns `AI_NOT_CONFIGURED` until all Smart Suggest server secrets are configured.
 
 The existing encrypted-data broker is unchanged. Its identity and encryption keys are not moved into wardrobe rows.
 
@@ -26,7 +26,7 @@ The existing encrypted-data broker is unchanged. Its identity and encryption key
 | `SUPABASE_URL`                  | Edge Function runtime                        | Supabase-provided project URL.                                                                          |
 | `SUPABASE_SERVICE_ROLE_KEY`     | Edge Function runtime only                   | Supabase-provided admin key for capability validation and session bridging. Never use a `VITE_` prefix. |
 | `SUPABASE_ANON_KEY`             | Edge Function runtime only                   | Supabase-provided key for the future recommendation endpoint's user-scoped client.                      |
-| `OPENAI_API_KEY`                | Future server-side secret only               | Not read or used by the current disabled placeholder.                                                   |
+| `OPENAI_API_KEY`                | Future server-side secret only               | Read only by the recommendation Edge Function when explicitly enabled.                                  |
 
 For any future email-based account-linking callback, set Supabase Auth Site URL to `https://avicados14.github.io/MyHub/` and add that exact URL to redirect allowlists (plus explicit localhost development URLs as needed). The capability bridge uses no email redirect. Never put private-link fragment values in redirect settings. Do not enable a second email login without implementing verified account linking and a callback compatible with MyHub's hash router.
 
@@ -50,7 +50,36 @@ Upload starts only after review. Per-entry operation UUIDs stay stable in the re
 
 Default weather is Golden, Colorado in Fahrenheit via Open-Meteo. Device location is optional. Weather failure is shown, and no temperature is fabricated. The local rule-based planner chooses clean tops/bottoms or a one-piece garment, optional shoes, and an available outer layer below 62°F. It uses simple filename-based occasion preferences. Notes are saved for history, not interpreted as AI instructions. Saving immediately marks selected garments dirty; **Run laundry** restores them to clean.
 
-To implement AI later, extend `closet-recommend` after server-side `getUser()` verification. Keep its user-scoped RLS query; validate weather, occasion and note lengths, send only necessary garment metadata, request structured JSON, and reject every returned garment ID not in that user's current clean set. Add rate limits, cost controls, model-output tests, a server-side `OPENAI_API_KEY` secret and an explicit feature flag. Do not claim AI is active merely because a key is set: the present endpoint intentionally remains disabled. Planning must still use the transactional RPC and revalidate cleanliness.
+## Smart Suggest activation
+
+The feature is implemented but requires all three **server-side Edge Function secrets**:
+
+- `OPENAI_API_KEY`: an OpenAI API project key.
+- `CLOSET_AI_MODEL`: an available model supporting the Responses API and strict JSON schema output.
+- `CLOSET_AI_ENABLED`: `true`. Set to `false` to disable immediately.
+
+Set these in the Supabase project's **Edge Functions → Secrets** screen. Never use
+`VITE_` variables, commit secrets, or paste a key into chat. OpenAI API billing is
+separate from a ChatGPT subscription. Configure project usage alerts/limits before activation.
+
+Deploy both `supabase/functions/closet-recommend/index.ts` and `logic.ts` with JWT verification.
+The endpoint also calls `getUser()`, queries with the caller's JWT under existing RLS, and
+filters ownership and clean status. No service-role key, image paths, photos, or account
+identifiers are sent to OpenAI. The request uses `store: false`; provider data policies
+still apply. Only garment IDs, names, colors, preferences, planning inputs, and the note
+are sent. The current clothing band comes from the user's encrypted profile through the
+request and is shape-validated; it is a preference, not an authorization boundary.
+
+Returned IDs must fill exactly one item per eligible clothing slot, include all kept items,
+and belong to the user's clean set. Cleanliness is checked again after generation and by the
+atomic save RPC. Malformed output, refusals, timeouts, and unavailable configuration fall back
+to the regular planner in the UI. Requests cap notes at 1,000 characters, wardrobes at 500
+clean garments, model output at 900 tokens, and model calls at 20 seconds. These bounds are
+not a global spending cap: monitor provider usage and disable the feature if necessary.
+
+Verification without a key covers constraints, ownership exclusions, fallback UI, and simulated
+valid AI responses. A real provider call must be verified after configuration before claiming
+that live AI suggestions work.
 
 ## Verification
 
