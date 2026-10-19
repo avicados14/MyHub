@@ -331,4 +331,27 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   const manualAccessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
   expect(manualAccessibility.violations).toEqual([])
   await page.screenshot({ path: testInfo.outputPath('manual-outfit.png'), fullPage: true })
+  items.push({
+    ...items[1]!,
+    id: crypto.randomUUID(),
+    import_key: crypto.randomUUID(),
+    garment_number: 4,
+    name: 'Synthetic alternate pants',
+  })
+  await page.reload()
+  await page.getByLabel('Planned date', { exact: true }).fill('2026-06-01')
+  await expect(page.getByLabel('Feels-like low °F', { exact: true })).toHaveValue('55')
+  await page.getByRole('button', { name: 'Suggest outfit', exact: true }).click()
+  const keepTop = page.getByLabel('Keep garment #3: Synthetic coral long sleeves', { exact: true })
+  await keepTop.check()
+  const before = await page.locator('.closet-picks').first().innerText()
+  await page.getByRole('button', { name: 'Regenerate around kept items', exact: true }).click()
+  await expect(keepTop).toBeChecked()
+  expect(await page.locator('.closet-picks').first().innerText()).not.toBe(before)
+  await page.getByRole('button', { name: 'Release kept items', exact: true }).click()
+  await expect(keepTop).not.toBeChecked()
+  await expect(page.getByRole('button', { name: 'Suggest outfit', exact: true })).toBeVisible()
+  const keptAccessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
+  expect(keptAccessibility.violations).toEqual([])
+  await page.screenshot({ path: testInfo.outputPath('keep-and-regenerate.png'), fullPage: true })
 })

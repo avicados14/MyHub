@@ -1,5 +1,5 @@
 import type { ClothingTemperatureBand } from '../../domain/types'
-import { recommend, type Garment, type GarmentType, type Occasion } from './types'
+import { type Garment, type GarmentType, type Occasion } from './types'
 
 export function inferType(name: string, category: string): GarmentType {
   const text = name.toLowerCase()
@@ -71,91 +71,158 @@ export interface OutfitSuggestion {
   band?: ClothingTemperatureBand
   needsTank: boolean
 }
+export interface SuggestionOptions {
+  warmer?: boolean
+  jacket?: boolean
+  includeAvoid?: boolean
+  variant?: number
+  keptIds?: string[]
+  previousIds?: string[]
+  usage?: Record<string, number>
+}
 export function planOutfit(
   items: Garment[],
   low: number | null,
   occasion: Occasion,
   bands: ClothingTemperatureBand[] = [],
-  options: { warmer?: boolean; jacket?: boolean; includeAvoid?: boolean; variant?: number } = {},
+  options: SuggestionOptions = {},
 ): OutfitSuggestion {
-  if (!bands.length)
-    return {
-      items: recommend(items, low, occasion),
-      messages: ['No active temperature bands configured. Add them in Clothing profile.'],
-      needsTank: false,
-    }
-  if (low === null || !Number.isFinite(low) || low < -150 || low > 150)
+  const messages: string[] = []
+  if (bands.length && (low === null || !Number.isFinite(low) || low < -150 || low > 150))
     return {
       items: [],
       messages: ['Enter a feels-like low or wait for weather before suggesting an outfit.'],
       needsTank: false,
     }
-  const band = temperatureBand(bands, low, options.warmer)
-  if (!band)
+  const band = bands.length ? temperatureBand(bands, low!, options.warmer) : undefined
+  if (bands.length && !band)
     return {
       items: [],
       messages: ['Temperature bands are invalid or do not cover this temperature. Review Clothing profile.'],
       needsTank: false,
     }
+  if (!bands.length) messages.push('No active temperature bands configured. Add them in Clothing profile.')
   const clean = items.filter((i) => i.laundry_status === 'clean' && (options.includeAvoid || i.preference !== 'avoid'))
-  const preference = (i: Garment) => (i.preference === 'preferred' ? 10 : i.preference === 'avoid' ? -10 : 0)
-  const pickType = (type: GarmentType) =>
-    clean
-      .filter((i) => typeOf(i) === type)
-      .sort((a, b) => preference(b) - preference(a) || a.garment_number - b.garment_number)
-  const pairs = pickType(band.top)
-    .slice(0, 100)
-    .flatMap((top) =>
-      pickType(band.bottom)
-        .slice(0, 100)
-        .map((bottom) => ({
-          top,
-          bottom,
-          score: preference(top) + preference(bottom) + colorScore(top.primary_color, bottom.primary_color),
-        })),
-    )
-    .sort(
+  const keptIds = new Set(options.keptIds ?? [])
+  const kept = clean.filter((i) => keptIds.has(i.id))
+  const pools: Record<string, Garment[]> = {
+    top: clean.filter((i) => (band ? typeOf(i) === band.top : i.category === 'tops')),
+    bottom: clean.filter((i) => (band ? typeOf(i) === band.bottom : i.category === 'bottoms')),
+    shoes: clean.filter((i) => (band ? typeOf(i) === 'shoes' : i.category === 'shoes')),
+    tank: band?.tank ? clean.filter((i) => typeOf(i) === 'tank') : [],
+    jacket:
+      options.jacket || (!band && low !== null && low < 62)
+        ? clean.filter((i) => (band ? typeOf(i) === 'jacket' : i.category === 'outerwear'))
+        : [],
+    one: !band ? clean.filter((i) => i.category === 'one-piece') : [],
+  }
+  if (
+    kept.length !== keptIds.size ||
+    kept.some((i) => !Object.values(pools).some((pool) => pool.some((p) => p.id === i.id))) ||
+    Object.values(pools).some((pool) => pool.filter((i) => keptIds.has(i.id)).length > 1)
+  )
+    return {
+      items: [],
+      band,
+      messages: ['A kept garment is no longer clean or does not fit these settings. Release it and suggest again.'],
+      needsTank: false,
+    }
+  const pool = (role: string) => {
+    const choices = pools[role]!
+    const fixed = choices.filter((i) => keptIds.has(i.id))
+    return fixed.length ? fixed : choices
+  }
+  const previous = new Set(options.previousIds ?? [])
+  const score = (outfit: Garment[]) =>
+    outfit.reduce((sum, item, index) => {
+      const preference = item.preference === 'preferred' ? 10 : item.preference === 'avoid' ? -10 : 0
+      const occasionScore =
+        ['Office', 'Date night'].includes(occasion) && /shirt|blouse|dress|chino|loafer/.test(item.name.toLowerCase())
+          ? 2
+          : 0
+      return (
+        sum +
+        preference +
+        occasionScore +
+        outfit.slice(index + 1).reduce((total, other) => total + colorScore(item.primary_color, other.primary_color), 0)
+      )
+    }, 0)
+  const choose = (choices: Garment[][], anchors: Garment[]) => {
+    const candidates = choices.map((choice) => {
+      const all = [...new Map([...choice, ...anchors].map((i) => [i.id, i])).values()]
+      return {
+        choice,
+        compatible: all.every((i, n) =>
+          all.slice(n + 1).every((other) => colorScore(i.primary_color, other.primary_color) >= 0),
+        ),
+        score: score(all),
+        repeats: choice.filter((i) => !keptIds.has(i.id) && previous.has(i.id)).length,
+        usage: choice.reduce((sum, i) => sum + (keptIds.has(i.id) ? 0 : (options.usage?.[i.id] ?? 0)), 0),
+      }
+    })
+    const compatible = candidates.filter((c) => c.compatible)
+    // If nothing coordinates, retain only the best available color/preference match.
+    const bestScore = candidates.reduce((best, c) => Math.max(best, c.score), -Infinity)
+    const eligible = compatible.length ? compatible : candidates.filter((c) => c.score === bestScore)
+    eligible.sort(
       (a, b) =>
+        a.repeats - b.repeats ||
+        a.usage - b.usage ||
         b.score - a.score ||
-        a.top.garment_number - b.top.garment_number ||
-        a.bottom.garment_number - b.bottom.garment_number,
+        a.choice
+          .map((i) => i.garment_number)
+          .join(',')
+          .localeCompare(b.choice.map((i) => i.garment_number).join(','), undefined, { numeric: true }),
     )
-  const compatible = pairs.filter((pair) => pair.score >= (pairs[0]?.score ?? 0) - 1)
-  const pair = compatible[Math.max(0, options.variant ?? 0) % Math.min(compatible.length, 8)]
-  if (!pair)
+    const best = eligible[0]
+    if (!best) return undefined
+    const ties = eligible.filter((c) => c.repeats === best.repeats && c.usage === best.usage && c.score === best.score)
+    const variant = Number.isFinite(options.variant) ? Math.max(0, Math.floor(options.variant!)) : 0
+    if (!compatible.length)
+      messages.push('No fully color-compatible alternative is available; showing the closest available match.')
+    return ties[variant % ties.length]!.choice
+  }
+  const base =
+    pool('top').length && pool('bottom').length && !pool('one').some((i) => keptIds.has(i.id))
+      ? pool('top').flatMap((top) => pool('bottom').map((bottom) => [top, bottom]))
+      : pool('one').map((one) => [one])
+  const selected = choose(base, kept)
+  if (
+    !selected ||
+    kept.some(
+      (i) => (pools.top!.includes(i) || pools.bottom!.includes(i) || pools.one!.includes(i)) && !selected.includes(i),
+    )
+  )
     return {
       items: [],
       band,
       messages: [
-        `No clean ${band.top} and ${band.bottom} combination is available. Run laundry, edit clothing types, or explicitly include less-preferred items.`,
+        `No clean ${band ? `${band.top} and ${band.bottom}` : 'top and bottom or one-piece'} combination is available. Run laundry or review clothing settings.`,
       ],
-      needsTank: band.tank,
+      needsTank: Boolean(band?.tank),
     }
-  const selected = [pair.top, pair.bottom],
-    messages: string[] = []
-  const coordinate = (type: GarmentType) =>
-    pickType(type).sort(
-      (a, b) =>
-        preference(b) +
-          colorScore(pair.top.primary_color, b.primary_color) +
-          colorScore(pair.bottom.primary_color, b.primary_color) -
-          (preference(a) +
-            colorScore(pair.top.primary_color, a.primary_color) +
-            colorScore(pair.bottom.primary_color, a.primary_color)) || a.garment_number - b.garment_number,
-    )[0]
-  const shoes = coordinate('shoes')
-  if (shoes) selected.push(shoes)
-  else messages.push('No clean shoes are available in the wardrobe.')
-  const tank = band.tank ? coordinate('tank') : undefined
-  if (tank) selected.push(tank)
-  if (band.tank && !tank)
-    messages.push(
-      'This band requires a tank undershirt. Tank quantities are not tracked; confirm you have a clean tank.',
-    )
-  if (options.jacket) {
-    const jacket = coordinate('jacket')
-    if (jacket) selected.push(jacket)
-    else messages.push('No clean preferred/regular jacket is available. Less-preferred jackets require opting in.')
+  for (const role of ['shoes', 'tank', 'jacket']) {
+    const next = choose(
+      pool(role).map((i) => [i]),
+      [...selected, ...kept],
+    )?.[0]
+    if (next) selected.push(next)
+    else if (role === 'shoes') messages.push('No clean shoes are available in the wardrobe.')
+    else if (role === 'tank' && band?.tank)
+      messages.push(
+        'This band requires a tank undershirt. Tank quantities are not tracked; confirm you have a clean tank.',
+      )
+    else if (role === 'jacket' && options.jacket)
+      messages.push('No clean preferred/regular jacket is available. Less-preferred jackets require opting in.')
   }
-  return { items: selected, band, messages, needsTank: band.tank && !tank }
+  if (selected.every((i) => keptIds.has(i.id)))
+    messages.push('All suggested items are kept. Uncheck Keep this item to change part of the outfit.')
+  else if (selected.some((i) => previous.has(i.id) && !keptIds.has(i.id)))
+    messages.push('Some unkept items repeated because the available clean, color-compatible combinations are limited.')
+  return {
+    items: selected,
+    band,
+    messages: [...new Set(messages)],
+    needsTank: Boolean(band?.tank && !selected.some((i) => typeOf(i) === 'tank')),
+  }
 }

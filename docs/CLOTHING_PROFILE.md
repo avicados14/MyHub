@@ -19,3 +19,13 @@ Security advisor after migration: no new database/storage findings. The existing
 ## Build your own outfit
 
 In Closet Planner, choose **Build my own outfit**, select up to 20 clean garments, and optionally enter an outfit name. Category filtering keeps selections from other categories. The selected garments appear in the preview. Set the date, occasion and note, then choose **Save outfit & mark dirty**. The existing atomic save creates an immutable historical snapshot and marks only those garments dirty. Manual outfits do not require a weather forecast or follow automatic temperature restrictions. Dirty garments cannot be selected; run laundry to make them available again. Switch to **Get suggestions** to return to temperature-aware recommendations.
+
+## Keep items while regenerating
+
+Check **Keep this item** on suggested garments, then choose **Regenerate around kept items**.
+Kept garments anchor the remaining color choices. Unkept slots favor alternatives to the
+previous suggestion and garments shown less often during this visit, including shoes and jackets.
+All choices still respect clean status, temperature bands, and the less-preferred setting.
+Limited alternatives are explained. **Release kept items** clears the locks.
+Changing the date, weather, wardrobe, or planning settings clears keeps.
+This planner uses local rules; it is not an AI service.

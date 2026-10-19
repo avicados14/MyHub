@@ -108,3 +108,68 @@ describe('active personal wardrobe rules', () => {
     await expect(weather('2026-07-01')).rejects.toThrow('No feels-like forecast')
   })
 })
+
+describe('kept garments and suggestion variety', () => {
+  const inventory = [
+    ...Array.from({ length: 12 }, (_, n) => garment(n + 1, 'short-sleeve')),
+    garment(20, 'shorts'),
+    garment(21, 'shorts'),
+    garment(30, 'shoes'),
+    garment(31, 'shoes'),
+    garment(40, 'jacket'),
+    garment(41, 'jacket'),
+  ]
+  it('keeps selected garments while rotating all other roles', () => {
+    const first = planOutfit(inventory, 75, 'Everyday', bands, { jacket: true })
+    const kept = first.items[0]!
+    const second = planOutfit(inventory, 75, 'Everyday', bands, {
+      jacket: true,
+      keptIds: [kept.id],
+      previousIds: first.items.map((i) => i.id),
+    })
+    expect(second.items[0]!.id).toBe(kept.id)
+    for (const item of second.items.slice(1)) expect(first.items.map((i) => i.id)).not.toContain(item.id)
+    const allKept = planOutfit(inventory, 75, 'Everyday', bands, {
+      jacket: true,
+      keptIds: second.items.map((i) => i.id),
+    })
+    expect(allKept.items.map((i) => i.id)).toEqual(second.items.map((i) => i.id))
+    expect(allKept.messages.join(' ')).toContain('All suggested items are kept')
+  })
+  it('reaches every eligible top instead of cycling through eight combinations', () => {
+    const seen = new Set<string>()
+    const usage: Record<string, number> = {}
+    let previousIds: string[] = []
+    for (let variant = 0; variant < 24; variant++) {
+      const result = planOutfit(inventory, 75, 'School', bands, { previousIds, usage, variant, jacket: true })
+      previousIds = result.items.map((i) => i.id)
+      result.items.forEach((i) => {
+        seen.add(i.id)
+        usage[i.id] = (usage[i.id] ?? 0) + 1
+      })
+    }
+    expect(seen.size).toBe(inventory.length)
+  })
+  it('rejects stale, dirty, wrong-temperature, and conflicting keeps', () => {
+    for (const keptIds of [['missing'], ['fixture-90'], ['fixture-91'], ['fixture-1', 'fixture-2']]) {
+      const result = planOutfit(
+        [...inventory, garment(90, 'short-sleeve', 'gray', { laundry_status: 'dirty' }), garment(91, 'sweatshirt')],
+        75,
+        'Everyday',
+        bands,
+        { keptIds },
+      )
+      expect(result.items).toEqual([])
+      expect(result.messages.join(' ')).toContain('Release')
+    }
+  })
+  it('matches remaining colors around a kept item and explains unavoidable repeats', () => {
+    const items = [garment(1, 'short-sleeve', 'purple'), garment(2, 'shorts', 'orange'), garment(3, 'shorts', 'gray')]
+    const result = planOutfit(items, 75, 'Everyday', bands, {
+      keptIds: ['fixture-1'],
+      previousIds: ['fixture-1', 'fixture-3'],
+    })
+    expect(result.items.map((i) => i.id)).toEqual(['fixture-1', 'fixture-3'])
+    expect(result.messages.join(' ')).toContain('limited')
+  })
+})
