@@ -979,7 +979,7 @@
 
 .container-estimate {
   padding: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background: var(--surface);
 }
