@@ -39,7 +39,7 @@ describe('meal lifecycle', () => {
     expect(meal.date).not.toBe('2026-09-24')
   })
 
-  it('upserts a detail-page meal and synchronizes prepared minus consumed leftovers', () => {
+  it('adds another item without deleting the existing meal or its batch', () => {
     const data = createTestFixtureData(new Date(2026, 8, 22))
     const displaced = data.meals[0]!
     const replacement = {
@@ -63,8 +63,8 @@ describe('meal lifecycle', () => {
     })
 
     const updated = upsertMealWithLeftover(data, replacement, '2026-09-22T12:00:00.000Z')
-    expect(updated.meals.find((meal) => meal.id === displaced.id)).toBeUndefined()
-    expect(updated.leftovers.find((leftover) => leftover.sourceMealId === displaced.id)).toBeUndefined()
+    expect(updated.meals.find((meal) => meal.id === displaced.id)).toEqual(displaced)
+    expect(updated.leftovers.find((leftover) => leftover.sourceMealId === displaced.id)).toBeDefined()
     expect(updated.leftovers.find((leftover) => leftover.sourceMealId === replacement.id)?.servingsRemaining).toBe(3)
   })
 

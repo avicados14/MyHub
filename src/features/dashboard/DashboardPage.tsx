@@ -242,13 +242,18 @@ export default function DashboardPage() {
         </div>
         <div className="meal-strip meal-strip--four">
           {mealSlots.map((slot) => {
-            const meal = meals.find((entry) => entry.slot === slot)
+            const items = meals.filter((entry) => entry.slot === slot)
+            const meal = items[0]
             const recipe = meal?.recipeId ? recipeMap.get(meal.recipeId) : undefined
             const name = recipe?.name ?? meal?.customName ?? meal?.sourceSnapshot.name
             const batchRemaining = meal ? remainingBatchServingsForMeal(data, meal) : null
 
             return meal ? (
-              <Link className="meal-card" key={slot} to={recipe ? `/food/recipes/${recipe.id}` : '/food?view=planner'}>
+              <Link
+                className="meal-card"
+                key={slot}
+                to={recipe && items.length === 1 ? `/food/recipes/${recipe.id}` : '/food?view=planner'}
+              >
                 {recipe?.image ? (
                   <img src={assetUrl(recipe.image)} alt="" width="420" height="280" loading="lazy" />
                 ) : (
@@ -256,12 +261,22 @@ export default function DashboardPage() {
                 )}
                 <div className="meal-card__body">
                   <span>{slot}</span>
-                  <strong>{name || 'Custom meal'}</strong>
+                  <strong>
+                    {items.length > 1
+                      ? items.map((item) => item.sourceSnapshot.name).join(' + ')
+                      : name || 'Custom meal'}
+                  </strong>
                   <small>
-                    {meal.servings} serving ·{' '}
-                    {batchRemaining !== null
-                      ? `${batchRemaining} batch servings left`
-                      : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
+                    {items.length > 1 ? (
+                      `${items.length} items · ${Math.round(items.reduce((sum, item) => sum + item.servings * item.sourceSnapshot.nutritionPerServing.calories, 0))} kcal planned`
+                    ) : (
+                      <>
+                        {meal.servings} serving ·{' '}
+                        {batchRemaining !== null
+                          ? `${batchRemaining} batch servings left`
+                          : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
+                      </>
+                    )}
                   </small>
                 </div>
               </Link>
