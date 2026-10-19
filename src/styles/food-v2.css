@@ -976,3 +976,19 @@
     transform: none;
   }
 }
+
+.container-estimate {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+.container-estimate p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0.5rem 0;
+}
+.container-estimate summary {
+  cursor: pointer;
+  margin-top: 0.75rem;
+}

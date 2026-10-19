@@ -302,14 +302,11 @@ export const upsertMealWithLeftover = (
         },
       }
     : meal
-  const displaced = data.meals.find(
-    (item) => item.id !== normalizedMeal.id && item.date === normalizedMeal.date && item.slot === normalizedMeal.slot,
-  )
-  const withoutDisplaced = displaced ? removeMealAndBatch(data, displaced.id) : data
-  const meals = withoutDisplaced.meals.some((item) => item.id === normalizedMeal.id)
-    ? withoutDisplaced.meals.map((item) => (item.id === normalizedMeal.id ? normalizedMeal : item))
-    : [...withoutDisplaced.meals, normalizedMeal]
-  const withMeal = { ...withoutDisplaced, meals }
+  // A date/slot is a meal group, not a unique entry. Only an explicit ID replaces an item.
+  const meals = data.meals.some((item) => item.id === normalizedMeal.id)
+    ? data.meals.map((item) => (item.id === normalizedMeal.id ? normalizedMeal : item))
+    : [...data.meals, normalizedMeal]
+  const withMeal = { ...data, meals }
   if (normalizedMeal.leftoverId) return reconcileMealBatchBalances(withMeal, timestamp)
   const withLeftover = syncLeftoverForMeal(withMeal, normalizedMeal, timestamp)
   if (options.autoPlanExtraServings)
@@ -333,7 +330,7 @@ export const logMealConsumption = (
 ): AppData => {
   const meal = data.meals.find((item) => item.id === mealId)
   if (!meal) return data
-  const safeServings = Math.max(0, consumedServings)
+  const safeServings = Number.isFinite(consumedServings) ? Math.max(0, consumedServings) : meal.consumedServings
   const updatedMeal: MealEntry = { ...meal, updatedAt: timestamp, consumedServings: safeServings }
   const withoutPrevious = data.foodLog.filter((entry) => entry.sourceSnapshot.sourceId !== `meal:${meal.id}`)
   const entry: FoodLogEntry | null =
@@ -376,9 +373,7 @@ export const moveOrCopyMeal = (
 ): AppData => {
   const meal = data.meals.find((item) => item.id === mealId)
   if (!meal) return data
-  const withoutTarget = data.meals.filter(
-    (item) => !(item.date === target.date && item.slot === target.slot) && (mode === 'copy' || item.id !== mealId),
-  )
+  const withoutTarget = data.meals.filter((item) => mode === 'copy' || item.id !== mealId)
   const next: MealEntry =
     mode === 'move'
       ? { ...meal, updatedAt: timestamp, ...target }

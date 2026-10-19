@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Field, Modal, SegmentedControl } from '../../components/ui'
+import { estimateContainerPortion } from '../../domain/containerPortion'
 import { createUnknownNutritionProvenance } from '../../domain/defaults'
 import { remainingServingsForLeftover } from '../../domain/mealWorkflow'
 import { createZeroNutrition, NUTRITION_FIELDS } from '../../domain/nutrition'
@@ -77,6 +78,9 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
             : '',
     )
   }
+
+  const selectedRecipe = sourceType === 'recipe' ? data.recipes.find((item) => item.id === sourceId) : undefined
+  const containerEstimate = selectedRecipe ? estimateContainerPortion(selectedRecipe) : null
 
   const save = () => {
     const timestamp = new Date().toISOString()
@@ -157,8 +161,8 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
       setError(`Choose a ${sourceType === 'custom' ? 'custom food name' : `${sourceType} item`} before saving.`)
       return
     }
-    if (servings < 0 || prepared < 0) {
-      setError('Serving counts cannot be negative.')
+    if (!Number.isFinite(servings) || servings <= 0 || !Number.isFinite(prepared) || prepared < 0) {
+      setError('Enter a positive planned serving amount and a nonnegative prepared amount.')
       return
     }
     onSave(next, {
@@ -230,7 +234,7 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
               <input
                 value={customName}
                 onChange={(event) => setCustomName(event.target.value)}
-                placeholder="Cafe soup and bread"
+                placeholder="Drink, snack, dessert, or another food"
               />
             </Field>
             <div className="nutrition-editor-grid">
@@ -248,12 +252,50 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
             </div>
           </>
         ) : null}
+        {selectedRecipe ? (
+          <section className="container-estimate" aria-label="30 oz container estimate">
+            <strong>No portion measured? Estimate a 30 oz container</strong>
+            {containerEstimate ? (
+              <>
+                <p>
+                  About {containerEstimate.servings} recipe servings per container (rough range{' '}
+                  {containerEstimate.servingRange[0]}–{containerEstimate.servingRange[1]}). A recipe serving is 1/
+                  {selectedRecipe.originalYield} of the batch.
+                </p>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() => {
+                    setServings(containerEstimate.servings)
+                  }}
+                >
+                  Use container estimate
+                </button>
+                <details>
+                  <summary>How this is estimated</summary>
+                  {containerEstimate.assumptions.map((note) => (
+                    <p key={note}>{note}</p>
+                  ))}
+                </details>
+              </>
+            ) : (
+              <p>
+                A 30 US fl oz container holds about 3.75 cups to the rim; aim for about 3.2 cups with lid space. This
+                recipe needs a measured portion or cooked batch volume to convert that to servings reliably.
+              </p>
+            )}
+            <p>
+              Your entered serving amount takes priority. This estimate never changes the recipe’s yield or nutrition
+              per serving.
+            </p>
+          </section>
+        ) : null}
         <div className="form-grid__split">
           <Field label="Servings planned">
             <input
               type="number"
-              min="0.25"
-              step="0.25"
+              min="0.01"
+              step="any"
               value={servings}
               onChange={(event) => setServings(Number(event.target.value))}
             />
@@ -262,7 +304,7 @@ export default function MealEditor({ open, data, target, meal, initialSource, on
             <input
               type="number"
               min="0"
-              step="0.25"
+              step="any"
               value={prepared}
               onChange={(event) => setPrepared(Number(event.target.value))}
             />

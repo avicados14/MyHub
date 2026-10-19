@@ -748,7 +748,7 @@ function PlannerView({
             >
               <ArrowRight aria-hidden="true" />
             </button>
-            <StatusBadge tone="food">{visibleMealCount} meals this week</StatusBadge>
+            <StatusBadge tone="food">{visibleMealCount} meal items this week</StatusBadge>
           </div>
         </div>
         <div className="meal-week">
@@ -761,96 +761,134 @@ function PlannerView({
                   <strong>{day.getDate()}</strong>
                 </header>
                 {mealSlots.map((slot) => {
-                  const meal = data.meals.find((entry) => entry.date === date && entry.slot === slot)
-                  const batchRemaining = meal ? remainingBatchServingsForMeal(data, meal) : null
+                  const items = data.meals.filter((entry) => entry.date === date && entry.slot === slot)
                   return (
                     <div className="meal-slot" key={slot}>
                       <span>{slot}</span>
-                      {meal ? (
-                        <div className="meal-slot__planned">
-                          <button type="button" onClick={() => onAdd(date, slot, meal)}>
-                            <strong>{meal.sourceSnapshot.name}</strong>
-                            <small>
-                              {meal.servings} planned ·{' '}
-                              {batchRemaining !== null
-                                ? `${batchRemaining} batch servings left`
-                                : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
-                            </small>
-                          </button>
-                          <button
-                            className="meal-slot__remove"
-                            type="button"
-                            aria-label={`Remove ${slot} on ${formatDate(date)}`}
-                            onClick={() =>
-                              updateData(
-                                (previous) => removeMealWithBatch(previous, meal.id),
-                                meal.autoPlannedFromMealId
-                                  ? 'Future batch serving removed from the plan.'
-                                  : 'Meal and its future batch servings removed from the plan.',
-                              )
-                            }
-                          >
-                            ×
-                          </button>
-                          {meal.recipeId && data.recipes.some((recipe) => recipe.id === meal.recipeId) ? (
-                            <Link
-                              className="button button--secondary"
-                              to={`/food/recipes/${meal.recipeId}/cook?servings=${meal.preparedServings || meal.servings}`}
-                            >
-                              Cook recipe
-                            </Link>
-                          ) : null}
-                          <div className="meal-slot__controls">
-                            <button
-                              type="button"
-                              aria-label={`Move ${meal.sourceSnapshot.name} to previous day`}
-                              onClick={() => shiftMeal(meal, -1, 'move')}
-                            >
-                              <ArrowLeft aria-hidden="true" />
+                      {items.length > 0 ? (
+                        <small className="meal-slot__total">
+                          {items.length} {items.length === 1 ? 'item' : 'items'} ·{' '}
+                          {Math.round(
+                            items.reduce(
+                              (sum, item) => sum + item.servings * item.sourceSnapshot.nutritionPerServing.calories,
+                              0,
+                            ),
+                          )}{' '}
+                          kcal planned
+                        </small>
+                      ) : null}
+                      {items.map((meal) => {
+                        const batchRemaining = remainingBatchServingsForMeal(data, meal)
+                        return (
+                          <div className="meal-slot__planned" key={meal.id}>
+                            <button type="button" onClick={() => onAdd(date, slot, meal)}>
+                              <strong>{meal.sourceSnapshot.name}</strong>
+                              <small>
+                                {meal.servings} planned ·{' '}
+                                {batchRemaining !== null
+                                  ? `${batchRemaining} batch servings left`
+                                  : `${Math.max(0, meal.preparedServings - meal.consumedServings)} left`}
+                              </small>
                             </button>
                             <button
+                              className="meal-slot__remove"
                               type="button"
-                              aria-label={`Copy ${meal.sourceSnapshot.name} to next day`}
-                              onClick={() => shiftMeal(meal, 1, 'copy')}
-                            >
-                              <Copy aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`Move ${meal.sourceSnapshot.name} to next day`}
-                              onClick={() => shiftMeal(meal, 1, 'move')}
-                            >
-                              <ArrowRight aria-hidden="true" />
-                            </button>
-                          </div>
-                          <label className="consumed-control">
-                            <span>Consumed</span>
-                            <input
-                              aria-label={`Consumed servings for ${meal.sourceSnapshot.name}`}
-                              type="number"
-                              min="0"
-                              step="0.25"
-                              value={meal.consumedServings}
-                              onChange={(event) =>
+                              aria-label={`Remove ${meal.sourceSnapshot.name} from ${slot} on ${formatDate(date)}`}
+                              onClick={() =>
                                 updateData(
-                                  (previous) =>
-                                    logMealConsumption(
-                                      previous,
-                                      meal.id,
-                                      Number(event.target.value),
-                                      new Date().toISOString(),
-                                    ),
-                                  'Consumed servings updated; nutrition and leftovers recalculated.',
+                                  (previous) => removeMealWithBatch(previous, meal.id),
+                                  meal.autoPlannedFromMealId
+                                    ? 'Future batch serving removed from the plan.'
+                                    : 'Meal and its future batch servings removed from the plan.',
                                 )
                               }
-                            />
-                          </label>
-                        </div>
-                      ) : (
-                        <button className="meal-slot__add" type="button" onClick={() => onAdd(date, slot)}>
-                          <Plus aria-hidden="true" /> Add
-                        </button>
-                      )}
+                            >
+                              ×
+                            </button>
+                            {meal.recipeId && data.recipes.some((recipe) => recipe.id === meal.recipeId) ? (
+                              <Link
+                                className="button button--secondary"
+                                to={`/food/recipes/${meal.recipeId}/cook?servings=${meal.preparedServings || meal.servings}`}
+                              >
+                                Cook recipe
+                              </Link>
+                            ) : null}
+                            <div className="meal-slot__controls">
+                              <button
+                                type="button"
+                                aria-label={`Move ${meal.sourceSnapshot.name} to previous day`}
+                                onClick={() => shiftMeal(meal, -1, 'move')}
+                              >
+                                <ArrowLeft aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Copy ${meal.sourceSnapshot.name} to next day`}
+                                onClick={() => shiftMeal(meal, 1, 'copy')}
+                              >
+                                <Copy aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Move ${meal.sourceSnapshot.name} to next day`}
+                                onClick={() => shiftMeal(meal, 1, 'move')}
+                              >
+                                <ArrowRight aria-hidden="true" />
+                              </button>
+                            </div>
+                            <label className="consumed-control">
+                              <span>Consumed</span>
+                              <input
+                                aria-label={`Consumed servings for ${meal.sourceSnapshot.name}`}
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={meal.consumedServings}
+                                onChange={(event) =>
+                                  updateData(
+                                    (previous) =>
+                                      logMealConsumption(
+                                        previous,
+                                        meal.id,
+                                        Number(event.target.value),
+                                        new Date().toISOString(),
+                                      ),
+                                    'Consumed servings updated; nutrition and leftovers recalculated.',
+                                  )
+                                }
+                              />
+                            </label>
+                            <button
+                              className="button button--quiet"
+                              type="button"
+                              aria-label={`Eat one more serving of ${meal.sourceSnapshot.name}`}
+                              onClick={() =>
+                                updateData((previous) => {
+                                  const current = previous.meals.find((item) => item.id === meal.id)
+                                  return current
+                                    ? logMealConsumption(
+                                        previous,
+                                        current.id,
+                                        current.consumedServings + 1,
+                                        new Date().toISOString(),
+                                      )
+                                    : previous
+                                }, 'One more serving recorded; nutrition and leftovers updated.')
+                              }
+                            >
+                              +1 serving eaten
+                            </button>
+                          </div>
+                        )
+                      })}
+                      <button
+                        className="meal-slot__add"
+                        type="button"
+                        onClick={() => onAdd(date, slot)}
+                        aria-label={`Add item to ${slot} on ${formatDate(date)}`}
+                      >
+                        <Plus aria-hidden="true" /> {items.length ? 'Add another item' : 'Add'}
+                      </button>
                     </div>
                   )
                 })}

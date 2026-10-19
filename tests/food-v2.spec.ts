@@ -116,7 +116,11 @@ test.describe('food v2 workflows', () => {
     await recipeEditor.getByLabel('Protein (g)').fill('24')
     await recipeEditor.getByRole('button', { name: 'Save recipe' }).click()
     await page.getByText('Meal planner', { exact: true }).click()
-    await page.locator('.meal-day.is-today').getByRole('button', { name: 'Add', exact: true }).first().click()
+    await page
+      .locator('.meal-day.is-today')
+      .getByRole('button', { name: /Add item to/ })
+      .first()
+      .click()
     const mealEditor = page.getByRole('dialog', { name: 'Plan breakfast' })
     await mealEditor.getByLabel('Saved recipe').selectOption({ label: 'Protein toast' })
     await mealEditor.getByLabel('Servings prepared').fill('3')
@@ -380,4 +384,53 @@ test.describe('food v2 workflows', () => {
     await expect(suggestion.locator('strong')).not.toHaveText(initial)
     await expect(suggestion.getByRole('button', { name: 'Regenerate day' })).toBeVisible()
   })
+})
+
+test('meal groups retain recipes, drinks and desserts with independent portions after reload', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 8, 22, 12))
+  const data = createTestFixtureData(new Date(2026, 8, 22))
+  data.meals = []
+  data.leftovers = []
+  data.foodLog = []
+  data.packagedFoods = [{ ...riceSource(data.initializedAt), name: 'Yogurt dessert' }]
+  await seedAppData(page, data, '/#/food?view=planner')
+  const dinner = page
+    .locator('.meal-day.is-today .meal-slot')
+    .filter({ has: page.getByText('dinner', { exact: true }) })
+  await dinner.getByRole('button', { name: /Add item to dinner/ }).click()
+  let editor = page.getByRole('dialog')
+  await expect(editor.getByLabel('30 oz container estimate')).toContainText('recipe servings per container')
+  await editor.getByRole('button', { name: 'Use container estimate' }).click()
+  expect(Number(await editor.getByLabel('Servings planned').inputValue())).toBeGreaterThan(1)
+  await editor.getByLabel('Servings planned').fill('0.5')
+  await editor.getByRole('button', { name: 'Plan meal' }).click()
+  await dinner.getByRole('button', { name: /Add item to dinner/ }).click()
+  editor = page.getByRole('dialog')
+  await editor.getByRole('radio', { name: 'Custom', exact: true }).click()
+  await editor.getByLabel('Custom food name').fill('Milk drink')
+  await editor.getByLabel('Calories per serving').fill('120')
+  await editor.getByRole('button', { name: 'Plan meal' }).click()
+  await dinner.getByRole('button', { name: /Add item to dinner/ }).click()
+  editor = page.getByRole('dialog')
+  await editor.getByRole('radio', { name: 'Packaged', exact: true }).click()
+  await editor.getByRole('button', { name: 'Plan meal' }).click()
+  await expect(dinner.locator('.meal-slot__planned')).toHaveCount(3)
+  await dinner.getByRole('button', { name: 'Eat one more serving of Milk drink' }).click()
+  await dinner.getByRole('button', { name: 'Eat one more serving of Milk drink' }).click()
+  await expect
+    .poll(
+      async () =>
+        (await readAppData(page)).foodLog.find((item) => item.name === 'Milk drink')?.nutritionSnapshot.calories,
+    )
+    .toBe(240)
+  await page.reload()
+  await expect(dinner.locator('.meal-slot__planned')).toHaveCount(3)
+  await expect(dinner.getByLabel('Consumed servings for Milk drink')).toHaveValue('2')
+  const saved = await readAppData(page)
+  expect(saved.meals.find((item) => item.recipeId === 'recipe-teriyaki')?.servings).toBe(0.5)
+  await dinner.getByRole('button', { name: /Remove Milk drink from dinner/ }).click()
+  await expect(dinner.locator('.meal-slot__planned')).toHaveCount(2)
+  await expect(dinner).toContainText('Yogurt dessert')
+  await expect(dinner).toContainText('Teriyaki Steak Bowls')
+  await page.screenshot({ path: test.info().outputPath('meal-items.png'), fullPage: true })
 })
