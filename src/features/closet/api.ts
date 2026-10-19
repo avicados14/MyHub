@@ -210,3 +210,10 @@ export async function createTextGarment(item: Garment) {
   })
   if (error) throw error
 }
+
+export async function smartSuggest(input: import('../../../supabase/functions/closet-recommend/logic').SmartInput) {
+  await authenticate()
+  const { data, error } = await client.functions.invoke('closet-recommend', { body: input })
+  if (error) throw new Error('Smart Suggest is unavailable or not configured.')
+  return data as unknown
+}
