@@ -61,6 +61,8 @@ function IncomingPhoto({ file }: { file: File }) {
 export default function ClosetPage() {
   const { data: appData } = useApp()
   const bands = appData.settings.clothingTemperatureBands
+  const [keptIds, setKeptIds] = useState<string[]>([])
+  const [suggestionUsage, setSuggestionUsage] = useState<Record<string, number>>({})
   const [manualOutfit, setManualOutfit] = useState(false)
   const [outfitCategory, setOutfitCategory] = useState('all')
   const [outfitTitle, setOutfitTitle] = useState('')
@@ -115,6 +117,7 @@ export default function ClosetPage() {
     }
   }, [refresh])
   useEffect(() => {
+    setKeptIds([])
     if (manualOutfit) return
     setPicks([])
     setSuggestion(null)
@@ -509,17 +512,35 @@ export default function ClosetPage() {
                         jacket,
                         includeAvoid,
                         variant,
+                        keptIds,
+                        previousIds: picks.map((item) => item.id),
+                        usage: suggestionUsage,
                       })
                       setSuggestion(next)
                       setPicks(next.items)
+                      setSuggestionUsage((previous) => {
+                        const counts = { ...previous }
+                        for (const item of next.items) counts[item.id] = (counts[item.id] ?? 0) + 1
+                        return counts
+                      })
                       setTankConfirmed(false)
                       setVariant((value) => value + 1)
                       setPlanId(crypto.randomUUID())
                       setNotice(next.messages.join(' '))
                     }}
                   >
-                    Suggest outfit
+                    {keptIds.length ? 'Regenerate around kept items' : 'Suggest outfit'}
                   </button>
+                  {keptIds.length > 0 && (
+                    <button className="button" disabled={busy} onClick={() => setKeptIds([])}>
+                      Release kept items
+                    </button>
+                  )}
+                  <p className="muted">
+                    Keep any suggested items you like, then regenerate the rest. Alternatives favor clean,
+                    color-compatible clothes you have seen less often. Keeps reset when the date, weather, wardrobe, or
+                    planning settings change.
+                  </p>
                 </>
               )}
               {suggestion?.band ? (
@@ -543,6 +564,22 @@ export default function ClosetPage() {
                         <p>
                           #{item.garment_number} · {item.name}
                         </p>
+                        {!manualOutfit ? (
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={keptIds.includes(item.id)}
+                              disabled={busy}
+                              aria-label={`Keep garment #${item.garment_number}: ${item.name}`}
+                              onChange={(e) =>
+                                setKeptIds((previous) =>
+                                  e.target.checked ? [...previous, item.id] : previous.filter((id) => id !== item.id),
+                                )
+                              }
+                            />{' '}
+                            Keep this item
+                          </label>
+                        ) : null}
                       </div>
                     ))}
                   </div>
