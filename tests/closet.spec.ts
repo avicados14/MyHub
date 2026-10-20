@@ -404,7 +404,7 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   const shoeCard = page
     .locator('.closet-garment')
     .filter({ has: page.getByRole('heading', { name: '#5 · Synthetic sneakers' }) })
-  await shoeCard.getByRole('button', { name: 'Edit', exact: true }).click()
+  await shoeCard.getByRole('button', { name: 'Edit #5', exact: true }).click()
   await expect(page.getByLabel('Laundry status', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Shoes stay available and are not included in laundry.')).toBeVisible()
   await page.getByRole('button', { name: 'Save garment', exact: true }).click()
