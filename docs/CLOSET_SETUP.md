@@ -32,7 +32,7 @@ For any future email-based account-linking callback, set Supabase Auth Site URL 
 
 ### Privacy and storage
 
-`wardrobe_items` and `outfit_plans` enforce owner UUID, an existing Auth session, and the exact active MyHub capability bound to that session through RLS. Service-only `closet_sessions` records cannot be rebound by clients or refreshed account metadata. Direct Auth sign-ins without a bridge-created binding receive no closet access. The bridge no longer updates account-wide authorization metadata. Database-generated garment numbers are immutable, monotonic and never reused after deletion. Planning locks selected rows, checks cleanliness, constructs immutable snapshots and marks clothing dirty within one transaction (shoes stay available); retrying the same plan UUID returns the previous plan.
+`wardrobe_items` and `outfit_plans` enforce owner UUID, an existing Auth session, and the exact active MyHub capability bound to that session through RLS. Service-only `closet_sessions` records cannot be rebound by clients or refreshed account metadata. Direct Auth sign-ins without a bridge-created binding receive no closet access. The bridge no longer updates account-wide authorization metadata. Database-generated garment numbers are immutable, monotonic and never reused after deletion. Planning locks selected rows, checks cleanliness, constructs immutable snapshots and marks clothing dirty within one transaction (shoes and jackets stay available); retrying the same plan UUID returns the previous plan.
 
 The `wardrobe` bucket is private, allows JPEG/PNG/WEBP/GIF and limits objects to 8 MB. Object paths start with the authenticated user UUID. Image URLs expire after five minutes and are renewed while the page is open. Already-issued signed URLs can remain usable until expiry after link revocation. Wardrobe metadata/photos are protected by Supabase access controls, **not end-to-end encrypted like MyHub AppData**. No photos are copied into public assets or Git. The JSON export includes metadata, image paths and historical snapshots; it does not embed image bytes or credentials.
 
@@ -48,7 +48,7 @@ Upload starts only after review. Per-entry operation UUIDs stay stable in the re
 
 ## Planner and future AI
 
-Default weather is Golden, Colorado in Fahrenheit via Open-Meteo. Device location is optional. Weather failure is shown, and no temperature is fabricated. The local rule-based planner chooses clean tops/bottoms or a one-piece garment, optional shoes, and an available outer layer below 62°F. It uses simple filename-based occasion preferences. Notes are saved for history, not interpreted as AI instructions. Saving immediately marks selected clothing dirty; **Run laundry** restores it to clean. Shoes always stay available: they have no dirty-status controls and are excluded from outfit-save laundry updates. Existing dirty shoes are restored by the `shoes_skip_laundry` migration.
+Default weather is Golden, Colorado in Fahrenheit via Open-Meteo. Device location is optional. Weather failure is shown, and no temperature is fabricated. The local rule-based planner chooses clean tops/bottoms or a one-piece garment, optional shoes, and an available outer layer below 62°F. It uses simple filename-based occasion preferences. Notes are saved for history, not interpreted as AI instructions. Saving immediately marks selected clothing dirty; **Run laundry** restores it to clean. Shoes and jackets always stay available: they have no dirty-status controls and are excluded from outfit-save laundry updates. Existing dirty shoes are restored by the `shoes_skip_laundry` migration.
 
 ## Smart Suggest activation
 
@@ -92,3 +92,5 @@ An explicitly authorized live production round trip passed session issuance, pri
 The final security advisor reports only leaked-password protection disabled. The current capability bridge is passwordless. Enable this project-wide setting in Supabase Dashboard Auth settings if the project plan supports it (Pro or higher); the available connector cannot change it. [Remediation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 
 The previous OpenAI key is no longer read. A previous non-Gemini model setting falls back to Flash-Lite. The misspelled `CLOST_AI_MODEL` is accepted only when `CLOSET_AI_MODEL` is absent.
+
+The `jackets_skip_laundry` migration also restores dirty jackets and exempts items classified as outerwear or jacket.

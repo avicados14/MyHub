@@ -74,5 +74,8 @@ export function recommend(items: Garment[], temperature: number | null, occasion
   )
 }
 
-export const isFootwear = (item: Pick<Garment, 'category' | 'garment_type'>) =>
-  item.category === 'shoes' || item.garment_type === 'shoes'
+export const isLaundryExempt = (item: Pick<Garment, 'category' | 'garment_type'>) =>
+  item.category === 'shoes' ||
+  item.category === 'outerwear' ||
+  item.garment_type === 'shoes' ||
+  item.garment_type === 'jacket'
