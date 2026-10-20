@@ -5,6 +5,7 @@ import type { Garment, OutfitPlan } from '../src/features/closet/types'
 
 // Deterministic browser contract test. Live ownership/transaction tests are supabase/tests/closet_rls.sql.
 test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → available', async ({ page }, testInfo) => {
+  test.setTimeout(120_000) // Full import, planning, laundry, and photo-attachment lifecycle.
   const userId = '11111111-1111-4111-8111-111111111111'
   const user = {
     id: userId,
@@ -120,7 +121,10 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
         created_at: new Date().toISOString(),
       })
       picked
-        .filter((item) => item.category !== 'shoes' && item.garment_type !== 'shoes')
+        .filter(
+          (item) =>
+            !['shoes', 'outerwear'].includes(item.category) && !['shoes', 'jacket'].includes(item.garment_type ?? ''),
+        )
         .forEach((item) => (item.laundry_status = 'dirty'))
       return route.fulfill({ json: plans[0] })
     }
@@ -406,11 +410,30 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
     .filter({ has: page.getByRole('heading', { name: '#5 · Synthetic sneakers' }) })
   await shoeCard.getByRole('button', { name: 'Edit #5', exact: true }).click()
   await expect(page.getByLabel('Laundry status', { exact: true })).toHaveCount(0)
-  await expect(page.getByText('Shoes stay available and are not included in laundry.')).toBeVisible()
+  await expect(page.getByText('Shoes and jackets stay available and are not included in laundry.')).toBeVisible()
   await page.getByRole('button', { name: 'Save garment', exact: true }).click()
   await page.getByRole('button', { name: 'Build my own outfit', exact: true }).click()
   await page.getByLabel('Select garment #5: Synthetic sneakers', { exact: true }).check()
   await page.getByRole('button', { name: 'Save outfit', exact: true }).click()
   expect(shoes.laundry_status).toBe('clean')
   await expect(page.getByRole('button', { name: 'Mark garment #5 dirty', exact: true })).toHaveCount(0)
+  const jacket: Garment = {
+    ...shoes,
+    id: crypto.randomUUID(),
+    import_key: crypto.randomUUID(),
+    garment_number: 6,
+    name: 'Synthetic varsity jacket',
+    category: 'outerwear',
+    garment_type: 'jacket',
+  }
+  items.push(jacket)
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Mark garment #6 dirty', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Edit #6', exact: true }).click()
+  await expect(page.getByLabel('Laundry status', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Save garment', exact: true }).click()
+  await page.getByRole('button', { name: 'Build my own outfit', exact: true }).click()
+  await page.getByLabel('Select garment #6: Synthetic varsity jacket', { exact: true }).check()
+  await page.getByRole('button', { name: 'Save outfit', exact: true }).click()
+  expect(jacket.laundry_status).toBe('clean')
 })
