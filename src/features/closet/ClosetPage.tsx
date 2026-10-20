@@ -566,8 +566,8 @@ export default function ClosetPage() {
                     Smart Suggest
                   </button>
                   <p className="muted">
-                    Smart Suggest uses your clothing descriptions and styling note with OpenAI when configured. Photos
-                    are not sent. If unavailable, the regular suggester is used.
+                    Smart Suggest uses your clothing descriptions and styling note with Google Gemini when configured.
+                    Photos are not sent. If unavailable, the regular suggester is used.
                   </p>
                   {keptIds.length > 0 && (
                     <button className="button" disabled={busy} onClick={() => setKeptIds([])}>
