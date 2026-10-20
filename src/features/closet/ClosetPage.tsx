@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, EmptyState, Field, Modal, PageHeader, ProgressBar, StatusBadge } from '../../components/ui'
 import { toLocalDate } from '../../utilities/date'
-import { categories, occasions, garmentTypes, type Garment, type Occasion, type OutfitPlan } from './types'
+import { categories, occasions, garmentTypes, isFootwear, type Garment, type Occasion, type OutfitPlan } from './types'
 import { extractZip, importBatch, inspectImage, isDuplicate, type Incoming } from './import'
 import * as api from './api'
 import './closet.css'
@@ -476,7 +476,7 @@ export default function ClosetPage() {
                 <section aria-label="Choose outfit garments">
                   <p>
                     Choose up to 20 clean items in any combination. Weather and temperature rules do not restrict your
-                    own outfits. Saving marks only your selected items dirty.
+                    own outfits. Saving marks selected clothing dirty; shoes stay available.
                   </p>
                   <Field label="Outfit category filter">
                     <select value={outfitCategory} onChange={(e) => setOutfitCategory(e.target.value)}>
@@ -644,11 +644,11 @@ export default function ClosetPage() {
                         )
                         setPicks([])
                         await refresh()
-                        setNotice('Outfit saved. Selected garments are now dirty.')
+                        setNotice('Outfit saved. Selected clothing is now dirty; shoes stay available.')
                       })
                     }
                   >
-                    Save outfit &amp; mark dirty
+                    Save outfit
                   </button>
                 </>
               ) : null}
@@ -883,10 +883,10 @@ export default function ClosetPage() {
                       {item.category} · {item.primary_color}
                     </p>
                     <StatusBadge tone={item.laundry_status === 'clean' ? 'success' : 'attention'}>
-                      {item.laundry_status}
+                      {isFootwear(item) ? 'Available' : item.laundry_status}
                     </StatusBadge>
                     <div className="closet-toolbar">
-                      {item.laundry_status === 'clean' ? (
+                      {!isFootwear(item) && item.laundry_status === 'clean' ? (
                         <button
                           className="button button--secondary"
                           disabled={busy}
@@ -991,7 +991,7 @@ export default function ClosetPage() {
                     name: editing.name,
                     category: editing.category,
                     primary_color: editing.primary_color,
-                    laundry_status: editing.laundry_status,
+                    laundry_status: isFootwear(editing) ? 'clean' : editing.laundry_status,
                     garment_type: editing.garment_type ?? typeOf(editing),
                     preference: editing.preference ?? 'normal',
                   })
@@ -1077,17 +1077,21 @@ export default function ClosetPage() {
                 />
               </Field>
             ) : null}
-            <Field label="Laundry status">
-              <select
-                value={editing.laundry_status}
-                onChange={(e) =>
-                  setEditing({ ...editing, laundry_status: e.target.value as Garment['laundry_status'] })
-                }
-              >
-                <option value="clean">Clean</option>
-                <option value="dirty">Dirty</option>
-              </select>
-            </Field>
+            {isFootwear(editing) ? (
+              <p>Shoes stay available and are not included in laundry.</p>
+            ) : (
+              <Field label="Laundry status">
+                <select
+                  value={editing.laundry_status}
+                  onChange={(e) =>
+                    setEditing({ ...editing, laundry_status: e.target.value as Garment['laundry_status'] })
+                  }
+                >
+                  <option value="clean">Clean</option>
+                  <option value="dirty">Dirty</option>
+                </select>
+              </Field>
+            )}
             <button className="button button--primary" disabled={busy} type="submit">
               Save garment
             </button>

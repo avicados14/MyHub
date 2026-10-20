@@ -119,7 +119,9 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
         garment_snapshot: structuredClone(picked),
         created_at: new Date().toISOString(),
       })
-      picked.forEach((item) => (item.laundry_status = 'dirty'))
+      picked
+        .filter((item) => item.category !== 'shoes' && item.garment_type !== 'shoes')
+        .forEach((item) => (item.laundry_status = 'dirty'))
       return route.fulfill({ json: plans[0] })
     }
     return route.fulfill({ status: 400, json: { error: `Unhandled fixture path ${path}` } })
@@ -212,15 +214,15 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   await page.getByLabel('Occasion', { exact: true }).selectOption('School')
   await page.getByLabel('Styling note (saved with plan)').fill('Walking to class')
   await page.getByRole('button', { name: 'Suggest outfit' }).click()
-  await page.getByRole('button', { name: 'Save outfit & mark dirty' }).click()
+  await page.getByRole('button', { name: 'Save outfit' }).click()
   await expect(page.getByText('2 garments · 2 in laundry')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'School outfit' })).toBeVisible()
   await page.getByRole('button', { name: 'Suggest outfit' }).click()
-  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save outfit' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Run laundry' }).click()
   await expect(page.getByText('2 garments · 0 in laundry')).toBeVisible()
   await page.getByRole('button', { name: 'Suggest outfit' }).click()
-  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save outfit' })).toBeVisible()
   await page
     .getByLabel('Import closet ZIP', { exact: true })
     .setInputFiles({ name: 'repeat.zip', mimeType: 'application/zip', buffer: Buffer.from(archive) })
@@ -270,13 +272,13 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   await page.getByLabel('Planned date', { exact: true }).fill('2026-06-02')
   await expect(page.getByLabel('Feels-like low °F', { exact: true })).toHaveValue('75')
   await page.getByRole('button', { name: 'Suggest outfit', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save outfit' })).toHaveCount(0)
   await page.getByLabel('Planned date', { exact: true }).fill('2026-06-01')
   await expect(page.getByLabel('Feels-like low °F', { exact: true })).toHaveValue('55')
   await page.getByRole('button', { name: 'Suggest outfit', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Save outfit' })).toBeDisabled()
   await page.getByLabel('I have a clean tank undershirt for this outfit', { exact: true }).check()
-  await page.getByRole('button', { name: 'Save outfit & mark dirty' }).click()
+  await page.getByRole('button', { name: 'Save outfit' }).click()
   await expect(page.getByText('3 garments · 2 in laundry')).toBeVisible()
   const snapshot = plans.at(-1)!.garment_snapshot.find((item) => item.id === starter.id)!
   expect(snapshot.image_path).toBeNull()
@@ -302,7 +304,7 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   await expect(page.locator('.closet-picks').first()).toContainText('Synthetic coral long sleeves')
   await page.getByRole('button', { name: 'Build my own outfit', exact: true }).click()
   await page.getByRole('button', { name: 'Clear selection', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save outfit' })).toHaveCount(0)
   await page.getByLabel('Select garment #1: blue tee', { exact: true }).check()
   await page.getByLabel('Select garment #2: black pants', { exact: true }).check()
   await page.getByLabel('Outfit category filter').selectOption('bottoms')
@@ -312,8 +314,8 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
   await page.getByLabel('Outfit name (optional)').fill('My custom combination')
   await page.getByLabel('Styling note (saved with plan)').fill('Chosen by me')
   await expect(page.getByText('2 of 20 items selected')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Save outfit & mark dirty' })).toBeEnabled()
-  await page.getByRole('button', { name: 'Save outfit & mark dirty' }).click()
+  await expect(page.getByRole('button', { name: 'Save outfit' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Save outfit' }).click()
   await expect(page.getByText('3 garments · 2 in laundry')).toBeVisible()
   expect(plans.at(-1)!.title).toBe('My custom combination')
   expect(plans.at(-1)!.occasion).toBe('Weekend')
@@ -385,4 +387,30 @@ test('MyHub sign-in bridge → ZIP import → plan → dirty → laundry → ava
     page.getByText('Smart Suggest: Synthetic smart suggestion for browser testing.', { exact: false }),
   ).toBeVisible()
   await expect(keepTop).toBeChecked()
+  const shoes: Garment = {
+    ...items[1]!,
+    id: crypto.randomUUID(),
+    import_key: crypto.randomUUID(),
+    garment_number: 5,
+    name: 'Synthetic sneakers',
+    category: 'shoes',
+    garment_type: 'shoes',
+    laundry_status: 'clean',
+  }
+  items.push(shoes)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: '#5 · Synthetic sneakers' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mark garment #5 dirty', exact: true })).toHaveCount(0)
+  const shoeCard = page
+    .locator('.closet-garment')
+    .filter({ has: page.getByRole('heading', { name: '#5 · Synthetic sneakers' }) })
+  await shoeCard.getByRole('button', { name: 'Edit #5', exact: true }).click()
+  await expect(page.getByLabel('Laundry status', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Shoes stay available and are not included in laundry.')).toBeVisible()
+  await page.getByRole('button', { name: 'Save garment', exact: true }).click()
+  await page.getByRole('button', { name: 'Build my own outfit', exact: true }).click()
+  await page.getByLabel('Select garment #5: Synthetic sneakers', { exact: true }).check()
+  await page.getByRole('button', { name: 'Save outfit', exact: true }).click()
+  expect(shoes.laundry_status).toBe('clean')
+  await expect(page.getByRole('button', { name: 'Mark garment #5 dirty', exact: true })).toHaveCount(0)
 })

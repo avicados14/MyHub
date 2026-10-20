@@ -73,3 +73,6 @@ export function recommend(items: Garment[], temperature: number | null, occasion
     (item): item is Garment => Boolean(item),
   )
 }
+
+export const isFootwear = (item: Pick<Garment, 'category' | 'garment_type'>) =>
+  item.category === 'shoes' || item.garment_type === 'shoes'
