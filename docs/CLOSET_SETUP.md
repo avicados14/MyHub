@@ -26,7 +26,7 @@ The existing encrypted-data broker is unchanged. Its identity and encryption key
 | `SUPABASE_URL`                  | Edge Function runtime                        | Supabase-provided project URL.                                                                          |
 | `SUPABASE_SERVICE_ROLE_KEY`     | Edge Function runtime only                   | Supabase-provided admin key for capability validation and session bridging. Never use a `VITE_` prefix. |
 | `SUPABASE_ANON_KEY`             | Edge Function runtime only                   | Supabase-provided key for the future recommendation endpoint's user-scoped client.                      |
-| `OPENAI_API_KEY`                | Future server-side secret only               | Read only by the recommendation Edge Function when explicitly enabled.                                  |
+| `GEMINI_API_KEY`                | Future server-side secret only               | Read only by the recommendation Edge Function when explicitly enabled.                                  |
 
 For any future email-based account-linking callback, set Supabase Auth Site URL to `https://avicados14.github.io/MyHub/` and add that exact URL to redirect allowlists (plus explicit localhost development URLs as needed). The capability bridge uses no email redirect. Never put private-link fragment values in redirect settings. Do not enable a second email login without implementing verified account linking and a callback compatible with MyHub's hash router.
 
@@ -52,21 +52,20 @@ Default weather is Golden, Colorado in Fahrenheit via Open-Meteo. Device locatio
 
 ## Smart Suggest activation
 
-The feature is implemented but requires all three **server-side Edge Function secrets**:
+The feature is implemented but uses these **server-side Edge Function secrets**:
 
-- `OPENAI_API_KEY`: an OpenAI API project key.
-- `CLOSET_AI_MODEL`: an available model supporting the Responses API and strict JSON schema output.
+- `GEMINI_API_KEY`: a Google Gemini API project key.
+- `CLOSET_AI_MODEL`: `gemini-3.5-flash-lite` (the default), or another available Gemini Flash model supporting structured JSON.
 - `CLOSET_AI_ENABLED`: `true`. Set to `false` to disable immediately.
 
 Set these in the Supabase project's **Edge Functions → Secrets** screen. Never use
-`VITE_` variables, commit secrets, or paste a key into chat. OpenAI API billing is
+`VITE_` variables, commit secrets, or paste a key into chat. Google Gemini API billing is
 separate from a ChatGPT subscription. Configure project usage alerts/limits before activation.
 
-Deploy both `supabase/functions/closet-recommend/index.ts` and `logic.ts` with JWT verification.
+Deploy `supabase/functions/closet-recommend/index.ts`, `logic.ts`, and `gemini.ts` with JWT verification.
 The endpoint also calls `getUser()`, queries with the caller's JWT under existing RLS, and
 filters ownership and clean status. No service-role key, image paths, photos, or account
-identifiers are sent to OpenAI. The request uses `store: false`; provider data policies
-still apply. Only garment IDs, names, colors, preferences, planning inputs, and the note
+identifiers are sent to Google Gemini. Google Gemini data-use policies apply; review the policies for your API billing tier. Only garment IDs, names, colors, preferences, planning inputs, and the note
 are sent. The current clothing band comes from the user's encrypted profile through the
 request and is shape-validated; it is a preference, not an authorization boundary.
 
@@ -74,7 +73,7 @@ Returned IDs must fill exactly one item per eligible clothing slot, include all 
 and belong to the user's clean set. Cleanliness is checked again after generation and by the
 atomic save RPC. Malformed output, refusals, timeouts, and unavailable configuration fall back
 to the regular planner in the UI. Requests cap notes at 1,000 characters, wardrobes at 500
-clean garments, model output at 900 tokens, and model calls at 20 seconds. These bounds are
+clean garments, model output at 2,048 tokens, and model calls at 20 seconds. These bounds are
 not a global spending cap: monitor provider usage and disable the feature if necessary.
 
 Verification without a key covers constraints, ownership exclusions, fallback UI, and simulated
@@ -91,3 +90,5 @@ that live AI suggestions work.
 An explicitly authorized live production round trip passed session issuance, private uploads, numbering, outfit persistence/retry, laundry and anonymous/revoked-access denial. Synthetic rows/images were removed and the temporary credential revoked. Browser ZIP/review coverage uses a simulated backend; it is not described as a production UI test.
 
 The final security advisor reports only leaked-password protection disabled. The current capability bridge is passwordless. Enable this project-wide setting in Supabase Dashboard Auth settings if the project plan supports it (Pro or higher); the available connector cannot change it. [Remediation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+The previous OpenAI key is no longer read. A previous non-Gemini model setting falls back to Flash-Lite. The misspelled `CLOST_AI_MODEL` is accepted only when `CLOSET_AI_MODEL` is absent.
