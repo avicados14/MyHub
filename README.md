@@ -158,3 +158,16 @@ These are illustrative fixture screenshots, not personal account contents or a g
 ### Personal wardrobe and temperature rules
 
 Closet Planner supports garments before photos are available, active feels-like-low temperature bands, and color-coordinated clean-only suggestions. Later photo attachments preserve garment IDs and history. Configure bands in Settings → Clothing profile and review garment types/preferences in Closet Planner. See [Clothing profile guide](docs/CLOTHING_PROFILE.md).
+
+### Startup and School loading
+
+Planner data is loaded once from IndexedDB and shared across pages. A saved private
+connection restores the encrypted primary copy before editing is enabled, preventing
+late cloud restores from overwriting new edits. Cloud requests time out after 15
+seconds so an unavailable broker does not leave startup loading indefinitely; the
+saved local copy remains available. Reload to retry the connection.
+
+GitHub backup verification runs after primary hydration and does not block page
+access. School preloads in the background after startup and displays homework in
+batches of 20; **Show more homework** reveals the remaining assignments without
+removing any records. Failed page imports display a **Reload MyHub** action.

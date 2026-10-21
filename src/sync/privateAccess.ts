@@ -65,19 +65,29 @@ const randomCapability = (): string => {
 const writeTokenForKey = (key: string): string => `myhub-write-${key}`
 
 const brokerRequest = async (body: Record<string, unknown>, brokerUrl: string): Promise<Record<string, unknown>> => {
-  const response = await fetch(brokerUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-    referrerPolicy: 'no-referrer',
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15_000)
+  let response: Response
   let result: unknown
   try {
+    response = await fetch(brokerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
+      signal: controller.signal,
+    })
     result = await response.json()
-  } catch {
-    throw new Error('Private access returned an unreadable response.')
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error('Cloud connection timed out. Your saved local data is available; reload to reconnect.')
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
   }
+
   if (!response.ok) {
     const error = new Error(
       isRecord(result) && typeof result.error === 'string' ? result.error : 'Private access failed.',

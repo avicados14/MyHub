@@ -12,7 +12,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
 import { Card, EmptyState, Field, Modal, PageHeader, SegmentedControl, StatusBadge } from '../../components/ui'
@@ -50,12 +50,23 @@ export default function SchoolPage() {
   const view = params.get('view') ?? 'homework'
   const [assignmentModal, setAssignmentModal] = useState<'add' | HomeworkAssignment | null>(null)
   const [subtaskDrafts, setSubtaskDrafts] = useState<Record<string, string>>({})
-  const activeAssignments = visibleAssignments(data)
-  const activeEvents = visibleCalendarEvents(data)
-  const assignments = rankAssignments(activeAssignments)
-  const studyBlocks = activeEvents
-    .filter((event) => event.kind === 'study')
-    .toSorted((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`))
+  const [visibleCount, setVisibleCount] = useState(20)
+  const activeAssignments = useMemo(
+    () => visibleAssignments({ assignments: data.assignments, settings: data.settings }),
+    [data.assignments, data.settings],
+  )
+  const activeEvents = useMemo(
+    () => visibleCalendarEvents({ events: data.events, settings: data.settings }),
+    [data.events, data.settings],
+  )
+  const assignments = useMemo(() => rankAssignments(activeAssignments), [activeAssignments])
+  const studyBlocks = useMemo(
+    () =>
+      activeEvents
+        .filter((event) => event.kind === 'study')
+        .toSorted((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)),
+    [activeEvents],
+  )
 
   const saveAssignment = (form: HTMLFormElement) => {
     const values = new FormData(form)
@@ -188,7 +199,7 @@ export default function SchoolPage() {
       {view === 'homework' ? (
         <div className="school-layout">
           <div className="assignment-list">
-            {assignments.map((assignment) => {
+            {assignments.slice(0, visibleCount).map((assignment) => {
               const sourceUrl = safeExternalUrl(assignment.sourceUrl)
               return (
                 <Card key={assignment.id} className="assignment-card" as="article">
@@ -384,6 +395,15 @@ export default function SchoolPage() {
                 </Card>
               )
             })}
+            {assignments.length > visibleCount ? (
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={() => setVisibleCount((count) => count + 20)}
+              >
+                Show more homework ({assignments.length - visibleCount} remaining)
+              </button>
+            ) : null}
             {!assignments.length ? (
               <EmptyState title="Homework is clear" detail="Add your next assignment when it arrives." />
             ) : null}
