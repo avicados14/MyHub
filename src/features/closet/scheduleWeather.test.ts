@@ -28,6 +28,43 @@ const hour = (h: number, temp: number | null = 55): HourlyConditions => ({
   windMph: 8,
 })
 describe('calendar outdoor estimates', () => {
+  it('assumes the full gap under 30 minutes is walking, including Mines campus locations', () => {
+    for (const location of ['Colorado School of Mines campus', undefined]) {
+      const events = [event({ location }), event({ id: 'next', startTime: '09:29', endTime: '10:00', location })]
+      expect(estimateOutdoorWindows(events, date, { minutes: 5 })).toEqual([
+        { start: 475, end: 480 },
+        { start: 540, end: 569 },
+        { start: 600, end: 605 },
+      ])
+      expect(estimateOutdoorWindows(events, date, { minutes: 0 })).toEqual([])
+    }
+  })
+  it('does not extend the walking assumption to gaps of exactly 30 minutes', () => {
+    expect(
+      estimateOutdoorWindows([event(), event({ id: 'next', startTime: '09:30', endTime: '10:00' })], date, {
+        minutes: 5,
+      }),
+    ).toEqual([
+      { start: 475, end: 480 },
+      { start: 540, end: 545 },
+      { start: 565, end: 570 },
+      { start: 600, end: 605 },
+    ])
+  })
+  it('clips short-gap buffers to class boundaries and avoids overlapping or back-to-back class time', () => {
+    expect(
+      estimateOutdoorWindows([event(), event({ id: 'next', startTime: '09:05', endTime: '10:00' })], date),
+    ).toEqual([
+      { start: 465, end: 480 },
+      { start: 540, end: 545 },
+      { start: 600, end: 615 },
+    ])
+    for (const startTime of ['08:50', '09:00'])
+      expect(estimateOutdoorWindows([event(), event({ id: 'next', startTime, endTime: '10:00' })], date)).toEqual([
+        { start: 465, end: 480 },
+        { start: 600, end: 615 },
+      ])
+  })
   it('honors hidden feeds while retaining TA calendar events', () => {
     const data = {
       events: [event({ sourceFeedId: 'hidden' }), event({ id: 'ta', startTime: '10:00', endTime: '11:00' })],

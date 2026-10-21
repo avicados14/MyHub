@@ -52,6 +52,7 @@ export function estimateOutdoorWindows(
   if (!Number.isInteger(duration) || duration < 0 || duration > 120)
     throw new Error('Outdoor estimate must be 0–120 minutes.')
   const windows: OutdoorWindow[] = [...(options.custom ?? [])]
+  const timed: { start: number; end: number }[] = []
   for (const event of events) {
     if (event.allDay || event.kind !== 'event' || event.assignmentId || options.excludedIds?.includes(event.id))
       continue
@@ -66,10 +67,32 @@ export function estimateOutdoorWindows(
     const end = minutes(event.endTime)
     const endDate = event.endDate ?? event.date
     if (start === null || end === null || endDate < event.date || (endDate === event.date && end <= start)) continue
+    if (event.date <= date && endDate >= date)
+      timed.push({ start: event.date === date ? start : 0, end: endDate === date ? end : 1440 })
     if (event.date === date) windows.push({ start: Math.max(0, start - duration), end: start })
     if (endDate === date) windows.push({ start: end, end: Math.min(1440, end + duration) })
   }
-  return mergeOutdoorWindows(windows)
+  // Treat short gaps between consecutive event blocks as walking time, including
+  // Mines campus events even when a location is absent or only a room code.
+  // Merge overlapping events first so conflicting entries cannot create a fake gap.
+  const blocks = mergeOutdoorWindows(timed)
+  if (duration > 0)
+    for (let i = 1; i < blocks.length; i++) {
+      const previous = blocks[i - 1]!
+      const next = blocks[i]!
+      if (next.start - previous.end < 30) windows.push({ start: previous.end, end: next.start })
+    }
+  // Arrival/departure buffers must not turn time inside another class into walking.
+  let outside = mergeOutdoorWindows(windows)
+  for (const block of blocks)
+    outside = outside.flatMap((w) => {
+      if (w.end <= block.start || w.start >= block.end) return [w]
+      return [
+        { start: w.start, end: Math.min(w.end, block.start) },
+        { start: Math.max(w.start, block.end), end: w.end },
+      ].filter(validWindow)
+    })
+  return mergeOutdoorWindows([...outside, ...(options.custom ?? [])])
 }
 
 const finite = (value: number | null, min: number, max: number): value is number =>

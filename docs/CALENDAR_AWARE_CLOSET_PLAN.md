@@ -8,6 +8,7 @@ Use weather during likely outdoor activity, instead of the overnight low, while 
 
 - Use visible MyHub calendar events, including TA classes; do not use the homework filter.
 - Start with 15 minutes before/after timed events. These are estimates, not route calculations or evidence the user is walking.
+- Per Avi's preference, assume walking across the entire positive gap between consecutive events when it is strictly less than 30 minutes, especially on the Mines campus. Apply even when locations are missing or abbreviated; do not require campus address matching. Exactly 30 minutes does not trigger this rule. Clip default buffers to event boundaries, combine overlapping events before finding gaps, and retain manual corrections. Setting estimated duration to zero disables automatic walking windows.
 - Ignore all-day, assignment-linked, generated study/meal-prep and explicitly online events. Unknown locations remain estimates requiring review.
 - Provide per-event include/exclude, editable window duration, and custom outdoor windows. Merge overlapping windows; never count a whole class as outdoors by default.
 - Use an explicit calendar timezone for both stored wall-clock event times and hourly forecast labels. Show it in the UI. Golden is the initial weather location; device location is optional. No automatic address geocoding or inferred travel between cities.
