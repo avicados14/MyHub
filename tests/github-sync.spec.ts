@@ -28,6 +28,8 @@ interface RemoteState {
   writes: Array<Record<string, unknown>>
   deletes: Array<Record<string, unknown>>
   repositoryChecks: number
+  blockRepositoryChecks?: boolean
+  pendingRepositoryChecks?: Array<() => void>
 }
 
 interface PrivateAccessState {
@@ -46,6 +48,8 @@ const json = (route: Route, body: unknown, status = 200) =>
 const installGitHubMock = async (page: Page, state: RemoteState) => {
   await page.route('https://api.github.com/**', async (route: Route, request: Request) => {
     if (request.url() === repositoryUrl && request.method() === 'GET') {
+      if (state.blockRepositoryChecks)
+        await new Promise<void>((resolve) => (state.pendingRepositoryChecks ??= []).push(resolve))
       state.repositoryChecks += 1
       await json(route, {
         private: state.repositoryPrivate,
@@ -254,6 +258,7 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
   expect(savedCredential?.tokenEnvelope).toBeTruthy()
   expect(savedCredential?.tokenEnvelope).not.toContain(token)
 
+  state.blockRepositoryChecks = true
   privateAccess.resolveDelayMs = 750
   await phonePage.goto('/#/settings')
   await phonePage.reload()
@@ -265,6 +270,9 @@ test('a private access link opens a fresh phone and syncs encrypted Supabase dat
   await phoneName.fill('Updated on phone')
   await expect.poll(() => privateAccess.writes, { timeout: 30_000 }).toBe(1)
   await expect.poll(() => privateAccess.version, { timeout: 30_000 }).toBe(2)
+  await expect.poll(() => state.pendingRepositoryChecks?.length).toBe(1)
+  state.blockRepositoryChecks = false
+  for (const release of state.pendingRepositoryChecks?.splice(0) ?? []) release()
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(page.getByLabel('Your name')).toHaveValue('Updated on phone')
   await expect.poll(() => state.writes.length).toBeGreaterThanOrEqual(2)
@@ -479,6 +487,20 @@ test('device code connects a fresh phone and retains sign-in through a broker ou
       phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
     ).toBeVisible()
     access.unavailable = false
+    let releaseBroker: (() => void) | undefined
+    await phonePage.route('**/functions/v1/myhub-private-access', async (route) => {
+      await new Promise<void>((resolve) => {
+        releaseBroker = resolve
+      })
+      await route.abort().catch(() => undefined)
+    })
+    await phonePage.reload()
+    await expect(
+      phonePage.getByRole('heading', { name: /Good (morning|afternoon|evening), Crosscut User\./u }),
+    ).toBeVisible({ timeout: 25_000 })
+    releaseBroker?.()
+    await phonePage.unroute('**/functions/v1/myhub-private-access')
+    await installPrivateAccessMock(phonePage, access)
     await phonePage.reload()
     await phonePage.goto('/#/devices')
     await expect(phonePage.getByRole('button', { name: 'Generate sign-in code' })).toBeEnabled()

@@ -383,12 +383,9 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
           const remoteData = migrateAppData(access.data)
           const repository = access.material.repository
           const client = new GitHubContentsClient(access.material.token)
-          await client.requirePrivateRepository(repository)
           const tokenEnvelope = await encryptText(access.material.token, access.material.passphrase)
           const next: StoredGitHubCredential = { version: 1, repository, tokenEnvelope, paused: false }
           const lastDigest = await digestData(remoteData)
-          tokenRef.current = access.material.token
-          passphraseRef.current = access.material.passphrase
           privateAccessRef.current = {
             id: access.id,
             key: access.key,
@@ -402,8 +399,20 @@ export function GitHubSyncProvider({ children }: { children: ReactNode }) {
           dataRef.current = remoteData
           replaceData(remoteData, 'Supabase loaded the current encrypted MyHub data.')
           await persistCredential(next)
-          setStatus('current')
-          void withSerializedOperation(() => performSync())
+          // Primary data is ready. Backup availability must not block the app.
+          // Keep backup credentials locked until the repository is verified.
+          void withSerializedOperation(async () => {
+            try {
+              await client.requirePrivateRepository(repository)
+              if (privateAccessRef.current?.id !== access.id) return
+              tokenRef.current = access.material.token
+              passphraseRef.current = access.material.passphrase
+              await performSync()
+            } catch (error) {
+              setStatus('error')
+              setErrorMessage(error instanceof Error ? error.message : 'GitHub backup could not reconnect.')
+            }
+          })
         } finally {
           setPrivateAccessReady(true)
         }

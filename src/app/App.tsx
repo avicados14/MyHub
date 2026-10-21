@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { RouteErrorBoundary } from './RouteErrorBoundary'
 import { AppShell } from './AppShell'
 import { useApp } from './AppContext'
 import { useGitHubSync } from '../sync/GitHubSyncContext'
@@ -7,7 +8,8 @@ import { useGitHubSync } from '../sync/GitHubSyncContext'
 const ClosetPage = lazy(() => import('../features/closet/ClosetPage'))
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
 const CalendarPage = lazy(() => import('../features/calendar/CalendarPage'))
-const SchoolPage = lazy(() => import('../features/school/SchoolPage'))
+const loadSchoolPage = () => import('../features/school/SchoolPage')
+const SchoolPage = lazy(loadSchoolPage)
 const FoodPage = lazy(() => import('../features/food/FoodPage'))
 const CookingPage = lazy(() => import('../features/food/CookingPage'))
 const RecipePage = lazy(() => import('../features/food/RecipePage'))
@@ -23,6 +25,16 @@ export default function App() {
   const openingPrivateLink = window.location.hash.startsWith('#/access')
   const applicationReady = ready && (privateAccessReady || openingPrivateLink)
 
+  // Warm the frequently used School view after startup, without delaying the
+  // first screen. Personal data is already loaded once into AppProvider/IndexedDB.
+  useEffect(() => {
+    if (!applicationReady) return
+    const timeout = window.setTimeout(() => {
+      void loadSchoolPage().catch(() => undefined)
+    }, 1_000)
+    return () => window.clearTimeout(timeout)
+  }, [applicationReady])
+
   return (
     <AppShell>
       {!applicationReady ? (
@@ -30,29 +42,31 @@ export default function App() {
           {ready ? 'Loading your encrypted MyHub data…' : 'Opening your local hub…'}
         </div>
       ) : (
-        <Suspense
-          fallback={
-            <div className="route-loading" role="status">
-              Loading view…
-            </div>
-          }
-        >
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/closet" element={<ClosetPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/school" element={<SchoolPage />} />
-            <Route path="/food" element={<FoodPage />} />
-            <Route path="/food/recipes/:recipeId/cook" element={<CookingPage />} />
-            <Route path="/food/recipes/:recipeId" element={<RecipePage />} />
-            <Route path="/pantry" element={<PantryPage />} />
-            <Route path="/grocery" element={<GroceryPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/devices" element={<DevicesPage />} />
-            <Route path="/access" element={<PrivateAccessPage />} />
-            <Route path="*" element={<Navigate replace to="/" />} />
-          </Routes>
-        </Suspense>
+        <RouteErrorBoundary>
+          <Suspense
+            fallback={
+              <div className="route-loading" role="status">
+                Loading view…
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/closet" element={<ClosetPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/school" element={<SchoolPage />} />
+              <Route path="/food" element={<FoodPage />} />
+              <Route path="/food/recipes/:recipeId/cook" element={<CookingPage />} />
+              <Route path="/food/recipes/:recipeId" element={<RecipePage />} />
+              <Route path="/pantry" element={<PantryPage />} />
+              <Route path="/grocery" element={<GroceryPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/devices" element={<DevicesPage />} />
+              <Route path="/access" element={<PrivateAccessPage />} />
+              <Route path="*" element={<Navigate replace to="/" />} />
+            </Routes>
+          </Suspense>
+        </RouteErrorBoundary>
       )}
     </AppShell>
   )
