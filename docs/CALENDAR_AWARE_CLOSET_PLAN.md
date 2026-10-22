@@ -16,7 +16,7 @@ Use weather during likely outdoor activity, instead of the overnight low, while 
 - Conservatively cover every forecast hour touched by an outdoor interval. A missing/nonfinite temperature in any required hour invalidates the schedule-based low. Missing rain/wind stays unknown, not zero.
 - Apply existing temperature bands to the outdoor minimum. Show high/low and changing conditions. A jacket remains an explicit removable-layer choice, never a silent replacement for a required warm base.
 - Rain/wind prompts must not claim garments are waterproof or windproof without garment metadata.
-- No calendar titles, descriptions, addresses, or raw events sent to Gemini. Send only bounded numeric weather context and estimated time windows through the authenticated endpoint.
+- No calendar titles, descriptions, addresses, raw events, or exact time windows sent to Gemini. Append a bounded numeric weather summary to the existing authenticated styling-note input (already limited to 1,000 characters by the server); no backend deployment or new input contract is needed.
 - Keep daily-low and manual temperature modes. Empty schedules, excluded events, incomplete/out-of-range forecasts and timezone ambiguity must display a reason and fall back visibly.
 
 ## Action checklist
@@ -24,12 +24,12 @@ Use weather during likely outdoor activity, instead of the overnight low, while 
 - [x] Inspect current calendar visibility, event schema, weather request and Smart Suggest validator.
 - [x] Define initial assumptions, privacy boundary and fallback behavior.
 - [x] Build and test pure outdoor-window and hourly-weather calculations (including visible calendar feeds).
-- [ ] Add hourly API fetch/cache with explicit timezone and request cancellation.
-- [ ] Add calendar mode, reviewable event selections and custom outdoor windows to Closet Planner.
-- [ ] Connect effective temperature and weather context to regular and Smart suggestions; preserve manual mode and invalidate stale recommendations.
-- [ ] Extend server input validation and Gemini explanations with minimal numeric context.
+- [x] Add hourly API fetch/cache with explicit timezone and request cancellation.
+- [x] Add calendar mode, reviewable event selections and custom outdoor windows to Closet Planner.
+- [x] Connect effective temperature and weather context to regular and Smart suggestions; preserve manual mode and invalidate stale recommendations.
+- [x] Reuse existing server-validated styling notes for minimal numeric weather context and Gemini explanations.
 - [ ] Test desktop/mobile controls, reload/settings behavior, weather failure and stale-response handling.
-- [ ] Run release checks, deploy backend/frontend and verify production without saving an outfit.
+- [ ] Run release checks, deploy frontend and verify production without saving an outfit.
 
 ## Acceptance checks
 
@@ -40,6 +40,6 @@ Use weather during likely outdoor activity, instead of the overnight low, while 
 - No calendar/weather input is mutated; titles stay local.
 - Missing hourly data never silently produces a warmer recommendation.
 - Existing exact temperature boundaries, kept-item validation, clean clothing, available shoes/jackets, fallback and manual outfits remain intact.
-- Calendar integration is disabled until its UI and end-to-end tests are complete.
+- Calendar mode is the default. Outdoor corrections are local to the selected date and reset when leaving the planner; the calendar timezone comes from Settings. Release requires browser checks to pass.
 
 Weather API reference: https://open-meteo.com/en/docs

@@ -115,3 +115,25 @@ describe('private access links', () => {
     expect(conflict).toEqual(expect.objectContaining({ status: 409, currentVersion: 7 }))
   })
 })
+
+it('aborts a stalled broker request so startup can fall back to local data', async () => {
+  vi.useFakeTimers()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+        }),
+    ),
+  )
+  try {
+    const request = resolvePrivateAccess(linkId, 'a'.repeat(43), brokerUrl)
+    const result = expect(request).rejects.toThrow('Cloud connection timed out')
+    await vi.advanceTimersByTimeAsync(15_000)
+    await result
+  } finally {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  }
+})

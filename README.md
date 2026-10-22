@@ -158,3 +158,22 @@ These are illustrative fixture screenshots, not personal account contents or a g
 ### Personal wardrobe and temperature rules
 
 Closet Planner supports garments before photos are available, active feels-like-low temperature bands, and color-coordinated clean-only suggestions. Later photo attachments preserve garment IDs and history. Configure bands in Settings → Clothing profile and review garment types/preferences in Closet Planner. See [Clothing profile guide](docs/CLOTHING_PROFILE.md).
+
+### Startup and School loading
+
+Planner data is loaded once from IndexedDB and shared across pages. A saved private
+connection restores the encrypted primary copy before editing is enabled, preventing
+late cloud restores from overwriting new edits. Cloud requests time out after 15
+seconds so an unavailable broker does not leave startup loading indefinitely; the
+saved local copy remains available. Reload to retry the connection.
+
+GitHub backup verification runs after primary hydration and does not block page
+access. School preloads in the background after startup and displays homework in
+batches of 20; **Show more homework** reveals the remaining assignments without
+removing any records. Failed page imports display a **Reload MyHub** action.
+
+### Calendar-aware outfit weather
+
+Closet Planner defaults to **My outdoor times**. It uses visible MyHub calendar events (including TA classes) and hourly feels-like weather in your calendar timezone. Gaps strictly under 30 minutes count as walking, including between Mines campus events. Other arrivals/departures default to 15 minutes; class time, online events, all-day events, and hidden feeds are excluded.
+
+Open **Review outdoor times** to exclude events, change the arrival/departure estimate, or add custom walks. These corrections reset when changing dates or leaving the planner. Choose **Daily low** or enter a manual temperature when needed. Incomplete hourly forecasts visibly fall back to the daily low. Golden is the default weather location; device location is optional. Smart Suggest receives a weather summary without calendar titles or locations, and continues to use your temperature bands and kept garments.

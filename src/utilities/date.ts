@@ -48,16 +48,15 @@ export const dateFromLocal = (date: string, time = '00:00'): Date => {
   return new Date(year, month - 1, day, hour, minute)
 }
 
+const defaultDateFormatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+
 export const formatDate = (date: string, options?: Intl.DateTimeFormatOptions): string =>
-  new Intl.DateTimeFormat(undefined, options ?? { weekday: 'short', month: 'short', day: 'numeric' }).format(
-    dateFromLocal(date),
-  )
+  (options ? new Intl.DateTimeFormat(undefined, options) : defaultDateFormatter).format(dateFromLocal(date))
 
 export const formatTime = (time: string): string => {
   const [hour = 0, minute = 0] = time.split(':').map(Number)
-  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(
-    new Date(2000, 0, 1, hour, minute),
-  )
+  return timeFormatter.format(new Date(2000, 0, 1, hour, minute))
 }
 
 export const minutesFromTime = (time: string): number => {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { createCrosscutFixtureData, seedAppData } from './crosscut-helpers'
 
 const localDate = (date: Date): string => {
   const year = date.getFullYear()
@@ -329,4 +330,34 @@ test('study blocks support pointer date-time moves and pointer edge resizing', a
     Number(resizedEnd.slice(3)) -
     (Number(movedEnd.slice(0, 2)) * 60 + Number(movedEnd.slice(3)))
   expect(duration).toBe(15)
+})
+
+test('large homework lists load in batches and preserve edits after reload', async ({ page }) => {
+  await page.goto('/')
+  const data = createCrosscutFixtureData()
+  const template = data.assignments[0]!
+  data.assignments = Array.from({ length: 168 }, (_, index) => ({
+    ...template,
+    id: `large-homework-${String(index).padStart(3, '0')}`,
+    title: `Large homework ${index}`,
+    course: 'TEST 201',
+    status: 'not-started',
+    sourceFeedId: undefined,
+  }))
+  await seedAppData(page, data)
+  await page.goto('/#/school')
+  await expect(page.locator('.assignment-card')).toHaveCount(20)
+  await page.getByRole('button', { name: 'Show more homework (148 remaining)' }).click()
+  await expect(page.locator('.assignment-card')).toHaveCount(40)
+  const card = page
+    .locator('.assignment-card')
+    .filter({ has: page.getByRole('heading', { name: 'Large homework 20', exact: true }) })
+  await card.getByLabel('New subtask for Large homework 20').fill('Saved next step')
+  await card.getByRole('button', { name: 'Add', exact: true }).click()
+  await waitForStoredRecord(page, 'assignments', { id: 'large-homework-020' })
+  await expect(card.getByLabel('Subtask title').last()).toHaveValue('Saved next step')
+  await page.reload()
+  await expect(page.locator('.assignment-card')).toHaveCount(20)
+  await page.getByRole('button', { name: 'Show more homework (148 remaining)' }).click()
+  await expect(card.getByLabel('Subtask title').last()).toHaveValue('Saved next step')
 })
