@@ -105,3 +105,15 @@
 .closet-manual-choice small {
   display: block;
 }
+
+.calendar-weather-event {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-block: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.calendar-weather-event input {
+  width: auto;
+  flex-shrink: 0;
+}

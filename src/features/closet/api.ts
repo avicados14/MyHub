@@ -177,19 +177,6 @@ export async function runLaundry() {
     .eq('laundry_status', 'dirty')
   if (error) throw error
 }
-export async function weather(date: string, latitude = 39.7555, longitude = -105.2211) {
-  const response = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=apparent_temperature_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`,
-    { signal: AbortSignal.timeout(12000) },
-  )
-  if (!response.ok) throw new Error('Weather unavailable; enter a feels-like low manually.')
-  const result = await response.json()
-  const index = Array.isArray(result.daily?.time) ? result.daily.time.indexOf(date) : -1
-  const value = index >= 0 ? result.daily?.apparent_temperature_min?.[index] : null
-  if (!Number.isFinite(value)) throw new Error('No feels-like forecast for this date; enter a low manually.')
-  return value as number
-}
-
 export async function createTextGarment(item: Garment) {
   const userId = await authenticate()
   const prior = await client.from('wardrobe_items').select('id').eq('import_key', item.id).maybeSingle()

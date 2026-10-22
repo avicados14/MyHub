@@ -2,7 +2,9 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import { colorScore, planOutfit, temperatureBand, validBands } from './recommendations'
 import type { Garment, GarmentType } from './types'
 import type { ClothingTemperatureBand } from '../../domain/types'
-import { weather } from './api'
+import { fetchForecast } from './forecast'
+const weather = (date: string) =>
+  fetchForecast(date, 39.7555, -105.2211, 'America/Denver', new AbortController().signal)
 import { defaults } from './import'
 
 const bands: ClothingTemperatureBand[] = [
@@ -101,11 +103,11 @@ describe('active personal wardrobe rules', () => {
       }),
     })
     vi.stubGlobal('fetch', fetch)
-    expect(await weather('2026-06-01')).toBe(67.99)
-    expect(await weather('2026-06-02')).toBe(42)
+    expect((await weather('2026-06-01')).dailyLowF).toBe(67.99)
+    expect((await weather('2026-06-02')).dailyLowF).toBe(42)
     expect(fetch.mock.calls[0]![0]).toContain('daily=apparent_temperature_min')
     expect(fetch.mock.calls[0]![0]).toContain('temperature_unit=fahrenheit')
-    await expect(weather('2026-07-01')).rejects.toThrow('No feels-like forecast')
+    expect((await weather('2026-07-01')).dailyLowF).toBeNull()
   })
 })
 

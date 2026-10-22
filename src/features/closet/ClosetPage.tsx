@@ -2,7 +2,7 @@ import { Download } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, EmptyState, Field, Modal, PageHeader, ProgressBar, StatusBadge } from '../../components/ui'
-import { toLocalDate } from '../../utilities/date'
+import { dateTimeInZone } from '../../utilities/date'
 import {
   categories,
   occasions,
@@ -19,6 +19,7 @@ import { useApp } from '../../app/AppContext'
 import { planOutfit, typeOf, type OutfitSuggestion } from './recommendations'
 import { validateSmartOutput } from '../../../supabase/functions/closet-recommend/logic'
 import { ClothingProfile } from './ClothingProfile'
+import { CalendarWeather, type WeatherSelection } from './CalendarWeather'
 
 function Photo({ path, name }: { path: string | null; name: string }) {
   const [url, setUrl] = useState(''),
@@ -84,8 +85,12 @@ export default function ClosetPage() {
   const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null),
     [tankConfirmed, setTankConfirmed] = useState(false),
     [variant, setVariant] = useState(0)
-  const [coords, setCoords] = useState({ latitude: 39.7555, longitude: -105.2211 })
-  const [weatherMode, setWeatherMode] = useState<'auto' | 'manual'>('auto')
+  const [weatherSelection, setWeatherSelection] = useState<WeatherSelection>({
+    temperature: null,
+    context: '',
+    signature: '',
+  })
+  const temperature = weatherSelection.temperature
   const [items, setItems] = useState<Garment[]>([]),
     [plans, setPlans] = useState<OutfitPlan[]>([]),
     [ready, setReady] = useState(false)
@@ -100,12 +105,9 @@ export default function ClosetPage() {
     [progress, setProgress] = useState({ done: 0, total: 0 })
   const [occasion, setOccasion] = useState<Occasion>('Everyday'),
     [note, setNote] = useState(''),
-    [date, setDate] = useState(() => toLocalDate(new Date()))
+    [date, setDate] = useState(() => dateTimeInZone(new Date(), appData.settings.calendarTimeZone).date)
   const [picks, setPicks] = useState<Garment[]>([]),
     [planId, setPlanId] = useState(() => crypto.randomUUID())
-  const [temperature, setTemperature] = useState<number | null>(null),
-    [place, setPlace] = useState('Golden, Colorado'),
-    [weatherError, setWeatherError] = useState('')
   const refresh = useCallback(async () => {
     const data = await api.loadCloset()
     setItems(data.items)
@@ -132,7 +134,18 @@ export default function ClosetPage() {
     setPicks([])
     setSuggestion(null)
     setTankConfirmed(false)
-  }, [date, temperature, occasion, bands, warmer, jacket, includeAvoid, items, manualOutfit])
+  }, [
+    date,
+    temperature,
+    weatherSelection.signature,
+    occasion,
+    bands,
+    warmer,
+    jacket,
+    includeAvoid,
+    items,
+    manualOutfit,
+  ])
   useEffect(() => {
     if (manualOutfit)
       setPicks((previous) =>
@@ -145,26 +158,6 @@ export default function ClosetPage() {
   useEffect(() => {
     setPlanId(crypto.randomUUID())
   }, [date, occasion, note, outfitTitle])
-  useEffect(() => {
-    if (weatherMode === 'manual') return
-    let active = true
-    setTemperature(null)
-    setWeatherError('Loading feels-like forecast…')
-    void api
-      .weather(date, coords.latitude, coords.longitude)
-      .then((value) => {
-        if (active) {
-          setTemperature(value)
-          setWeatherError('')
-        }
-      })
-      .catch((e) => {
-        if (active) setWeatherError(e.message)
-      })
-    return () => {
-      active = false
-    }
-  }, [date, coords, weatherMode])
   const act = async (task: () => Promise<void>) => {
     setBusy(true)
     setError('')
@@ -178,7 +171,19 @@ export default function ClosetPage() {
   }
   useEffect(() => {
     requestVersion.current += 1
-  }, [items, date, temperature, occasion, bands, warmer, jacket, includeAvoid, manualOutfit, note])
+  }, [
+    items,
+    date,
+    temperature,
+    weatherSelection.signature,
+    occasion,
+    bands,
+    warmer,
+    jacket,
+    includeAvoid,
+    manualOutfit,
+    note,
+  ])
   const suggest = async (smart = false) => {
     const version = requestVersion.current
     const next = planOutfit(items, temperature, occasion, bands, {
@@ -195,7 +200,7 @@ export default function ClosetPage() {
       const input = {
         low: temperature,
         occasion,
-        note,
+        note: [note, weatherSelection.context].filter(Boolean).join('\n').slice(0, 1000),
         band: next.band,
         jacket,
         includeAvoid,
@@ -348,62 +353,7 @@ export default function ClosetPage() {
       ) : (
         <>
           <div className="closet-overview">
-            <Card>
-              <h2>Feels-like low for {date}</h2>
-              <p className="closet-temperature">
-                {temperature === null ? '—' : `${Math.round(temperature * 10) / 10}°F`}
-              </p>
-              <p>{place}</p>
-              {weatherError ? <p role="status">{weatherError}</p> : null}
-              <button
-                className="button button--secondary"
-                disabled={busy}
-                onClick={() => {
-                  if (!navigator.geolocation) {
-                    setWeatherError('Location is unavailable on this device.')
-                    return
-                  }
-                  navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                      setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude })
-                      setWeatherMode('auto')
-                      setPlace('Your device location')
-                    },
-                    () => setWeatherError('Location permission was denied or unavailable. Golden remains the default.'),
-                    { timeout: 10000 },
-                  )
-                }}
-              >
-                Use device location
-              </button>
-              <Field
-                label="Feels-like low °F"
-                hint="Override missing weather or use a temperature you trust. This is the day's low, not the current temperature."
-              >
-                <input
-                  type="number"
-                  min={-150}
-                  max={150}
-                  step="0.1"
-                  value={temperature ?? ''}
-                  onChange={(e) => {
-                    setWeatherMode('manual')
-                    setWeatherError('')
-                    setTemperature(e.target.value === '' ? null : Number(e.target.value))
-                  }}
-                />
-              </Field>
-              <button
-                className="button button--quiet"
-                onClick={() => {
-                  setCoords({ ...coords })
-                  setWeatherMode('auto')
-                }}
-              >
-                Refresh forecast
-              </button>
-              <p className="muted">Weather by Open-Meteo. Location is requested only when you choose it.</p>
-            </Card>
+            <CalendarWeather key={date} data={appData} date={date} onChange={setWeatherSelection} />
             <Card>
               <h2>Plan an outfit</h2>
               <p>
@@ -467,7 +417,7 @@ export default function ClosetPage() {
                     value={date}
                     onChange={(e) => {
                       setDate(e.target.value)
-                      setWeatherMode('auto')
+                      setWeatherSelection({ temperature: null, context: '', signature: '' })
                     }}
                   />
                 </Field>
