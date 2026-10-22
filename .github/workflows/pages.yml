@@ -29,7 +29,7 @@ jobs:
         run: npm ci
       - name: Use Ubuntu archive for browser dependencies
         run: |
-          for apt_source_file in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+          for apt_source_file in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt; do
             if [ -f "$apt_source_file" ]; then
               sudo sed -i -E 's|https?://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' "$apt_source_file"
             fi

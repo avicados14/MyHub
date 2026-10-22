@@ -49,3 +49,5 @@ Weather API reference: https://open-meteo.com/en/docs
 PR #40 merged as `0b5f7be57f6e96f1bd429fdcd9c6b39b2dfe07d2`. The initial publish run (39785846631) stalled in browser-engine installation before application validation. This checklist update starts a fresh publish run with unchanged application code; all release checks remain enabled.
 
 The cancelled run showed very slow package downloads from `azure.archive.ubuntu.com` during Playwright dependency installation. The publish workflow now uses Ubuntu’s main archive for those signed packages and limits browser setup to 10 minutes. Application checks and browser coverage are unchanged.
+
+Run 39789425935 confirmed that this runner resolves Ubuntu packages through `/etc/apt/apt-mirrors.txt`; changing only sources.list and ubuntu.sources left the slow Azure mirror active. The workflow now also rewrites that mirror-list file before installing dependencies. The 10-minute setup timeout and all validation gates remain enabled.
