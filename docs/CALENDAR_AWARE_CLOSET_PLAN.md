@@ -28,7 +28,7 @@ Use weather during likely outdoor activity, instead of the overnight low, while 
 - [x] Add calendar mode, reviewable event selections and custom outdoor windows to Closet Planner.
 - [x] Connect effective temperature and weather context to regular and Smart suggestions; preserve manual mode and invalidate stale recommendations.
 - [x] Reuse existing server-validated styling notes for minimal numeric weather context and Gemini explanations.
-- [ ] Test desktop/mobile controls, reload/settings behavior, weather failure and stale-response handling.
+- [x] Test desktop/mobile controls, reload/settings behavior, weather failure and stale-response handling. Pre-merge CI passed 192 unit tests, 160 browser tests, and 2 installed-app offline tests (run 39705622480).
 - [ ] Run release checks, deploy frontend and verify production without saving an outfit.
 
 ## Acceptance checks
@@ -43,3 +43,7 @@ Use weather during likely outdoor activity, instead of the overnight low, while 
 - Calendar mode is the default. Outdoor corrections are local to the selected date and reset when leaving the planner; the calendar timezone comes from Settings. Release requires browser checks to pass.
 
 Weather API reference: https://open-meteo.com/en/docs
+
+## Release progress
+
+PR #40 merged as `0b5f7be57f6e96f1bd429fdcd9c6b39b2dfe07d2`. The initial publish run (39785846631) stalled in browser-engine installation before application validation. This checklist update starts a fresh publish run with unchanged application code; all release checks remain enabled.
