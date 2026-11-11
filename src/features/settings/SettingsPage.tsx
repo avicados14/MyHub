@@ -21,6 +21,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../app/AppContext'
+import { fetchWithTimeout } from '../../utilities/network'
 import { Card, Field, Modal, PageHeader, StatusBadge } from '../../components/ui'
 import { parseIcsResult, replaceImportedFeedAssignments, replaceImportedFeedEvents } from '../../domain/ics'
 import { NUTRITION_FIELDS } from '../../domain/nutrition'
@@ -292,7 +293,11 @@ export default function SettingsPage() {
     }
     setRefreshingFeedId(feed.id)
     try {
-      const response = await fetch(url)
+      const response = await fetchWithTimeout(
+        url,
+        {},
+        'The calendar feed took too long to respond. Try again later or import the ICS file.',
+      )
       if (!response.ok) throw new Error(`Calendar feed returned ${response.status}.`)
       const importedAt = new Date().toISOString()
       const sourceLabel = feed.name.trim() || 'Calendar feed'
@@ -327,9 +332,13 @@ export default function SettingsPage() {
         }),
         `${sourceLabel} refreshed with ${parsed.events.length} events and ${parsed.assignments.length} homework assignments.`,
       )
-    } catch {
+    } catch (error) {
       updateCalendarFeed(feed.id, { status: 'error' })
-      announce('The browser could not refresh that feed. Download the ICS file and import it here instead.')
+      announce(
+        error instanceof Error && error.message.includes('took too long')
+          ? error.message
+          : 'The browser could not refresh that feed. Download the ICS file and import it here instead.',
+      )
     } finally {
       setRefreshingFeedId(null)
     }
