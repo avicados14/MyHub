@@ -3,6 +3,7 @@ import { loadPrivateAccessCredential } from '../../storage/database'
 import type { Incoming } from './import'
 import { inferType } from './recommendations'
 import type { Garment, OutfitPlan, Occasion } from './types'
+import { fetchWithTimeout } from '../../utilities/network'
 // Publishable keys are public identifiers. All access is enforced by Auth + RLS.
 const url = import.meta.env.VITE_SUPABASE_URL || 'https://vlsxvwqmzcriarcctubr.supabase.co'
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_D4-6zCDhSxJW0hqTT9cPfw_-nNjIFwj'
@@ -21,13 +22,17 @@ export async function authenticate(): Promise<string> {
   if (current?.id === credential.id && current.expires > Date.now() + 60_000) return current.userId
   if (connecting) return connecting
   connecting = (async () => {
-    const response = await fetch(`${url}/functions/v1/myhub-closet-session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: credential.id, writeToken: `myhub-write-${credential.key}` }),
-      cache: 'no-store',
-      referrerPolicy: 'no-referrer',
-    })
+    const response = await fetchWithTimeout(
+      `${url}/functions/v1/myhub-closet-session`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: credential.id, writeToken: `myhub-write-${credential.key}` }),
+        cache: 'no-store',
+        referrerPolicy: 'no-referrer',
+      },
+      'Closet sign-in took too long. Check your connection and try again.',
+    )
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || 'Could not open your private closet.')
     const session = await client.auth.setSession(result)

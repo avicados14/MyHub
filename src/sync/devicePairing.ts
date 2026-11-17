@@ -1,5 +1,6 @@
 import { decryptJson, encryptJson, sha256Digest } from './crypto'
 import { PRIVATE_ACCESS_BROKER_URL, resolvePrivateAccess } from './privateAccess'
+import { fetchWithTimeout } from '../utilities/network'
 
 const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 export const normalizePairingCode = (value: string): string => {
@@ -10,13 +11,17 @@ export const normalizePairingCode = (value: string): string => {
   return code
 }
 const request = async (body: Record<string, unknown>, url: string): Promise<Record<string, unknown>> => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-    referrerPolicy: 'no-referrer',
-  })
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
+    },
+    'Device sign-in took too long. Check your connection and try again.',
+  )
   if (!response.ok)
     throw new Error(
       response.status === 404
