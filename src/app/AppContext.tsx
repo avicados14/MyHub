@@ -49,14 +49,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [data, ready])
 
   useEffect(() => {
-    const mode =
-      data.settings.appearance === 'system'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'
-        : data.settings.appearance
-    document.documentElement.dataset.theme = mode
-    document.documentElement.style.colorScheme = mode
+    const appearance = data.settings.appearance
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const applyTheme = () => {
+      const mode = appearance === 'system' ? (media.matches ? 'dark' : 'light') : appearance
+      document.documentElement.dataset.theme = mode
+      document.documentElement.style.colorScheme = mode
+    }
+    applyTheme()
+    if (appearance !== 'system') return
+    media.addEventListener('change', applyTheme)
+    return () => media.removeEventListener('change', applyTheme)
   }, [data.settings.appearance])
 
   const announce = useCallback((message: string) => {
