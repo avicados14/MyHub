@@ -293,15 +293,18 @@ export default function SettingsPage() {
     }
     setRefreshingFeedId(feed.id)
     try {
-      const response = await fetchWithTimeout(
+      const calendarText = await fetchWithTimeout(
         url,
         {},
+        async (response) => {
+          if (!response.ok) throw new Error(`Calendar feed returned ${response.status}.`)
+          return response.text()
+        },
         'The calendar feed took too long to respond. Try again later or import the ICS file.',
       )
-      if (!response.ok) throw new Error(`Calendar feed returned ${response.status}.`)
       const importedAt = new Date().toISOString()
       const sourceLabel = feed.name.trim() || 'Calendar feed'
-      const parsed = parseIcsResult(await response.text(), {
+      const parsed = parseIcsResult(calendarText, {
         sourceLabel,
         sourceFeedId: feed.id,
         sourceType: feed.kind,

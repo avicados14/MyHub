@@ -11,7 +11,7 @@ export const normalizePairingCode = (value: string): string => {
   return code
 }
 const request = async (body: Record<string, unknown>, url: string): Promise<Record<string, unknown>> => {
-  const response = await fetchWithTimeout(
+  return fetchWithTimeout(
     url,
     {
       method: 'POST',
@@ -20,17 +20,20 @@ const request = async (body: Record<string, unknown>, url: string): Promise<Reco
       cache: 'no-store',
       referrerPolicy: 'no-referrer',
     },
+    async (response) => {
+      if (!response.ok)
+        throw new Error(
+          response.status === 404
+            ? 'This code expired, was already used, or is unavailable. Generate a new code on your connected device.'
+            : 'Device sign-in is unavailable. Check your connection and try again.',
+        )
+      const result: unknown = await response.json()
+      if (!result || typeof result !== 'object' || Array.isArray(result))
+        throw new Error('Device sign-in returned an invalid response.')
+      return result as Record<string, unknown>
+    },
     'Device sign-in took too long. Check your connection and try again.',
   )
-  if (!response.ok)
-    throw new Error(
-      response.status === 404
-        ? 'This code expired, was already used, or is unavailable. Generate a new code on your connected device.'
-        : 'Device sign-in is unavailable. Check your connection and try again.',
-    )
-  const result: unknown = await response.json()
-  if (!result || typeof result !== 'object') throw new Error('Device sign-in returned an invalid response.')
-  return result as Record<string, unknown>
 }
 export const createDevicePairing = async (id: string, key: string, url = PRIVATE_ACCESS_BROKER_URL) => {
   // 80 random bits: a short numeric PIN would be guessable without a separate approval channel.

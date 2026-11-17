@@ -22,7 +22,7 @@ export async function authenticate(): Promise<string> {
   if (current?.id === credential.id && current.expires > Date.now() + 60_000) return current.userId
   if (connecting) return connecting
   connecting = (async () => {
-    const response = await fetchWithTimeout(
+    const result = await fetchWithTimeout(
       `${url}/functions/v1/myhub-closet-session`,
       {
         method: 'POST',
@@ -31,10 +31,13 @@ export async function authenticate(): Promise<string> {
         cache: 'no-store',
         referrerPolicy: 'no-referrer',
       },
+      async (response) => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Could not open your private closet.')
+        return result
+      },
       'Closet sign-in took too long. Check your connection and try again.',
     )
-    const result = await response.json()
-    if (!response.ok) throw new Error(result.error || 'Could not open your private closet.')
     const session = await client.auth.setSession(result)
     if (session.error) throw session.error
     current = { id: credential.id, userId: result.user_id, expires: result.expires_at * 1000 }
